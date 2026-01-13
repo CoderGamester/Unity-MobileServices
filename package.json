@@ -1,8 +1,14 @@
 {
-  "name": "com.gamelovers.nativeui",
-  "displayName": "Native UI",
-  "version": "0.2.5",
-  "unity": "2020.3",
-  "description": "This package provides the OS functionality to show the native UI alerts, Game Review PopUp and message Toasts",
-  "type": "library"
+  "name": "com.gamelovers.mobileservices",
+  "displayName": "Mobile Services",
+  "author": "Miguel Tomas",
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "license": "MIT",
+  "description": "Mobile platform services for Unity: native UI (alerts/toasts), push notifications, and gesture detection (swipe/drag).",
+  "type": "library",
+  "dependencies": {
+    "com.unity.mobile.notifications": "2.3.0",
+    "com.unity.inputsystem": "1.11.0"
+  }
 }

@@ -1,0 +1,18 @@
+{
+    "name": "GameLovers.MobileServices",
+    "rootNamespace": "GameLovers.MobileServices",
+    "references": [
+        "Unity.Notifications",
+        "Unity.Notifications.Android",
+        "Unity.Notifications.iOS",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}
