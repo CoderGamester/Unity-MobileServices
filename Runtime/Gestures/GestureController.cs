@@ -2,52 +2,53 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.InputSystem.EnhancedTouch;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
+using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace GameLovers.MobileServices.Gestures
 {
     /// <summary>
-    /// Controller that interprets takes pointer input from <see cref="PointerInputManager"/> and detects
+    /// Controller that interprets takes pointer input from <see cref="Touch"/> and detects
     /// directional swipes and detects taps.
     /// </summary>
     public class GestureController : MonoBehaviour
     {
-        [SerializeField]
-        private PointerInputManager inputManager;
-
         // Maximum duration of a press before it can no longer be considered a tap.
         [SerializeField]
-        private float maxTapDuration = 0.2f;
+        private float _maxTapDuration = 0.2f;
 
         // Maximum distance in screen units that a tap can drift from its original position before
         // it is no longer considered a tap.
         [SerializeField]
-        private float maxTapDrift = 5.0f;
+        private float _maxTapDrift = 5.0f;
 
         // Maximum duration of a swipe before it is no longer considered to be a valid swipe.
         [SerializeField]
-        private float maxSwipeDuration = 0.5f;
+        private float _maxSwipeDuration = 0.5f;
 
         // Minimum distance in screen units that a swipe must move before it is considered a swipe.
         // Note that if this is smaller or equal to maxTapDrift, then it is possible for a user action to be
         // returned as both a swipe and a tap.
         [SerializeField]
-        private float minSwipeDistance = 10.0f;
+        private float _minSwipeDistance = 10.0f;
 
         // How much a swipe should consistently be in the same direction before it is considered a swipe.
         [SerializeField]
-        private float swipeDirectionSamenessThreshold = 0.6f;
+        private float _swipeDirectionSamenessThreshold = 0.6f;
 
+        [FormerlySerializedAs("label")]
         [Header("Debug"), SerializeField]
-        private Text label;
+        private Text _label;
 
         // Mapping of input IDs to their active gesture tracking objects.
-        private readonly Dictionary<int, ActiveGesture> activeGestures = new Dictionary<int, ActiveGesture>();
+        private readonly Dictionary<int, ActiveGesture> _activeGestures = new Dictionary<int, ActiveGesture>();
 
         /// <summary>
         /// Event fired when the user presses on the screen.
         /// </summary>
-        public new event Action<SwipeInput> Pressed;
+        public event Action<SwipeInput> Pressed;
 
         /// <summary>
         /// Event fired for every motion (possibly multiple times a frame) of a potential swipe gesture.
@@ -64,11 +65,38 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         public event Action<TapInput> Tapped;
 
-        protected virtual void Awake()
+        protected virtual void OnEnable()
         {
-            inputManager.Pressed += OnPressed;
-            inputManager.Dragged += OnDragged;
-            inputManager.Released += OnReleased;
+            EnhancedTouchSupport.Enable();
+            Touch.onFingerDown += OnFingerDown;
+            Touch.onFingerMove += OnFingerMove;
+            Touch.onFingerUp += OnFingerUp;
+        }
+
+        protected virtual void OnDisable()
+        {
+            Touch.onFingerDown -= OnFingerDown;
+            Touch.onFingerMove -= OnFingerMove;
+            Touch.onFingerUp -= OnFingerUp;
+            EnhancedTouchSupport.Disable();
+        }
+
+        private void OnFingerDown(Finger finger)
+        {
+            var touch = finger.currentTouch;
+            OnPressed(finger.index, touch.screenPosition, touch.time);
+        }
+
+        private void OnFingerMove(Finger finger)
+        {
+            var touch = finger.currentTouch;
+            OnDragged(finger.index, touch.screenPosition, touch.time);
+        }
+
+        private void OnFingerUp(Finger finger)
+        {
+            var touch = finger.currentTouch;
+            OnReleased(finger.index, touch.screenPosition, touch.time);
         }
 
         /// <summary>
@@ -76,9 +104,9 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         private bool IsValidSwipe(ref ActiveGesture gesture)
         {
-            return gesture.TravelDistance >= minSwipeDistance &&
-                (gesture.StartTime - gesture.EndTime) <= maxSwipeDuration &&
-                gesture.SwipeDirectionSameness >= swipeDirectionSamenessThreshold;
+            return gesture.TravelDistance >= _minSwipeDistance &&
+                (gesture.EndTime - gesture.StartTime) <= _maxSwipeDuration &&
+                gesture.SwipeDirectionSameness >= _swipeDirectionSamenessThreshold;
         }
 
         /// <summary>
@@ -86,31 +114,31 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         private bool IsValidTap(ref ActiveGesture gesture)
         {
-            return gesture.TravelDistance <= maxTapDrift &&
-                (gesture.StartTime - gesture.EndTime) <= maxTapDuration;
+            return gesture.TravelDistance <= _maxTapDrift &&
+                (gesture.EndTime - gesture.StartTime) <= _maxTapDuration;
         }
 
-        private void OnPressed(PointerInput input, double time)
+        private void OnPressed(int inputId, Vector2 position, double time)
         {
-            Debug.Assert(!activeGestures.ContainsKey(input.InputId));
+            Debug.Assert(!_activeGestures.ContainsKey(inputId));
 
-            var newGesture = new ActiveGesture(input.InputId, input.Position, time);
-            activeGestures.Add(input.InputId, newGesture);
+            var newGesture = new ActiveGesture(inputId, position, time);
+            _activeGestures.Add(inputId, newGesture);
 
             DebugInfo(newGesture);
 
             Pressed?.Invoke(new SwipeInput(newGesture));
         }
 
-        private void OnDragged(PointerInput input, double time)
+        private void OnDragged(int inputId, Vector2 position, double time)
         {
-            if (!activeGestures.TryGetValue(input.InputId, out var existingGesture))
+            if (!_activeGestures.TryGetValue(inputId, out var existingGesture))
             {
                 // Probably caught by UI, or the input was otherwise lost
                 return;
             }
 
-            existingGesture.SubmitPoint(input.Position, time);
+            existingGesture.SubmitPoint(position, time);
 
             if (IsValidSwipe(ref existingGesture))
             {
@@ -120,16 +148,16 @@ namespace GameLovers.MobileServices.Gestures
             DebugInfo(existingGesture);
         }
 
-        private void OnReleased(PointerInput input, double time)
+        private void OnReleased(int inputId, Vector2 position, double time)
         {
-            if (!activeGestures.TryGetValue(input.InputId, out var existingGesture))
+            if (!_activeGestures.TryGetValue(inputId, out var existingGesture))
             {
                 // Probably caught by UI, or the input was otherwise lost
                 return;
             }
 
-            activeGestures.Remove(input.InputId);
-            existingGesture.SubmitPoint(input.Position, time);
+            _activeGestures.Remove(inputId);
+            existingGesture.SubmitPoint(position, time);
 
             if (IsValidSwipe(ref existingGesture))
             {
@@ -146,7 +174,7 @@ namespace GameLovers.MobileServices.Gestures
 
         private void DebugInfo(ActiveGesture gesture)
         {
-            if (label == null) return;
+            if (_label == null) return;
 
             var builder = new StringBuilder();
 
@@ -171,7 +199,9 @@ namespace GameLovers.MobileServices.Gestures
             builder.AppendFormat("Ending Timestamp: {0}", gesture.EndTime);
             builder.AppendLine();
 
-            label.text = builder.ToString();
+            _label.text = builder.ToString();
+
+            if (Camera.main == null) return;
 
             var worldStart = Camera.main.ScreenToWorldPoint(gesture.StartPosition);
             var worldEnd = Camera.main.ScreenToWorldPoint(gesture.EndPosition);

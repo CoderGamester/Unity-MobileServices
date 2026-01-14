@@ -41,14 +41,12 @@ For user-facing docs, treat `README.md` as the primary entry point. This file is
   - Android requires at least one channel to be registered; the first channel passed becomes the platform default (`AndroidNotificationsPlatform.DefaultChannelId`).
 
 ### Gestures (`GameLovers.MobileServices.Gestures`)
-- **Input abstraction**
-  - `Runtime/Gestures/PointerInputManager.cs` converts Input System callbacks into higher-level events: `Pressed`, `Dragged`, `Released`.
-  - Input actions live under `Runtime/Gestures/Controls/PointerControls.inputactions` and are generated into `PointerControls.cs`.
-  - `Runtime/Gestures/PointerInput.cs` defines the transport struct (`PointerInput`) and a binding composite (`PointerInputComposite`) used by the input action setup.
+- **Input source**: Unity's `EnhancedTouch` API (`Touch.onFingerDown/Move/Up`)
 - **Gesture detection**
-  - `Runtime/Gestures/GestureController.cs` consumes `PointerInputManager` and emits gesture events (`Pressed`, `PotentiallySwiped`, `Swiped`, `Tapped`).
-  - `Runtime/Gestures/ActiveGesture.cs` is the internal state accumulator per pointer id.
+  - `Runtime/Gestures/GestureController.cs` subscribes to EnhancedTouch finger events and emits gesture events (`Pressed`, `PotentiallySwiped`, `Swiped`, `Tapped`).
+  - `Runtime/Gestures/ActiveGesture.cs` is the internal state accumulator per finger.
   - `Runtime/Gestures/SwipeInput.cs` is the public data structure for swipe output.
+  - `Runtime/Gestures/TapInput.cs` is the public data structure for tap output.
 
 ## 3. Key Directories / Files
 ```
@@ -73,13 +71,9 @@ Runtime/
 │       └── SerializableNotification.cs
 ├── Gestures/
 │   ├── GestureController.cs
-│   ├── PointerInputManager.cs
 │   ├── ActiveGesture.cs
 │   ├── SwipeInput.cs
-│   ├── PointerInput.cs
-│   └── Controls/
-│       ├── PointerControls.inputactions
-│       └── PointerControls.cs
+│   └── TapInput.cs
 └── GameLovers.MobileServices.asmdef
 
 Plugins/iOS/
@@ -104,7 +98,8 @@ Plugins/iOS/
   - Foreground/background transitions are handled via `OnApplicationFocus`.
 - **GestureController threshold interplay**
   - If `minSwipeDistance <= maxTapDrift`, a single interaction can qualify as both tap and swipe depending on travel distance and other thresholds.
-  - `PointerInputManager` requires `PointerControls` to be enabled (it enables/disables in `OnEnable`/`OnDisable`).
+  - `GestureController` requires `EnhancedTouchSupport` to be enabled; it handles this automatically in `OnEnable`/`OnDisable`.
+  - For mouse input in Editor, add `TouchSimulation` component to convert mouse to touch.
 
 ## 5. Coding Standards (Unity 6 / C# 9.0)
 - **C#**: C# 9.0 syntax; explicit namespaces; no global usings.
@@ -134,11 +129,10 @@ When you need third-party source/docs, prefer the locally-cached UPM packages:
   - Ensure at least one channel is registered; confirm default channel behavior matches expectations.
 - **Change gesture detection**
   - Adjust thresholds on `GestureController` and document intended UX.
-  - If modifying pointer bindings, update `PointerControls.inputactions` and regenerate `PointerControls.cs` from the Input System editor.
 
 ## 8. Update Policy
 Update this file when:
 - Public API changes (`NativeUiService`, `INotificationService`, `IGameNotification`, `GestureController` events)
 - Platform integration changes (JNI calls, iOS native symbols, notification platform wrappers)
 - Notification queueing/persistence behavior changes (`OperatingMode`, PlayerPrefs payload shape)
-- Input System bindings or generated controls change (`PointerControls.inputactions`, `PointerControls.cs`)
+- Gesture detection logic or input source integration changes
