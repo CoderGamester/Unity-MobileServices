@@ -1,5 +1,7 @@
 # GameLovers.MobileServices - AI Agent Guide
 
+> **Companion files**: `CLAUDE.md` wraps this file for Claude Code — edit `AGENTS.md`, not `CLAUDE.md`. `README.md` is the user-facing entry point.
+
 ## 1. Package Overview
 - **Package**: `com.gamelovers.mobileservices`
 - **Unity**: 6000.0+
