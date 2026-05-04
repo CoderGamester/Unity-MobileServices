@@ -79,3 +79,6 @@ crashlytics-build.properties
 
 
 
+
+# Tests audit history (unity-tests-audit skill -- local developer state, never committed)
+.audit-history.md
