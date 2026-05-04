@@ -12,9 +12,14 @@ Building mobile-specific features in Unity often requires dealing with platform-
 
 | Problem | Solution |
 |---------|----------|
-| **Platform-specific UI code** | Native UI service bridges iOS/Android alerts, toasts, and review prompts with one API |
+| **Platform-specific UI code** | Native UI service bridges iOS/Android alerts, toasts, review prompts, and share sheets with one API |
 | **Notification complexity** | Notification service wraps Unity Mobile Notifications with channel management |
 | **Custom gesture detection** | Gesture controller provides swipe and tap detection via Unity's EnhancedTouch |
+| **Haptic plugin sprawl** | Zero-dependency `IHapticsService` with 9 presets, custom intensity, and time-bounded looping — built directly on iOS/Android primitives |
+| **Scattered device APIs** | One `IDeviceService` umbrella over `SafeArea`, `ScreenWake`, `Battery`, `Connectivity`, `AudioSession`, `Permissions`, `Att`, `DeepLink` — each child also independently mockable |
+| **iOS silent switch muting audio** | `device.AudioSession.ConfigureForPlayback()` overrides `AVAudioSession` category in one line |
+| **iOS App Tracking Transparency** | `device.Att.RequestAuthorizationAsync()` — direct `ATTrackingManager` bridge, no `com.unity.ads.ios-support` dependency |
+| **Cold-start deep link loss** | `device.DeepLink` queues the launch link for the first subscriber so you never miss it |
 | **Editor testing challenges** | Editor fallbacks for all features enable testing without device builds |
 
 **Built for production:** Uses Unity's official packages (`com.unity.mobile.notifications`, `com.unity.inputsystem`). Tested in real mobile games.
@@ -29,11 +34,11 @@ Building mobile-specific features in Unity often requires dealing with platform-
 
 | Platform | Status |
 |---|---|
-| iOS | ✅ Supported |
-| Android | ✅ Supported |
-| Editor | ✅ Supported (fallbacks) |
-| Standalone | ⚠️ Gestures only; no native UI/notifications |
-| WebGL | ❌ Not Supported |
+| iOS | ✅ Fully supported |
+| Android | ✅ Fully supported |
+| Editor | ✅ Supported (no-op fallbacks for all native services) |
+| Standalone | ⚠️ Gestures + Connectivity + SafeArea + Battery (level/status); Haptics returns `IsSupported = false`; iOS audio session / ATT are no-ops |
+| WebGL | ❌ Not supported |
 
 ## Installation
 
@@ -65,6 +70,16 @@ Building mobile-specific features in Unity often requires dealing with platform-
 | **GestureController** | MonoBehaviour detecting swipe and tap gestures via EnhancedTouch |
 | **SwipeInput** | Data structure with swipe direction, velocity, and consistency metrics |
 | **TapInput** | Data structure for tap position and finger data |
+| **IIosAudioSessionService** | Overrides the iOS silent switch so audio keeps playing (no-op elsewhere) |
+| **IHapticsService** | Cross-platform haptic feedback with 9 presets, custom intensity, time-bounded looping. Zero third-party deps. |
+| **IDeviceService** | Umbrella facade exposing `SafeArea`, `ScreenWake`, `Battery`, `Connectivity`, `AudioSession`, `Permissions`, `Att`, `DeepLink` |
+| **IPermissionsService** | Unified iOS+Android runtime permissions (Camera, Mic, Location, Photos, Notifications) — Task-based async |
+| **IAttService** | iOS App Tracking Transparency. Built directly on `ATTrackingManager` — no `com.unity.ads.ios-support` dep |
+| **IDeepLinkService** | `Application.deepLinkActivated` wrapper with cold-start link queueing |
+| **ISafeAreaService** | `Screen.safeArea` with change events; pairs with `SafeAreaContainer` UI Toolkit element |
+| **IBatteryService** | Battery level/status + iOS/Android low-power-mode awareness with events |
+| **IConnectivityService** | `Application.internetReachability` with change events |
+| **IScreenWakeService** | `KeepAwake` toggle over `Screen.sleepTimeout` |
 
 ---
 
@@ -76,15 +91,20 @@ Building mobile-specific features in Unity often requires dealing with platform-
 using GameLovers.MobileServices.NativeUi;
 
 NativeUiService.ShowAlertPopUp(
-    darkMode: false,
+    isAlertSheet: false,
     title: "Delete Save?",
     message: "This action cannot be undone.",
     new AlertButton { Text = "Cancel", Style = AlertButtonStyle.Cancel },
-    new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, OnClick = OnDeleteConfirmed }
+    new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, Callback = OnDeleteConfirmed }
 );
 
-NativeUiService.ShowToastMessage("Item Collected!", isLongDuration: false); // Android only
+NativeUiService.ShowToastMessage("Item Collected!", isLongDuration: false);
+
+// OS-mediated rating prompt (no-op in Editor; iOS SKStoreReviewController + Android Play In-App Review).
 NativeUiService.RequestReview();
+
+// OS share sheet. Pass any combination of text/url/imagePath; nulls are skipped.
+NativeUiService.Share(text: "Check out my high score!", url: "https://example.com/game");
 ```
 
 ### Notifications
@@ -103,6 +123,78 @@ notification.Body         = "Your daily reward is waiting for you!";
 notification.DeliveryTime = DateTime.Now.AddHours(24);
 notification.Channel      = "rewards";
 service.ScheduleNotification(notification);
+```
+
+### iOS Audio Session
+
+```csharp
+using GameLovers.MobileServices.Device;
+
+var audio = new IosAudioSessionService();
+audio.ConfigureForPlayback(); // Call once at startup. No-op on Android / Editor.
+```
+
+### Device Services (umbrella)
+
+```csharp
+using GameLovers.MobileServices.Device;
+
+IDeviceService device = new DeviceService();
+
+// Battery + low-power mode.
+device.Battery.OnLowPowerModeChanged += () =>
+    Debug.Log($"LPM changed -> {device.Battery.IsLowPowerMode}");
+
+// Connectivity events.
+device.Connectivity.OnStatusChanged += status =>
+    Debug.Log($"Reachability changed -> {status}");
+
+// Safe area for UI Toolkit.
+var safeAreaContainer = new SafeAreaContainer(device.SafeArea);
+rootVisualElement.Add(safeAreaContainer);
+
+// Keep the screen awake during gameplay.
+device.ScreenWake.KeepAwake = true;
+
+// Override iOS silent switch.
+device.AudioSession.ConfigureForPlayback();
+
+// Runtime permissions (Task-based; no UniTask dependency).
+var camera = await device.Permissions.RequestAsync(AppPermission.Camera);
+if (camera == PermissionStatus.Granted) { /* … */ }
+
+// App Tracking Transparency (iOS 14.5+; returns Authorized on Android/Editor).
+var att = await device.Att.RequestAuthorizationAsync();
+
+// Deep links — cold-start safe; subscribe whenever, never miss a launch link.
+device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
+```
+
+Each child interface is also independently registerable for tests, so you can mock `IBatteryService` directly without going through the facade.
+
+### Haptics
+
+```csharp
+using GameLovers.MobileServices.Haptics;
+
+IHapticsService haptics = new HapticsService();
+
+// Natural one-shot for the preset's built-in duration.
+haptics.PlayPreset(HapticPreset.Success);
+
+// Loop indefinitely until you call StopCurrentHaptic().
+haptics.PlayPresetDuration(HapticPreset.ImpactMedium, duration: -1f);
+// ... later ...
+haptics.StopCurrentHaptic();
+
+// Loop and auto-stop after 0.5 seconds.
+haptics.PlayPresetDuration(HapticPreset.ImpactHeavy, duration: 0.5f);
+
+// Custom intensity (0..1) with explicit duration in milliseconds.
+haptics.PlayCustom(intensity01: 0.7f, durationMs: 250f);
+
+// Master toggle. Setting Enabled=false also stops any active haptic.
+haptics.Enabled = false;
 ```
 
 ### Gesture Detection
@@ -139,18 +231,22 @@ All methods are **static** — no initialization needed. The service is platform
 
 | Method | Platform |
 |--------|----------|
-| `ShowAlertPopUp(darkMode, title, message, buttons…)` | iOS + Android |
-| `ShowToastMessage(message, isLongDuration)` | Android only |
+| `ShowAlertPopUp(isAlertSheet, title, message, buttons…)` | iOS + Android |
+| `ShowToastMessage(message, isLongDuration)` | iOS + Android |
 | `RequestReview()` | iOS (`SKStoreReviewController`) + Android (Play In-App Review) |
+| `Share(text, url, imagePath, title)` | iOS (`UIActivityViewController`) + Android (`Intent.ACTION_SEND`) |
 
 **Alert Button Styles:** `Default`, `Cancel`, `Destructive`
+
+> **Android `RequestReview()`** requires the Play Core Review library. Add to `mainTemplate.gradle`:
+> `implementation 'com.google.android.play:review:2.0.1'`
 
 ### Notification Service
 
 ```csharp
 service.CancelNotification(pending.Id);
-service.CancelAllNotifications();
-var scheduled = service.GetPendingNotifications();
+service.CancelAllScheduledNotifications();
+var scheduled = service.PendingNotifications;
 ```
 
 Key points:

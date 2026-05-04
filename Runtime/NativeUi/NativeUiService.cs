@@ -8,8 +8,8 @@ namespace GameLovers.MobileServices.NativeUi
 	public enum AlertButtonStyle
 	{
 		Default,
-		Positive,
-		Negative
+		Destructive,
+		Cancel
 	}
 
 	public struct AlertButton
@@ -101,7 +101,146 @@ namespace GameLovers.MobileServices.NativeUi
 			throw new SystemException("Show a Toast message is only available for iOS and Android platforms");
 #endif
 		}
-		
+
+		/// <summary>
+		/// Requests an OS-mediated app rating prompt. iOS uses <c>SKStoreReviewController</c>; Android uses
+		/// the Play In-App Review API. Both platforms throttle requests internally, so calling this
+		/// frequently does NOT spam the user — the OS decides whether to actually show the prompt.
+		/// On Editor / unsupported platforms this is a safe no-op.
+		/// </summary>
+		/// <remarks>
+		/// Android requires the Play Core Review library on the consumer's classpath. Add to
+		/// <c>mainTemplate.gradle</c>:
+		/// <c>implementation 'com.google.android.play:review:2.0.1'</c> (or newer).
+		/// Without that dependency this call logs an error and returns; it does not throw.
+		/// </remarks>
+		public static void RequestReview()
+		{
+#if UNITY_EDITOR
+			Debug.Log("Request Review is not available in the editor.");
+#elif UNITY_IOS
+			RequestReviewNative();
+#elif UNITY_ANDROID
+			RequestReviewAndroid();
+#endif
+		}
+
+		/// <summary>
+		/// Opens the OS share sheet with the given content. Any combination of <paramref name="text"/>,
+		/// <paramref name="url"/>, and <paramref name="imagePath"/> may be supplied; nulls are skipped.
+		/// <paramref name="imagePath"/> must be an absolute filesystem path. <paramref name="title"/> is
+		/// used as the chooser title (Android) and is ignored on iOS.
+		/// On Editor / unsupported platforms this is a safe no-op.
+		/// </summary>
+		public static void Share(string text, string url = null, string imagePath = null, string title = null)
+		{
+#if UNITY_EDITOR
+			Debug.Log($"Share is not available in the editor (text='{text}', url='{url}', imagePath='{imagePath}').");
+#elif UNITY_IOS
+			ShareNative(text ?? string.Empty, url ?? string.Empty, imagePath ?? string.Empty);
+#elif UNITY_ANDROID
+			ShareAndroid(text, url, imagePath, title);
+#endif
+		}
+
+#if UNITY_ANDROID
+		private static void RequestReviewAndroid()
+		{
+			try
+			{
+				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				using var managerFactory = new AndroidJavaClass("com.google.android.play.core.review.ReviewManagerFactory");
+				using var manager = managerFactory.CallStatic<AndroidJavaObject>("create", activity);
+				using var requestTask = manager.Call<AndroidJavaObject>("requestReviewFlow");
+				requestTask.Call<AndroidJavaObject>("addOnCompleteListener", new ReviewFlowListener(activity, manager));
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"[GameLovers.MobileServices] RequestReview failed: {e.Message}. " +
+					"Ensure 'com.google.android.play:review' is on the gradle classpath.");
+			}
+		}
+
+		private static void ShareAndroid(string text, string url, string imagePath, string title)
+		{
+			try
+			{
+				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				using var intentClass = new AndroidJavaClass("android.content.Intent");
+				using var intent = new AndroidJavaObject("android.content.Intent");
+
+				intent.Call<AndroidJavaObject>("setAction", intentClass.GetStatic<string>("ACTION_SEND"));
+
+				var hasImage = !string.IsNullOrEmpty(imagePath);
+				if (hasImage)
+				{
+					intent.Call<AndroidJavaObject>("setType", "image/*");
+					using var uriClass = new AndroidJavaClass("android.net.Uri");
+					using var fileClass = new AndroidJavaObject("java.io.File", imagePath);
+					using var imageUri = uriClass.CallStatic<AndroidJavaObject>("fromFile", fileClass);
+					intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_STREAM"), imageUri);
+					intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_GRANT_READ_URI_PERMISSION"));
+				}
+				else
+				{
+					intent.Call<AndroidJavaObject>("setType", "text/plain");
+				}
+
+				var combinedText = string.IsNullOrEmpty(url) ? text : (string.IsNullOrEmpty(text) ? url : text + " " + url);
+				if (!string.IsNullOrEmpty(combinedText))
+				{
+					intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_TEXT"), combinedText);
+				}
+
+				using var chooser = intentClass.CallStatic<AndroidJavaObject>("createChooser", intent, title ?? string.Empty);
+				activity.Call("startActivity", chooser);
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"[GameLovers.MobileServices] Share failed: {e.Message}");
+			}
+		}
+
+		private class ReviewFlowListener : AndroidJavaProxy
+		{
+			private readonly AndroidJavaObject _activity;
+			private readonly AndroidJavaObject _manager;
+
+			// Modern Play In-App Review (v2.x of com.google.android.play:review) uses Google Play Services Tasks.
+			// The legacy com.google.android.play.core.tasks.OnCompleteListener applies to the deprecated
+			// monolithic com.google.android.play:core library only — do not use it here.
+			public ReviewFlowListener(AndroidJavaObject activity, AndroidJavaObject manager)
+				: base("com.google.android.gms.tasks.OnCompleteListener")
+			{
+				_activity = activity;
+				_manager = manager;
+			}
+
+			// ReSharper disable once InconsistentNaming
+			public void onComplete(AndroidJavaObject task)
+			{
+				try
+				{
+					if (!task.Call<bool>("isSuccessful"))
+					{
+						Debug.LogWarning("[GameLovers.MobileServices] requestReviewFlow returned an unsuccessful task.");
+						return;
+					}
+
+					using var reviewInfo = task.Call<AndroidJavaObject>("getResult");
+					using var launchTask = _manager.Call<AndroidJavaObject>("launchReviewFlow", _activity, reviewInfo);
+					_ = launchTask;
+				}
+				catch (Exception e)
+				{
+					Debug.LogError($"[GameLovers.MobileServices] launchReviewFlow failed: {e.Message}");
+				}
+			}
+		}
+#endif
+
 #if UNITY_IOS
 		internal delegate void AlertButtonDelegate(string buttonText);
 		
@@ -111,6 +250,12 @@ namespace GameLovers.MobileServices.NativeUi
 		
 		[System.Runtime.InteropServices.DllImport("__Internal")] 
 		private static extern void ToastMessage(string message, bool isLongDuration);
+
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversRequestReview")]
+		private static extern void RequestReviewNative();
+
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversShare")]
+		private static extern void ShareNative(string text, string url, string imagePath);
 
 		[AOT.MonoPInvokeCallback(typeof(AlertButtonDelegate))]
 		private static void AlertButtonCallback(string buttonText)
@@ -156,9 +301,9 @@ namespace GameLovers.MobileServices.NativeUi
 			{
 				case AlertButtonStyle.Default:
 					return -3;
-				case AlertButtonStyle.Positive:
+				case AlertButtonStyle.Destructive:
 					return -1;
-				case AlertButtonStyle.Negative:
+				case AlertButtonStyle.Cancel:
 					return -2;
 				default:
 					throw new ArgumentOutOfRangeException(nameof(style), style, "Wrong given style");
