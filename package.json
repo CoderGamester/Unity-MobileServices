@@ -10,5 +10,27 @@
   "dependencies": {
     "com.unity.mobile.notifications": "2.3.0",
     "com.unity.inputsystem": "1.11.0"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Mobile Services Playground",
+      "description": "Kitchen-sink scene that wires every Mobile Services subsystem (NativeUI / Haptics / Notifications / Device / Permissions / ATT / DeepLink) into one runtime-built canvas.",
+      "path": "Samples~/MobileServicesPlayground"
+    },
+    {
+      "displayName": "Haptics Palette",
+      "description": "Designer iteration tool: 3x3 preset grid + sequence recorder + replay. Use on a paired device.",
+      "path": "Samples~/HapticsPalette"
+    },
+    {
+      "displayName": "Notifications Scheduler",
+      "description": "Lifecycle demo: channel CRUD, OperatingMode toggles, background-foreground round trip with reschedule semantics.",
+      "path": "Samples~/NotificationsScheduler"
+    },
+    {
+      "displayName": "Deep Link Router",
+      "description": "MapRoute pattern demo: /promo/:id, /profile/:userId, /settings, cold-start replay through IDeepLinkRouter.",
+      "path": "Samples~/DeepLinkRouter"
+    }
+  ]
 }

@@ -9,15 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of consolidated **Mobile Services** package.
-- **Native UI**: Alerts, sheets, and toasts for iOS/Android, plus `NativeUiService.RequestReview()` (iOS `SKStoreReviewController` + Android Play Core In-App Review) and `NativeUiService.Share(text, url, imagePath, title)` (iOS `UIActivityViewController` + Android `Intent.ACTION_SEND`).
+- **Native UI**: Alerts, sheets, and toasts for iOS/Android, Review request and Share button with different networks.
 - **Notifications**: Comprehensive local and remote notification management.
 - **Gestures**: Advanced swipe detection with velocity and consistency tracking.
-- **iOS Audio Session**: `IIosAudioSessionService.ConfigureForPlayback()` (also exposed via `device.AudioSession` on the unified `IDeviceService`) overrides the iOS silent switch so audio keeps playing.
-- **Haptics**: zero-dependency haptic feedback (`IHapticsService`) with 9 preset patterns, custom intensity, time-bounded looping (`PlayPresetDuration(preset, duration)` with `-1`=loop / `0`=natural one-shot / `>0`=loop with auto-stop), and `StopCurrentHaptic()`. iOS `UI*FeedbackGenerator` + Android `VibrationEffect.createWaveform` bridges, no third-party plugin required.
-- **`IDeviceService` umbrella facade** exposing `SafeArea`, `ScreenWake`, `Battery`, `Connectivity`, `AudioSession`, `Permissions`, `Att`, and `DeepLink` sub-services through one entry point. Each child is independently registerable for testing. `IBatteryService` includes low-power-mode awareness on iOS (`NSProcessInfoPowerStateDidChangeNotification`) and Android (`PowerManager.isPowerSaveMode`). `ISafeAreaService` ships with a companion `SafeAreaContainer` UI Toolkit element. All event-driven children share a single internal MonoBehaviour host for polling.
-- **Permissions** (`IPermissionsService`, also at `device.Permissions`): unified iOS+Android runtime permissions covering Camera, Microphone, Location (when-in-use & always), Photo Library (read-write & add-only), and Notifications. `Task`-based async — no `UniTask` dependency.
-- **App Tracking Transparency** (`IAttService`, also at `device.Att`): iOS 14.5+ `ATTrackingManager` bridge for `RequestAuthorizationAsync()` and `CurrentStatus`. **Zero dependency on the deprecation-bound `com.unity.ads.ios-support` package**. Android / Editor / unsupported platforms return `Authorized` (no equivalent restriction).
-- **Deep Links** (`IDeepLinkService`, also at `device.DeepLink`): wraps `Application.deepLinkActivated` and adds **cold-start link queueing** — links delivered by the OS at app launch are not lost if the first subscriber attaches after the event has fired.
+- **iOS Audio Session**: Override the iOS silent switch so audio keeps playing.
+- **Haptics**: Zero-dependency cross-platform haptic feedback with 9 presets, custom intensity, and time-bounded looping.
+- **Device**: Umbrella facade over `SafeArea`, `ScreenWake`, `Battery` (with LPM awareness), `Connectivity`, `AudioSession`, `Permissions`, `Att`, and `DeepLink` sub-services.
+- **Permissions**: Unified iOS+Android runtime permissions (Camera, Microphone, Location, Photo Library, Notifications) with `Task`-based async and a multi-permission `RequestAsync(params AppPermission[])` overload.
+- **App Tracking Transparency**: iOS 14.5+ `ATTrackingManager` bridge with zero dependency on `com.unity.ads.ios-support`.
+- **Deep Links**: `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
+- **Deep Link Router**: Path-pattern routing over `IDeepLinkService` with captured params (`/promo/:id`).
+- **Notification Builder**: Fluent API — `service.Schedule().In(...).Title(...).Body(...).Channel(...).Send()`.
+- **Mobile Service umbrella**: Single DI registration exposing `NativeUi` / `Notifications` / `Haptics` / `Device`.
+- **Native UI instance interface**: `INativeUiService` + `NativeUiServiceInstance` forwarder for mockable consumer code.
+- **Mobile Services Explorer**: Dockable editor window with eight tabs and a per-platform haptic envelope graph.
+- **Mobile Simulator window**: Truth-mirror that paints platform-shaped mocks (iOS / Android) of every native UI surface the package can trigger.
+- **Runtime Simulator Overlay**: Play-mode-only `UIDocument` overlay (opt-in via `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`) rendering the truth-mirror mocks inside Unity's Game / Simulator view at the simulated device's pixel grid. Composes with Unity's Device Simulator for correct safe-area / scale / `Application.platform` spoofing.
+- **Device Simulator Plugin**: `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim Mobile Services control panel inside Unity's Device Simulator window. Auto-syncs the simulated platform skin from the selected device profile; while alive, the Explorer's `Render as: iOS | Android` dropdown greys out.
+- **Editor Platform Simulator**: Static API for driving device / permission / ATT / deep-link state in editor tests and the Explorer.
+- **Project Settings panel**: Per-permission usage descriptions, capability toggles, project scan, and an iOS Privacy Nutrition Label draft generator.
+- **Build Postprocessor**: Fail-by-default validation that injects `Info.plist`, `.entitlements`, and Android `mainTemplate.xml` entries on iOS / Android builds.
+- **Samples**: Four code-only samples — `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, `DeepLinkRouter`.
+- **Docs**: Per-subsystem deep-dive references under `docs/` plus editor-tooling guides for the Explorer and build pipeline.
 
 ### Changed
 - Refactored all namespaces to `GameLovers.MobileServices.*`.
@@ -25,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependencies to target Unity 6 (6000.0+).
 - Legacy tap detection (replaced by Unity Input System's `TapInteraction`).
 - Gamepad input management (out of scope for mobile services), use the new input system configuration for that
+
+### Removed
+- **Editor-tooling automated tests**: removed the `GameLovers.MobileServices.Editor.Tests` assembly and its five test classes (`EditorPlatformSimulatorTest`, `MobileServicesBuildPostprocessorTest`, `MobileServicesExplorerWindowTest`, `MobileServicesSettingsTest`, `MobileSimulatorWindowTest`), along with the `InternalsVisibleTo("GameLovers.MobileServices.Editor.Tests")` grants on `Runtime/AssemblyInfo.cs` and the now-empty `Editor/AssemblyInfo.cs`. Editor tooling is now validated manually only — see `Tests/AGENTS.md` §1 / §9 for the policy and rationale.
 
 ### Migration
 This package consolidates three previously separate packages:

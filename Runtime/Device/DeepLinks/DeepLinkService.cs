@@ -62,6 +62,23 @@ namespace GameLovers.MobileServices.Device
 			_onLinkActivated?.Invoke(parsed);
 		}
 
+#if UNITY_EDITOR
+		/// <summary>
+		/// Editor-only simulator hook. Mimics what <c>Application.deepLinkActivated</c> would do
+		/// when the OS hands the app a link at runtime — supersedes any pending cold-start link
+		/// and dispatches to all current subscribers.
+		/// </summary>
+		internal void SimulateLinkActivated(Uri uri)
+		{
+			if (uri == null)
+			{
+				return;
+			}
+			_pendingColdStartLink = null;
+			_onLinkActivated?.Invoke(uri);
+		}
+#endif
+
 		private static Uri TryParse(string url)
 		{
 			if (string.IsNullOrEmpty(url))

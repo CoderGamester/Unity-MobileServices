@@ -15,6 +15,8 @@ namespace GameLovers.MobileServices.Haptics
 
 		private bool _enabled = true;
 		private bool _isPlaying;
+		private HapticPreset _currentPreset;
+		private float _currentDurationSeconds;
 
 		public HapticsService() : this(CreateDefaultBackend()) { }
 
@@ -22,6 +24,26 @@ namespace GameLovers.MobileServices.Haptics
 		{
 			_backend = backend;
 		}
+
+		/// <summary>
+		/// The preset most recently passed to a <c>Play*</c> call. Reads <see cref="HapticPreset.None"/>
+		/// when no haptic is currently playing or when the last call was <see cref="PlayCustom"/>.
+		/// </summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal HapticPreset CurrentPreset => _isPlaying ? _currentPreset : HapticPreset.None;
+
+		/// <summary>
+		/// Real-time-seconds duration scheduled for the active haptic. <c>0</c> when nothing is playing,
+		/// the preset's natural one-shot duration when invoked via <see cref="PlayPreset"/>,
+		/// <c>-1</c> for an indefinite loop, or the explicit positive duration passed to
+		/// <see cref="PlayPresetDuration"/> / <see cref="PlayCustom"/>.
+		/// </summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal float CurrentDurationSeconds => _isPlaying ? _currentDurationSeconds : 0f;
+
+		/// <summary>The backend selected for the current platform.</summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal IHapticsBackend Backend => _backend;
 
 		/// <inheritdoc />
 		public bool Enabled
@@ -67,11 +89,15 @@ namespace GameLovers.MobileServices.Haptics
 			{
 				_backend.PlayPresetOneShot(preset);
 				_isPlaying = true;
+				_currentPreset = preset;
+				_currentDurationSeconds = HapticEnvelopes.GetNaturalDurationSeconds(preset);
 				return;
 			}
 
 			_backend.PlayPresetLoop(preset);
 			_isPlaying = true;
+			_currentPreset = preset;
+			_currentDurationSeconds = duration;
 
 			if (duration > 0f)
 			{
@@ -92,6 +118,8 @@ namespace GameLovers.MobileServices.Haptics
 			intensity01 = Mathf.Clamp01(intensity01);
 			_backend.PlayCustom(intensity01, durationMs);
 			_isPlaying = true;
+			_currentPreset = HapticPreset.None;
+			_currentDurationSeconds = durationMs / 1000f;
 
 			EnsureHost().ScheduleStop(durationMs / 1000f, OnAutoStop);
 		}
@@ -106,6 +134,8 @@ namespace GameLovers.MobileServices.Haptics
 			}
 			_backend.Stop();
 			_isPlaying = false;
+			_currentPreset = HapticPreset.None;
+			_currentDurationSeconds = 0f;
 		}
 
 		private void OnAutoStop()
@@ -116,6 +146,8 @@ namespace GameLovers.MobileServices.Haptics
 			}
 			_backend.Stop();
 			_isPlaying = false;
+			_currentPreset = HapticPreset.None;
+			_currentDurationSeconds = 0f;
 		}
 
 		private void CancelPendingAutoStop()

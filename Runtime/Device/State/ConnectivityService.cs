@@ -12,8 +12,20 @@ namespace GameLovers.MobileServices.Device
 
 		private NetworkReachability _lastStatus;
 
+#if UNITY_EDITOR
+		// Editor-only simulator override. When set, Status reads this instead of the live
+		// Application.internetReachability so the Mobile Services Explorer's Device tab can
+		// preview connectivity transitions without needing a real network state change.
+		internal static NetworkReachability? EditorReachabilityOverride;
+#endif
+
 		/// <inheritdoc />
-		public NetworkReachability Status => Application.internetReachability;
+		public NetworkReachability Status =>
+#if UNITY_EDITOR
+			EditorReachabilityOverride ?? Application.internetReachability;
+#else
+			Application.internetReachability;
+#endif
 
 		/// <inheritdoc />
 		public event Action<NetworkReachability> OnStatusChanged;
@@ -58,5 +70,17 @@ namespace GameLovers.MobileServices.Device
 			_lastStatus = current;
 			OnStatusChanged?.Invoke(current);
 		}
+
+#if UNITY_EDITOR
+		/// <summary>
+		/// Editor-only simulator hook. Runs the diff path immediately so the Explorer's
+		/// "Set Connectivity" button surfaces transitions without waiting for the host's
+		/// per-second tick.
+		/// </summary>
+		internal void SimulateStatusChanged()
+		{
+			Tick();
+		}
+#endif
 	}
 }

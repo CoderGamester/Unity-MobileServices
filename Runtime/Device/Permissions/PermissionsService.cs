@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using GameLovers.MobileServices.Device.Internal;
@@ -19,11 +20,20 @@ namespace GameLovers.MobileServices.Device
 		[DllImport("__Internal")] private static extern void _GameLoversPermissionsRequest(int permissionId, int requestId, string callbackGameObject, string callbackMethod);
 #endif
 
+#if UNITY_EDITOR
+		// Editor-only override hooks consumed by EditorPlatformSimulator. When set, the editor
+		// short-circuit paths consult these instead of returning the default Granted. Keeps
+		// runtime non-Editor builds untouched.
+		internal static Func<AppPermission, PermissionStatus> EditorCheckOverride;
+		internal static Func<AppPermission, PermissionStatus> EditorRequestOverride;
+#endif
+
 		/// <inheritdoc />
 		public PermissionStatus Check(AppPermission permission)
 		{
 #if UNITY_EDITOR
-			return PermissionStatus.Granted;
+			var over = EditorCheckOverride;
+			return over != null ? over(permission) : PermissionStatus.Granted;
 #elif UNITY_IOS
 			return (PermissionStatus)_GameLoversPermissionsCheck((int)permission);
 #elif UNITY_ANDROID
@@ -33,11 +43,28 @@ namespace GameLovers.MobileServices.Device
 #endif
 		}
 
+		/// <summary>
+		/// Snapshot of <see cref="Check"/> across every <see cref="AppPermission"/> value. Used by
+		/// the Mobile Services Explorer Permissions tab to render the per-permission status grid
+		/// without forcing callers to iterate the enum themselves.
+		/// </summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal IReadOnlyDictionary<AppPermission, PermissionStatus> CheckSnapshot()
+		{
+			var dict = new Dictionary<AppPermission, PermissionStatus>();
+			foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
+			{
+				dict[p] = Check(p);
+			}
+			return dict;
+		}
+
 		/// <inheritdoc />
 		public Task<PermissionStatus> RequestAsync(AppPermission permission)
 		{
 #if UNITY_EDITOR
-			return Task.FromResult(PermissionStatus.Granted);
+			var over = EditorRequestOverride;
+			return Task.FromResult(over != null ? over(permission) : PermissionStatus.Granted);
 #elif UNITY_IOS
 			var tcs = new TaskCompletionSource<PermissionStatus>();
 			var id = PermissionsCallbackReceiver.Instance.Register(tcs);

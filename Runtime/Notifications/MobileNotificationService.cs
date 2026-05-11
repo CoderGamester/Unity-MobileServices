@@ -69,6 +69,7 @@ namespace GameLovers.MobileServices.Notifications
 	public class MobileNotificationService : INotificationService
 	{
 		private readonly GameNotificationsMonoBehaviour _monoBehaviour;
+		private readonly GameNotificationChannel[] _channels;
 
 		/// <inheritdoc />
 		public event Action<PendingNotification> OnLocalNotificationDeliveredEvent;
@@ -77,9 +78,18 @@ namespace GameLovers.MobileServices.Notifications
 
 		/// <inheritdoc />
 		public IReadOnlyList<PendingNotification> PendingNotifications => _monoBehaviour.PendingNotifications;
-		
+
+		/// <summary>The queueing / delivery mode the host MonoBehaviour was configured with.</summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal OperatingMode CurrentMode => _monoBehaviour != null ? _monoBehaviour.Mode : OperatingMode.NoQueue;
+
+		/// <summary>The channels passed to the constructor (Android default-channel-id resolution + Explorer display).</summary>
+		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
+		internal IReadOnlyList<GameNotificationChannel> Channels => _channels;
+
 		public MobileNotificationService(params GameNotificationChannel[] channels)
 		{
+			_channels = channels ?? Array.Empty<GameNotificationChannel>();
 			_monoBehaviour = new GameObject("NotificationService").AddComponent<GameNotificationsMonoBehaviour>();
 			_monoBehaviour.OnLocalNotificationDelivered = OnLocalNotificationDeliveredEvent;
 			_monoBehaviour.OnLocalNotificationExpired = OnLocalNotificationExpiredEvent;

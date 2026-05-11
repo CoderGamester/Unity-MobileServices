@@ -24,8 +24,9 @@ For runtime architecture, gotchas, and package-level context, see the parent [`A
   - `PermissionsCallbackReceiver`, `AttCallbackReceiver` (need a live MonoBehaviour to receive `UnitySendMessage`-style payloads)
   - Use `[UnityTest]` returning `IEnumerator`.
 - **PlayMode / Smoke** (`PlayMode/Smoke/`): Lightweight "instantiate without throwing" tests. `GestureController` lives here — driving real `EnhancedTouch` events deterministically requires test-input plumbing that exceeds the smoke-test scope; we only verify lifecycle (enable/disable subscription).
+- **Editor tooling (NOT tested)**: types under `Editor/` are validated by manual editor smoke + on-device builds, not by automated tests. This explicitly includes `MobileServicesExplorerWindow`, `MobileSimulatorWindow`, `MobileSimulatorRuntimeOverlay`, `MobileServicesDeviceSimulatorPlugin`, every `MobileServiceTab` subclass, `EditorPlatformSimulator`, `MobileServicesSettings` / `MobileServicesSettingsProvider`, `MobileServicesScanner`, `MobileServicesBuildPostprocessor`. The previous `GameLovers.MobileServices.Editor.Tests` assembly was removed in v1.0.0 — see §9 for rationale.
 
-**Decision tree**: if the type spawns a `GameObject`, subscribes to a Unity callback that needs a frame to fire, or relies on an internal MonoBehaviour singleton → **PlayMode**; otherwise → **EditMode**.
+**Decision tree**: if the type spawns a `GameObject`, subscribes to a Unity callback that needs a frame to fire, or relies on an internal MonoBehaviour singleton → **PlayMode**; if it lives under `Editor/` → **not tested**; otherwise → **EditMode**.
 
 ## 2. Namespace and Suppression
 All test files use `namespace GameLoversEditor.MobileServices.Tests` with the suppression comment:
@@ -76,6 +77,7 @@ The following code paths are **not** automated-testable from the EditMode/PlayMo
 - **`DeepLinkService` cold-start replay** — requires `Application.absoluteURL` to be non-empty, which only happens when the OS launches the app with a deep link. Black-box test #59 (cold-start absent) is the only automated coverage; the replay path is verified manually with `xcrun simctl openurl` (iOS) / `adb shell am start -a android.intent.action.VIEW -d <uri>` (Android).
 - **`GestureController` end-to-end gesture detection** — driving `UnityEngine.InputSystem.EnhancedTouch.Touch` deterministically from a test requires the Input System's `InputTestFixture`, which adds a non-trivial setup cost. Only the lifecycle (subscribe/unsubscribe) is smoke-tested; the math is fully covered through `ActiveGesture` / `SwipeInput` / `TapInput` unit tests.
 - **`BatteryService` low-power-mode change events** — driving an `OnIosLowPowerModeChanged` fan-out *through* `BatteryService` requires a `DeviceServicesHost` event invocation that's not reachable without reflection; we instead test the host's fan-out directly (`DeviceServicesHostTest.OnIosLowPowerModeChanged_PublicMethod_FanOutsToSubscribers`) and trust subscription wiring in `BatteryService` ctor.
+- **Editor tooling** — all `Editor/` assembly types are validated manually (open the menu items, drive the Explorer / Simulator Window / Device Simulator plugin, exercise the Settings provider, perform a real iOS / Android build). Automated tests in this scope were dropped in v1.0.0 (`GameLovers.MobileServices.Editor.Tests` assembly and its five test classes — `EditorPlatformSimulatorTest`, `MobileServicesBuildPostprocessorTest`, `MobileServicesExplorerWindowTest`, `MobileServicesSettingsTest`, `MobileSimulatorWindowTest` — were removed) because they tested UIToolkit wiring rather than behaviour that affects players, and the maintenance cost (UIToolkit visual-tree diffs, EditorWindow lifecycle quirks) exceeded the regression-catch value.
 
 ## 10. Test Directory Layout
 
@@ -91,3 +93,4 @@ Update this file when:
 - New test directories or categories are added
 - Mock/stub patterns change (e.g., NSubstitute added to the PlayMode asmdef)
 - A coverage gap from §9 becomes testable (e.g., a future Input System `InputTestFixture` adoption could promote `GestureController` from smoke to unit)
+- An editor-tooling type previously listed in §1's not-tested group becomes amenable to automated coverage (e.g. behaviour split out into a runtime-facing helper that no longer depends on UIToolkit / EditorWindow plumbing)

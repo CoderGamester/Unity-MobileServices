@@ -13,6 +13,12 @@ namespace GameLovers.MobileServices.Device
 		private Rect _lastSafeArea;
 		private Vector2Int _lastResolution;
 
+#if UNITY_EDITOR
+		// Editor-only simulator override. When set, the LateUpdate poll reports this rect
+		// instead of Screen.safeArea so the Explorer can drive notch/dynamic-island previews.
+		internal static Rect? EditorSafeAreaOverride;
+#endif
+
 		/// <inheritdoc />
 		public Rect SafeArea => _lastSafeArea;
 
@@ -42,7 +48,11 @@ namespace GameLovers.MobileServices.Device
 
 		private void Tick()
 		{
+#if UNITY_EDITOR
+			var current = EditorSafeAreaOverride ?? Screen.safeArea;
+#else
 			var current = Screen.safeArea;
+#endif
 			var resolution = new Vector2Int(Screen.width, Screen.height);
 
 			if (current == _lastSafeArea && resolution == _lastResolution)
@@ -54,5 +64,17 @@ namespace GameLovers.MobileServices.Device
 			_lastResolution = resolution;
 			OnSafeAreaChanged?.Invoke(current);
 		}
+
+#if UNITY_EDITOR
+		/// <summary>
+		/// Editor-only simulator hook. Forces an immediate diff against
+		/// <see cref="EditorSafeAreaOverride"/> so the Explorer's "Set Safe Area" affordance
+		/// surfaces the change without waiting for the next LateUpdate tick.
+		/// </summary>
+		internal void SimulateSafeAreaChanged()
+		{
+			Tick();
+		}
+#endif
 	}
 }

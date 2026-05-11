@@ -67,65 +67,6 @@ namespace GameLovers.MobileServices.Haptics.Internal
 			return _vibrator != null && _vibrationEffectClass != null;
 		}
 
-		private static (long[] timingsMs, int[] amplitudes) GetEnvelopeFor(HapticPreset preset)
-		{
-			// Time/amplitude pairs are in seconds and [0,1] amplitude (matching Lofelt's HapticPatterns
-			// shape). Translated to (long[] millis, int[] 0..255 amplitudes) for VibrationEffect.
-			float[] timesSec; float[] amps;
-			switch (preset)
-			{
-				case HapticPreset.Selection:
-					timesSec = new[] { 0.04f };
-					amps     = new[] { 0.471f };
-					break;
-				case HapticPreset.Success:
-					timesSec = new[] { 0.04f, 0.04f, 0.16f };
-					amps     = new[] { 0.157f, 0.0f,  1.000f };
-					break;
-				case HapticPreset.Warning:
-					timesSec = new[] { 0.12f, 0.12f, 0.04f };
-					amps     = new[] { 1.000f, 0.0f,  0.470f };
-					break;
-				case HapticPreset.Error:
-					timesSec = new[] { 0.08f, 0.04f, 0.08f, 0.04f, 0.16f, 0.04f, 0.04f };
-					amps     = new[] { 0.470f, 0.0f, 0.470f, 0.0f, 1.000f, 0.0f, 0.157f };
-					break;
-				case HapticPreset.ImpactLight:
-					timesSec = new[] { 0.04f };
-					amps     = new[] { 0.156f };
-					break;
-				case HapticPreset.ImpactMedium:
-					timesSec = new[] { 0.08f };
-					amps     = new[] { 0.471f };
-					break;
-				case HapticPreset.ImpactHeavy:
-					timesSec = new[] { 0.16f };
-					amps     = new[] { 1.000f };
-					break;
-				case HapticPreset.ImpactRigid:
-					timesSec = new[] { 0.04f };
-					amps     = new[] { 1.000f };
-					break;
-				case HapticPreset.ImpactSoft:
-					timesSec = new[] { 0.16f };
-					amps     = new[] { 0.156f };
-					break;
-				default:
-					timesSec = new[] { 0.0f };
-					amps     = new[] { 0.0f };
-					break;
-			}
-
-			var timingsMs  = new long[timesSec.Length];
-			var amplitudes = new int [amps.Length];
-			for (int i = 0; i < timesSec.Length; i++)
-			{
-				timingsMs[i]  = (long)Mathf.Round(timesSec[i] * 1000f);
-				amplitudes[i] = Mathf.Clamp(Mathf.RoundToInt(amps[i] * 255f), 0, 255);
-			}
-			return (timingsMs, amplitudes);
-		}
-
 		private void PlayWaveform(HapticPreset preset, int repeatIndex)
 		{
 			if (!EnsureInitialized() || preset == HapticPreset.None)
@@ -133,7 +74,9 @@ namespace GameLovers.MobileServices.Haptics.Internal
 				return;
 			}
 
-			var (timingsMs, amplitudes) = GetEnvelopeFor(preset);
+			// Envelope tables live in HapticEnvelopes so the editor explorer can reuse the
+			// exact same (timings, amplitudes) the device receives.
+			var (timingsMs, amplitudes) = HapticEnvelopes.GetEnvelopeFor(preset);
 			try
 			{
 				using var effect = _vibrationEffectClass.CallStatic<AndroidJavaObject>(

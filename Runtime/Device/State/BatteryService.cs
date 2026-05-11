@@ -141,9 +141,29 @@ namespace GameLovers.MobileServices.Device
 			{
 				return false;
 			}
+#elif UNITY_EDITOR
+			return EditorLowPowerModeOverride;
 #else
 			return false;
 #endif
 		}
+
+#if UNITY_EDITOR
+		// Editor-only simulator hook. EditorPlatformSimulator flips this then calls
+		// SimulateLowPowerModeChanged() to fan the change through to subscribers, mirroring
+		// what NSProcessInfoPowerStateDidChangeNotification would do on iOS.
+		internal static bool EditorLowPowerModeOverride;
+
+		/// <summary>
+		/// Editor-only test/simulator hook. Runs the LPM refresh path that would normally be
+		/// driven by the iOS bridge (<c>UnitySendMessage("DeviceServicesHost", "OnIosLowPowerModeChanged", "")</c>),
+		/// re-reading <see cref="EditorLowPowerModeOverride"/> and firing
+		/// <see cref="OnLowPowerModeChanged"/> on transition.
+		/// </summary>
+		internal void SimulateLowPowerModeChanged()
+		{
+			RefreshLowPowerMode();
+		}
+#endif
 	}
 }

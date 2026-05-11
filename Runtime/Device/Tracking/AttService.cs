@@ -16,6 +16,13 @@ namespace GameLovers.MobileServices.Device
 		[DllImport("__Internal")] private static extern void _GameLoversAttRequestAuthorization(int requestId, string callbackGameObject, string callbackMethod);
 #endif
 
+#if UNITY_EDITOR
+		// Editor-only override hooks consumed by EditorPlatformSimulator. When set, the editor
+		// short-circuit paths consult these instead of returning the default Authorized.
+		internal static AttStatus? EditorCurrentStatusOverride;
+		internal static AttStatus? EditorRequestResultOverride;
+#endif
+
 		/// <inheritdoc />
 		public AttStatus CurrentStatus
 		{
@@ -23,6 +30,8 @@ namespace GameLovers.MobileServices.Device
 			{
 #if UNITY_IOS && !UNITY_EDITOR
 				return (AttStatus)_GameLoversAttCurrentStatus();
+#elif UNITY_EDITOR
+				return EditorCurrentStatusOverride ?? AttStatus.Authorized;
 #else
 				return AttStatus.Authorized;
 #endif
@@ -37,6 +46,8 @@ namespace GameLovers.MobileServices.Device
 			var id = AttCallbackReceiver.Instance.Register(tcs);
 			_GameLoversAttRequestAuthorization(id, "AttCallbackReceiver", "OnAttResult");
 			return tcs.Task;
+#elif UNITY_EDITOR
+			return Task.FromResult(EditorRequestResultOverride ?? AttStatus.Authorized);
 #else
 			return Task.FromResult(AttStatus.Authorized);
 #endif

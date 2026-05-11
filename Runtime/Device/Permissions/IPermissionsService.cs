@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 // ReSharper disable once CheckNamespace
@@ -39,5 +40,25 @@ namespace GameLovers.MobileServices.Device
 
 		/// <summary>Requests the permission, prompting the user if not yet determined. Idempotent if already granted/denied.</summary>
 		Task<PermissionStatus> RequestAsync(AppPermission permission);
+
+		/// <summary>
+		/// Convenience for the common multi-permission flows (e.g. camera+mic for video chat). Awaits
+		/// each <see cref="RequestAsync(AppPermission)"/> sequentially — iOS prompts cannot stack — and
+		/// returns a dictionary keyed by permission.
+		/// </summary>
+		/// <remarks>
+		/// Default interface method — implementations may override, but the default behaviour is
+		/// expected to be sufficient for the vast majority of consumers.
+		/// </remarks>
+		async Task<IReadOnlyDictionary<AppPermission, PermissionStatus>> RequestAsync(params AppPermission[] permissions)
+		{
+			var result = new Dictionary<AppPermission, PermissionStatus>();
+			if (permissions == null) return result;
+			foreach (var p in permissions)
+			{
+				result[p] = await RequestAsync(p);
+			}
+			return result;
+		}
 	}
 }
