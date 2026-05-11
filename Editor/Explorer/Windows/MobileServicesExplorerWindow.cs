@@ -11,13 +11,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.Windows
 	/// <summary>
 	/// Main Mobile Services Explorer dockable window. Open via <c>Tools &gt; GameLovers &gt;
 	/// Mobile Services Explorer</c>. Top-row <c>Render as: iOS | Android</c> toggle drives the
-	/// platform skin of the truth-mirror <see cref="MobileSimulatorWindow"/>.
+	/// platform skin of the truth-mirror <see cref="MobileSimulatorWindow"/> (the runtime
+	/// overlay carries its own platform value driven by the Device Simulator plugin — see
+	/// <see cref="MobileSimulatorState.OverlayPlatform"/>).
 	/// </summary>
 	public class MobileServicesExplorerWindow : EditorWindow
 	{
 		private const string SelectedTabPrefKey = "GameLovers.MobileServicesExplorer.SelectedTab";
 		private const float MinWidth = 640f;
 		private const float MinHeight = 480f;
+		private const string ScopeHintText = "Controls the Mobile Simulator window only.";
 
 		private TabView _tabView;
 		private DropdownField _platformDropdown;
@@ -75,8 +78,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Windows
 			RestoreSelectedTab();
 
 			_tabView.activeTabChanged += OnActiveTabChanged;
-			MobileSimulatorState.PluginConnectedChanged += OnPluginConnectedChanged;
-			ApplyPluginConnectedState(MobileSimulatorState.IsActivePluginConnected);
 		}
 
 		private void LoadSharedStyleSheet()
@@ -109,17 +110,25 @@ namespace GameLovers.MobileServices.Editor.Explorer.Windows
 			_platformDropdown = new DropdownField
 			{
 				choices = new List<string> { SimulatedPlatform.iOS.ToString(), SimulatedPlatform.Android.ToString() },
-				value = MobileSimulatorState.Platform.ToString(),
+				value = MobileSimulatorState.WindowPlatform.ToString(),
+				tooltip = ScopeHintText,
 			};
 			_platformDropdown.AddToClassList("explorer-platform-dropdown");
 			_platformDropdown.RegisterValueChangedCallback(evt =>
 			{
 				if (System.Enum.TryParse<SimulatedPlatform>(evt.newValue, out var parsed))
 				{
-					MobileSimulatorState.Platform = parsed;
+					MobileSimulatorState.WindowPlatform = parsed;
 				}
 			});
 			headerRow.Add(_platformDropdown);
+
+			// Scope hint sits inline next to the dropdown so the next dev who pairs the Explorer with
+			// the Device Simulator plugin doesn't expect this toggle to drive the in-Game-view overlay
+			// (it does not — the overlay's platform is auto-synced by the plugin from the device profile).
+			var scopeHint = new Label(ScopeHintText);
+			scopeHint.AddToClassList("explorer-header-hint");
+			headerRow.Add(scopeHint);
 
 			var openSimBtn = new Button(() => MobileSimulatorWindow.Open()) { text = "Open Simulator" };
 			openSimBtn.AddToClassList("explorer-header-button");
@@ -174,21 +183,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Windows
 			{
 				_tabView.activeTabChanged -= OnActiveTabChanged;
 			}
-			MobileSimulatorState.PluginConnectedChanged -= OnPluginConnectedChanged;
-		}
-
-		private void OnPluginConnectedChanged(bool connected) => ApplyPluginConnectedState(connected);
-
-		private void ApplyPluginConnectedState(bool connected)
-		{
-			if (_platformDropdown == null)
-			{
-				return;
-			}
-			_platformDropdown.SetEnabled(!connected);
-			_platformDropdown.tooltip = connected
-				? "Platform is driven by the Mobile Services panel inside Unity's Device Simulator. Close the Simulator view (or disable the Mobile Services plugin in it) to regain control here."
-				: null;
 		}
 	}
 }

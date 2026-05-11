@@ -16,22 +16,26 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 	/// <summary>
 	/// <see cref="DeviceSimulatorPlugin"/> implementation that embeds a slim action-button control
 	/// panel inside Unity's Device Simulator window (Window &gt; General &gt; Device Simulator).
-	/// Drives the same <see cref="MobileSimulatorState"/> broker + <see cref="EditorPlatformSimulator"/>
-	/// API the Explorer tabs use, so designers can iterate on mobile UI surfaces with the simulated
-	/// phone screen sitting right next to the controls that drive it.
+	/// Drives the in-Game-view <c>MobileSimulatorRuntimeOverlay</c> via the
+	/// <see cref="MobileSimulatorState"/> broker so designers can iterate on mobile UI surfaces with
+	/// the mocks rendered right inside the simulated phone screen.
 	/// </summary>
 	/// <remarks>
-	/// <para>Auto-syncs <see cref="MobileSimulatorState.Platform"/> from the selected device profile
-	/// (via <c>Application.platform</c>, which Unity's Device Simulator spoofs for iOS / Android
-	/// device picks). While the plugin is alive, <see cref="MobileSimulatorState.IsActivePluginConnected"/>
-	/// flips to <c>true</c>; the Mobile Services Explorer header consumes this flag to grey out its
-	/// own platform dropdown — when this plugin is hosting the platform skin, the dropdown becomes
-	/// redundant.</para>
+	/// <para><b>Scoped to the runtime overlay.</b> Every <c>Push*</c> call from this panel passes
+	/// <see cref="SimulatorTarget.RuntimeOverlay"/>, so the standalone <c>MobileSimulatorWindow</c>
+	/// is never affected by the plugin — its platform skin and its mocks are independent.</para>
+	/// <para>Auto-syncs <see cref="MobileSimulatorState.OverlayPlatform"/> (the runtime overlay's
+	/// platform skin) from the selected device profile via <c>Application.platform</c>, which
+	/// Unity's Device Simulator spoofs for iOS / Android device picks.
+	/// <see cref="MobileSimulatorState.WindowPlatform"/> is intentionally left alone so the
+	/// Explorer's <c>Render as: iOS | Android</c> dropdown stays interactive and authoritative
+	/// for its own surface.</para>
 	/// <para>Unity auto-discovers <c>DeviceSimulatorPlugin</c> subclasses across all editor
 	/// assemblies — no attribute, no registration boilerplate is needed.</para>
 	/// </remarks>
 	internal sealed class MobileServicesDeviceSimulatorPlugin : DeviceSimulatorPlugin
 	{
+		private const SimulatorTarget OverlayOnly = SimulatorTarget.RuntimeOverlay;
 		private const string DefaultAlertTitle = "Delete Save?";
 		private const string DefaultAlertMessage = "This action cannot be undone.";
 		private const string DefaultToastMessage = "Item Collected!";
@@ -43,15 +47,12 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 		public override string title => "Mobile Services";
 
+		private Label _overlayHintBanner;
+		private Button _overlayHintOpenSettingsBtn;
+
 		public override void OnCreate()
 		{
-			MobileSimulatorState.IsActivePluginConnected = true;
 			SyncPlatformFromHost();
-		}
-
-		public override void OnDestroy()
-		{
-			MobileSimulatorState.IsActivePluginConnected = false;
 		}
 
 		public override VisualElement OnCreateUI()
@@ -60,6 +61,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			LoadStyleSheet(root);
 
 			root.Add(BuildHeader());
+			root.Add(BuildOverlayHintBanner());
 			root.Add(BuildNativeUiSection());
 			root.Add(BuildNotificationsSection());
 			root.Add(BuildDeviceSection());
@@ -71,8 +73,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			// DeviceSimulator.deviceChanged would be slightly tidier but its delegate signature
 			// is documented inconsistently across Unity 6 minor versions; reading Application.platform
 			// (which the simulator spoofs for iOS / Android device profile picks) is identical in
-			// outcome and version-agnostic.
-			root.schedule.Execute(SyncPlatformFromHost).Every(500);
+			// outcome and version-agnostic. Same poll refreshes the overlay-required banner so the
+			// hint disappears the moment the user enables the setting and presses Play (no extra
+			// EditorApplication.playModeStateChanged subscription needed).
+			root.schedule.Execute(() =>
+			{
+				SyncPlatformFromHost();
+				RefreshOverlayHintBanner();
+			}).Every(500);
 
 			return root;
 		}
@@ -80,18 +88,18 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		/// <summary>
 		/// Reads <see cref="Application.platform"/> — Unity's Device Simulator spoofs it to match
 		/// the selected device profile, so an iPhone pick yields <c>IPhonePlayer</c> and a Pixel
-		/// pick yields <c>Android</c>. Falls back to the existing <see cref="MobileSimulatorState.Platform"/>
-		/// when running on a non-mobile editor with no simulator selection.
+		/// pick yields <c>Android</c>. Writes only to <see cref="MobileSimulatorState.OverlayPlatform"/>
+		/// so the Explorer's standalone-window dropdown is never clobbered.
 		/// </summary>
 		private static void SyncPlatformFromHost()
 		{
 			switch (Application.platform)
 			{
 				case RuntimePlatform.IPhonePlayer:
-					MobileSimulatorState.Platform = SimulatedPlatform.iOS;
+					MobileSimulatorState.OverlayPlatform = SimulatedPlatform.iOS;
 					break;
 				case RuntimePlatform.Android:
-					MobileSimulatorState.Platform = SimulatedPlatform.Android;
+					MobileSimulatorState.OverlayPlatform = SimulatedPlatform.Android;
 					break;
 			}
 		}
@@ -105,7 +113,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			title.AddToClassList("msp-title");
 			header.Add(title);
 
-			var note = new Label("Drives the truth-mirror simulator. Pair with the Explorer for full-state diagnostics.");
+			var note = new Label("Drives the in-Game-view runtime overlay. Pair with the Explorer for full-state diagnostics.");
 			note.AddToClassList("msp-note");
 			header.Add(note);
 
@@ -116,13 +124,75 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			explorerBtn.AddToClassList("msp-button");
 			buttonRow.Add(explorerBtn);
 
-			var dismissBtn = new Button(EditorPlatformSimulator.DismissAllOverlays) { text = "Dismiss all mocks" };
+			// Scoped to the runtime overlay so the standalone Simulator window keeps any mocks the
+			// Explorer has open. Use EditorPlatformSimulator.DismissAllOverlays() for the global form.
+			var dismissBtn = new Button(() => MobileSimulatorState.PushDismissAll(OverlayOnly)) { text = "Dismiss all mocks" };
 			dismissBtn.AddToClassList("msp-button");
 			dismissBtn.AddToClassList("msp-button-danger");
 			buttonRow.Add(dismissBtn);
 
 			header.Add(buttonRow);
 			return header;
+		}
+
+		/// <summary>
+		/// Inline banner spelling out the overlay-required precondition for this panel: the runtime
+		/// overlay is opt-in (Project Settings → GameLovers → Mobile Services → Editor tooling →
+		/// Enable runtime simulator overlay) AND only spawns on EnteredPlayMode. Without it, every
+		/// mock fired here goes nowhere visible — by design, since the panel is scoped to
+		/// <see cref="SimulatorTarget.RuntimeOverlay"/>. Banner auto-hides once both preconditions
+		/// are satisfied; the 500 ms poll alongside <see cref="SyncPlatformFromHost"/> drives the
+		/// refresh so toggling the setting + pressing Play removes the banner without needing the
+		/// user to reopen the panel.
+		/// </summary>
+		private VisualElement BuildOverlayHintBanner()
+		{
+			var banner = new VisualElement { name = "msp-overlay-hint" };
+			banner.AddToClassList("msp-overlay-hint");
+
+			_overlayHintBanner = new Label();
+			_overlayHintBanner.AddToClassList("msp-overlay-hint-label");
+			banner.Add(_overlayHintBanner);
+
+			_overlayHintOpenSettingsBtn = new Button(() =>
+				SettingsService.OpenProjectSettings("Project/GameLovers/Mobile Services"))
+			{
+				text = "Open Project Settings \u2192",
+			};
+			_overlayHintOpenSettingsBtn.AddToClassList("msp-button");
+			banner.Add(_overlayHintOpenSettingsBtn);
+
+			RefreshOverlayHintBanner();
+			return banner;
+		}
+
+		private void RefreshOverlayHintBanner()
+		{
+			if (_overlayHintBanner == null)
+			{
+				return;
+			}
+
+			var enabled = MobileServicesSettings.instance.EnableRuntimeSimulatorOverlay;
+			var inPlayMode = EditorApplication.isPlayingOrWillChangePlaymode;
+			var overlayLive = enabled && inPlayMode;
+
+			_overlayHintBanner.parent.style.display = overlayLive ? DisplayStyle.None : DisplayStyle.Flex;
+			if (overlayLive)
+			{
+				return;
+			}
+
+			if (!enabled)
+			{
+				_overlayHintBanner.text = "Runtime overlay is OFF. Enable it in Project Settings → GameLovers → Mobile Services → Editor tooling, then press Play. Until then, mocks fired from this panel render nowhere (the panel is scoped to the overlay).";
+				_overlayHintOpenSettingsBtn.style.display = DisplayStyle.Flex;
+			}
+			else
+			{
+				_overlayHintBanner.text = "Runtime overlay is enabled but not alive yet — press Play. Mocks fired now will render once the overlay spawns on EnteredPlayMode.";
+				_overlayHintOpenSettingsBtn.style.display = DisplayStyle.None;
+			}
 		}
 
 		private static VisualElement BuildNativeUiSection()
@@ -136,18 +206,18 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			{
 				Message = DefaultToastMessage,
 				IsLongDuration = false,
-			})));
+			}, OverlayOnly)));
 			foldout.Add(MakeActionButton("Toast (long)", () => MobileSimulatorState.PushToast(new SimulatedToastSpec
 			{
 				Message = DefaultToastMessage,
 				IsLongDuration = true,
-			})));
+			}, OverlayOnly)));
 			foldout.Add(MakeActionButton("Share", () => MobileSimulatorState.PushShare(new SimulatedShareSpec
 			{
 				Text = DefaultShareText,
 				Url = DefaultShareUrl,
-			})));
-			foldout.Add(MakeActionButton("Review prompt", MobileSimulatorState.PushReview));
+			}, OverlayOnly)));
+			foldout.Add(MakeActionButton("Review prompt", () => MobileSimulatorState.PushReview(OverlayOnly)));
 
 			return foldout;
 		}
@@ -162,7 +232,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				ChannelName = "Rewards",
 				Title = DefaultNotificationTitle,
 				Body = DefaultNotificationBody,
-			})));
+			}, OverlayOnly)));
 
 			return foldout;
 		}
@@ -209,7 +279,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 					UsageDescription = MobileServicesSettings.instance.GetUsageDescriptionEn(p),
 					IsAtt = false,
 					OnResolved = null,
-				});
+				}, OverlayOnly);
 			});
 			foldout.Add(showBtn);
 
@@ -236,7 +306,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 					UsageDescription = MobileServicesSettings.instance.GetAttUsageDescriptionEn(),
 					IsAtt = true,
 					OnResolved = null,
-				});
+				}, OverlayOnly);
 			}));
 
 			var queuedResult = new EnumField("Queue next request result", AttStatus.Authorized);
@@ -293,7 +363,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 					new SimulatedAlertButton { Text = "Cancel", Style = SimulatedAlertButtonStyle.Cancel },
 					new SimulatedAlertButton { Text = "Delete", Style = SimulatedAlertButtonStyle.Destructive },
 				},
-			});
+			}, OverlayOnly);
 		}
 
 		private static void LoadStyleSheet(VisualElement root)

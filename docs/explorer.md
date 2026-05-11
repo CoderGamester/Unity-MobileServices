@@ -6,7 +6,7 @@ Two editor windows ship with the package, both designed to be docked next to (or
 
 `Tools > GameLovers > Mobile Services Explorer`
 
-Dockable `EditorWindow` (`MobileServicesExplorerWindow`) with eight tabs and a top-row `Render as: iOS | Android` dropdown.
+Dockable `EditorWindow` (`MobileServicesExplorerWindow`) with eight tabs and a top-row `Render as: iOS | Android` dropdown. The dropdown drives the standalone `MobileSimulatorWindow`'s platform skin only — the in-Game-view runtime overlay carries its own platform value (auto-synced by the Device Simulator plugin from the selected device profile). An inline scope-hint label next to the dropdown spells this out.
 
 | Tab | What it surfaces / drives |
 |-----|---------------------------|
@@ -24,6 +24,7 @@ Dockable `EditorWindow` (`MobileServicesExplorerWindow`) with eight tabs and a t
 - Each tab subclasses `MobileServiceTab` (mirrors `ServiceTab` in `com.gamelovers.services`).
 - Sticky-foldout state, digest-short-circuit, play-mode-aware refresh — all the workspace UIToolkit gotcha hardening is in the base.
 - The Explorer drives the simulator window via `MobileSimulatorState` (singleton broker / event bus). Tabs call `MobileSimulatorState.Push*` methods; the simulator subscribes and renders.
+- **Per-target routing**: every push carries a `SimulatorTarget` flag (defaults to `All` so every alive renderer paints). The Explorer broadcasts; the Device Simulator plugin scopes to `SimulatorTarget.RuntimeOverlay` so its mocks never reach the standalone window. Each renderer also tracks its own platform skin (`WindowPlatform` for the standalone window, `OverlayPlatform` for the runtime overlay), so neither steers the other.
 
 ## Three rendering surfaces
 
@@ -64,7 +65,7 @@ Editor-only `[InitializeOnLoad]` bootstrap that — when enabled — spawns a `D
 
 `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim action-button Control Panel inside Unity's Device Simulator window. Unity auto-discovers the plugin — no menu item, no enable flow.
 
-The panel groups action buttons by subsystem (Native UI / Notifications / Device state / Permissions / ATT / Deep Links) and includes a top-row `Open full Explorer →` button that jumps to the heavyweight diagnostic surface when needed. The plugin **auto-syncs `MobileSimulatorState.Platform`** from the selected device profile (reads `Application.platform`, which Unity's Device Simulator spoofs); while it's alive, the Explorer's `Render as: iOS | Android` dropdown greys out to signal "platform is driven by the Simulator view now."
+The panel groups action buttons by subsystem (Native UI / Notifications / Device state / Permissions / ATT / Deep Links) and includes a top-row `Open full Explorer →` button that jumps to the heavyweight diagnostic surface when needed. The plugin is **scoped to the runtime overlay**: every action button passes `SimulatorTarget.RuntimeOverlay`, including its own `Dismiss all mocks` button, so anything fired from this panel paints inside the simulated phone screen and never disturbs whatever the standalone Simulator window has open. The plugin **auto-syncs `MobileSimulatorState.OverlayPlatform`** from the selected device profile (reads `Application.platform`, which Unity's Device Simulator spoofs) — `WindowPlatform` is left alone, so the Explorer's `Render as: iOS | Android` dropdown stays interactive and authoritative for its own surface.
 
 ### Persistent watermark
 
@@ -135,7 +136,7 @@ Three pieces of the package's editor tooling do overlap with Unity's Device Simu
 |---------|------------------------|--------------------------------|
 | `EditorPlatformSimulator.SetSafeArea` | Richer (real device-accurate cutouts via device picker) | Programmatic API — drives `SafeAreaService.OnSafeAreaChanged` deterministically from unit tests |
 | `EditorPlatformSimulator.SetIosLowPowerMode` | "Low Battery" toggle in newer versions | Programmatic — fires `BatteryService.OnLowPowerModeChanged` for tests |
-| Explorer's `Render as: iOS \| Android` toggle | Richer (per-device + per-platform via picker) | Only swaps the USS skin for the mock dialogs; orthogonal to platform spoofing |
+| Explorer's `Render as: iOS \| Android` toggle | Richer (per-device + per-platform via picker) | Only swaps the USS skin for the standalone Simulator window's mock dialogs; orthogonal to platform spoofing. The runtime overlay's skin is auto-synced from the device profile by the Device Simulator plugin (`OverlayPlatform`), so the two surfaces don't fight over a single platform value. |
 
 If your iteration loop is interactive (designer-paired phone or just clicking around), Unity's Device Simulator wins for safe-area / platform / device-frame work. If your iteration loop is scripted (CI tests, automated previews), the `EditorPlatformSimulator` API is the path. Use both — they don't conflict.
 

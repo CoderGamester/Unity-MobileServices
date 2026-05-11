@@ -7,13 +7,35 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 {
 	/// <summary>
-	/// Platform skin currently selected by the Mobile Services Explorer's top-row toggle.
-	/// Drives the truth-mirror overlay's USS swap (iOS / Android).
+	/// Platform skin available to the truth-mirror simulator surfaces. Each surface (standalone
+	/// window vs runtime overlay) carries its own platform value — see
+	/// <see cref="MobileSimulatorState.WindowPlatform"/> and <see cref="MobileSimulatorState.OverlayPlatform"/>.
 	/// </summary>
 	public enum SimulatedPlatform
 	{
 		iOS,
 		Android,
+	}
+
+	/// <summary>
+	/// Routing flag for <see cref="MobileSimulatorState"/> push calls. Producers say which
+	/// renderer surface(s) a mock should appear on; renderers filter on the bit that matches
+	/// their own surface.
+	/// </summary>
+	/// <remarks>
+	/// Defaults to <see cref="All"/> on every <c>Push*</c> overload so existing call sites
+	/// (Explorer tabs, <c>EditorPlatformSimulator</c>) keep their broadcast semantics. The
+	/// Device Simulator plugin opts into the narrower <see cref="RuntimeOverlay"/> scope so its
+	/// mocks paint only inside Unity's Game / Simulator view, never in the standalone
+	/// <c>MobileSimulatorWindow</c>.
+	/// </remarks>
+	[Flags]
+	public enum SimulatorTarget
+	{
+		None             = 0,
+		StandaloneWindow = 1 << 0,
+		RuntimeOverlay   = 1 << 1,
+		All              = StandaloneWindow | RuntimeOverlay,
 	}
 
 	/// <summary>
@@ -83,90 +105,113 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 	/// <summary>
 	/// Editor-only broker decoupling the Explorer tabs and <c>EditorPlatformSimulator</c> from the
-	/// truth-mirror window that paints the mock dialogs. See <c>docs/explorer.md</c>.
+	/// truth-mirror windows that paint the mock dialogs. See <c>docs/explorer.md</c>.
 	/// </summary>
+	/// <remarks>
+	/// <para><b>Per-target routing.</b> Every push carries a <see cref="SimulatorTarget"/>
+	/// flag (default <see cref="SimulatorTarget.All"/>) and every renderer subscribes to one
+	/// surface — <see cref="SimulatorTarget.StandaloneWindow"/> for the dockable
+	/// <c>MobileSimulatorWindow</c>, <see cref="SimulatorTarget.RuntimeOverlay"/> for the
+	/// in-Game-view overlay. The platform skin is also split per surface
+	/// (<see cref="WindowPlatform"/> / <see cref="OverlayPlatform"/>) so the Explorer dropdown
+	/// and the Device Simulator plugin's auto-sync can drive their own surfaces independently
+	/// without one stealing the wheel from the other.</para>
+	/// </remarks>
 	public static class MobileSimulatorState
 	{
-		private const string PlatformPrefKey = "GameLovers.MobileServicesExplorer.SimulatedPlatform";
+		private const string WindowPlatformPrefKey  = "GameLovers.MobileServicesExplorer.SimulatedPlatform.Window";
+		private const string OverlayPlatformPrefKey = "GameLovers.MobileServicesExplorer.SimulatedPlatform.Overlay";
 
-		private static SimulatedPlatform _platform = SimulatedPlatform.iOS;
+		private static SimulatedPlatform _windowPlatform  = SimulatedPlatform.iOS;
+		private static SimulatedPlatform _overlayPlatform = SimulatedPlatform.iOS;
 		private static bool _initialized;
-		private static bool _isPluginConnected;
 
-		// ---- Platform ----
-
-		/// <summary>Fires when the user flips the Explorer's <c>Render as: iOS | Android</c> toggle.</summary>
-		public static event Action<SimulatedPlatform> PlatformChanged;
-
-		// ---- DeviceSimulator plugin presence ----
+		// ---- Platform (per-surface) ----
 
 		/// <summary>
-		/// Fires when a <c>MobileServicesDeviceSimulatorPlugin</c> instance is created or destroyed
-		/// inside Unity's Device Simulator window. Consumers (e.g. the Explorer header) use this to
-		/// hand control of the platform skin to the plugin (which auto-syncs from the device profile)
-		/// instead of letting the user pick it manually.
+		/// Fires when the <see cref="WindowPlatform"/> changes — the platform skin used by the
+		/// dockable <c>MobileSimulatorWindow</c> (driven by the Explorer's
+		/// <c>Render as: iOS | Android</c> dropdown).
 		/// </summary>
-		public static event Action<bool> PluginConnectedChanged;
+		public static event Action<SimulatedPlatform> WindowPlatformChanged;
 
 		/// <summary>
-		/// <c>true</c> while at least one <c>MobileServicesDeviceSimulatorPlugin</c> is alive (the
-		/// user has Unity's Simulator view open with our plugin enabled in it).
+		/// Fires when the <see cref="OverlayPlatform"/> changes — the platform skin used by the
+		/// in-Game-view <c>MobileSimulatorRuntimeOverlay</c> (auto-synced from
+		/// <see cref="Application.platform"/> by the Device Simulator plugin's poll).
 		/// </summary>
-		public static bool IsActivePluginConnected
-		{
-			get => _isPluginConnected;
-			internal set
-			{
-				if (_isPluginConnected == value)
-				{
-					return;
-				}
-				_isPluginConnected = value;
-				PluginConnectedChanged?.Invoke(value);
-			}
-		}
+		public static event Action<SimulatedPlatform> OverlayPlatformChanged;
 
-		public static SimulatedPlatform Platform
+		/// <summary>Platform skin for the dockable Simulator window. Persisted to <see cref="EditorPrefs"/>.</summary>
+		public static SimulatedPlatform WindowPlatform
 		{
 			get
 			{
 				EnsureInitialized();
-				return _platform;
+				return _windowPlatform;
 			}
 			set
 			{
 				EnsureInitialized();
-				if (_platform == value)
+				if (_windowPlatform == value)
 				{
 					return;
 				}
-				_platform = value;
-				EditorPrefs.SetInt(PlatformPrefKey, (int)value);
-				PlatformChanged?.Invoke(value);
+				_windowPlatform = value;
+				EditorPrefs.SetInt(WindowPlatformPrefKey, (int)value);
+				WindowPlatformChanged?.Invoke(value);
 			}
 		}
 
-		// ---- Overlay payload streams ----
+		/// <summary>Platform skin for the runtime overlay. Persisted to <see cref="EditorPrefs"/>.</summary>
+		public static SimulatedPlatform OverlayPlatform
+		{
+			get
+			{
+				EnsureInitialized();
+				return _overlayPlatform;
+			}
+			set
+			{
+				EnsureInitialized();
+				if (_overlayPlatform == value)
+				{
+					return;
+				}
+				_overlayPlatform = value;
+				EditorPrefs.SetInt(OverlayPlatformPrefKey, (int)value);
+				OverlayPlatformChanged?.Invoke(value);
+			}
+		}
 
-		public static event Action<SimulatedAlertSpec> AlertRequested;
-		public static event Action<SimulatedToastSpec> ToastRequested;
-		public static event Action<SimulatedShareSpec> ShareRequested;
-		public static event Action ReviewRequested;
-		public static event Action<SimulatedNotificationBannerSpec> NotificationBannerRequested;
-		public static event Action<SimulatedPermissionDialogSpec> PermissionDialogRequested;
-		public static event Action DismissAllRequested;
+		// ---- Overlay payload streams (per-target) ----
+
+		// Each event's first arg is the SimulatorTarget mask the producer addressed; subscribers
+		// short-circuit unless their own surface bit is set.
+		public static event Action<SimulatorTarget, SimulatedAlertSpec> AlertRequested;
+		public static event Action<SimulatorTarget, SimulatedToastSpec> ToastRequested;
+		public static event Action<SimulatorTarget, SimulatedShareSpec> ShareRequested;
+		public static event Action<SimulatorTarget> ReviewRequested;
+		public static event Action<SimulatorTarget, SimulatedNotificationBannerSpec> NotificationBannerRequested;
+		public static event Action<SimulatorTarget, SimulatedPermissionDialogSpec> PermissionDialogRequested;
+		public static event Action<SimulatorTarget> DismissAllRequested;
 
 		// ---- Push entry points ----
 
-		public static void PushAlert(SimulatedAlertSpec spec) => AlertRequested?.Invoke(spec);
-		public static void PushToast(SimulatedToastSpec spec) => ToastRequested?.Invoke(spec);
-		public static void PushShare(SimulatedShareSpec spec) => ShareRequested?.Invoke(spec);
-		public static void PushReview() => ReviewRequested?.Invoke();
-		public static void PushNotificationBanner(SimulatedNotificationBannerSpec spec) =>
-			NotificationBannerRequested?.Invoke(spec);
-		public static void PushPermissionDialog(SimulatedPermissionDialogSpec spec) =>
-			PermissionDialogRequested?.Invoke(spec);
-		public static void PushDismissAll() => DismissAllRequested?.Invoke();
+		public static void PushAlert(SimulatedAlertSpec spec, SimulatorTarget targets = SimulatorTarget.All) =>
+			AlertRequested?.Invoke(targets, spec);
+		public static void PushToast(SimulatedToastSpec spec, SimulatorTarget targets = SimulatorTarget.All) =>
+			ToastRequested?.Invoke(targets, spec);
+		public static void PushShare(SimulatedShareSpec spec, SimulatorTarget targets = SimulatorTarget.All) =>
+			ShareRequested?.Invoke(targets, spec);
+		public static void PushReview(SimulatorTarget targets = SimulatorTarget.All) =>
+			ReviewRequested?.Invoke(targets);
+		public static void PushNotificationBanner(SimulatedNotificationBannerSpec spec, SimulatorTarget targets = SimulatorTarget.All) =>
+			NotificationBannerRequested?.Invoke(targets, spec);
+		public static void PushPermissionDialog(SimulatedPermissionDialogSpec spec, SimulatorTarget targets = SimulatorTarget.All) =>
+			PermissionDialogRequested?.Invoke(targets, spec);
+		public static void PushDismissAll(SimulatorTarget targets = SimulatorTarget.All) =>
+			DismissAllRequested?.Invoke(targets);
 
 		private static void EnsureInitialized()
 		{
@@ -175,7 +220,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				return;
 			}
 			_initialized = true;
-			_platform = (SimulatedPlatform)EditorPrefs.GetInt(PlatformPrefKey, (int)SimulatedPlatform.iOS);
+			_windowPlatform  = (SimulatedPlatform)EditorPrefs.GetInt(WindowPlatformPrefKey,  (int)SimulatedPlatform.iOS);
+			_overlayPlatform = (SimulatedPlatform)EditorPrefs.GetInt(OverlayPlatformPrefKey, (int)SimulatedPlatform.iOS);
 		}
 	}
 }

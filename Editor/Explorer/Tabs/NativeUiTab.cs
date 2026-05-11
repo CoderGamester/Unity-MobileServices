@@ -12,8 +12,27 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 		public override string DisplayName => "Native UI";
 		protected override int RefreshIntervalMs => 1000;
 
+		// Mock-side toast auto-dismiss timings (mirror MobileSimulatorWindow / MobileSimulatorRuntimeOverlay).
+		// Match Android's Toast.LENGTH_SHORT (~2s) / LENGTH_LONG (~3.5s); on iOS the package fakes a toast since
+		// there's no native equivalent, but the durations are kept consistent for editor preview purposes.
+		private const float ToastShortSeconds = 2.0f;
+		private const float ToastLongSeconds = 3.5f;
+		private const string ToastDurationTooltip =
+			"Mirrors Android Toast.LENGTH_SHORT (~2s) and LENGTH_LONG (~3.5s). " +
+			"iOS has no native Toast — the package fakes one and uses the same timings for editor preview parity.";
+
+		// Android has no native action-sheet idiom — UIAlertController(.actionSheet) is iOS-only and on
+		// Android both shapes resolve to the same Material 3 dialog (see AGENTS.md §4 / MockBuilders.BuildAlert).
+		// Greying the button on Android (with this tooltip) makes that contract discoverable instead of leaving
+		// the user wondering why the simulator paints the same shape for both buttons.
+		private const string ActionSheetAndroidDisabledTooltip =
+			"Disabled on Android: the OS has no native action-sheet idiom. " +
+			"On a real device, ShowAlertPopUp(isActionSheet: true) collapses to the same Material 3 dialog as the modal alert. " +
+			"Switch the platform to iOS in the header to drive the distinct sheet shape.";
+
 		private TextField _alertTitle;
 		private TextField _alertMessage;
+		private Button _actionSheetBtn;
 		private TextField _toastMessage;
 		private Toggle _toastLongDuration;
 		private TextField _shareText;
@@ -31,20 +50,28 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 			scroll.Add(_alertTitle);
 			scroll.Add(_alertMessage);
 
-			var alertRow = new VisualElement();
-			alertRow.style.flexDirection = FlexDirection.Row;
-			alertRow.Add(MakePrimaryButton("Show Alert (modal)", () => PushAlert(isSheet: false)));
-			alertRow.Add(MakePrimaryButton("Show Action Sheet", () => PushAlert(isSheet: true)));
-			scroll.Add(alertRow);
+			_actionSheetBtn = MakePrimaryButton("Show Action Sheet", () => PushAlert(isSheet: true));
+			scroll.Add(MakePrimaryButtonRow(
+				MakePrimaryButton("Show Alert (modal)", () => PushAlert(isSheet: false)),
+				_actionSheetBtn));
+
+			ApplyActionSheetButtonState(MobileSimulatorState.WindowPlatform);
+			MobileSimulatorState.WindowPlatformChanged += OnWindowPlatformChanged;
+			RegisterCallback<DetachFromPanelEvent>(_ =>
+				MobileSimulatorState.WindowPlatformChanged -= OnWindowPlatformChanged);
 
 			scroll.Add(MakeSectionLabel("Toasts"));
 
 			_toastMessage = new TextField("Message") { value = "Item Collected!" };
-			_toastLongDuration = new Toggle("Long duration") { value = false };
+			_toastLongDuration = new Toggle($"Long duration ({ToastLongSeconds:0.0}s vs {ToastShortSeconds:0.0}s)")
+			{
+				value = false,
+				tooltip = ToastDurationTooltip,
+			};
 			scroll.Add(_toastMessage);
 			scroll.Add(_toastLongDuration);
 
-			var toastBtn = MakePrimaryButton("Show Toast", () =>
+			scroll.Add(MakePrimaryButtonRow(MakePrimaryButton("Show Toast", () =>
 			{
 				MobileSimulatorState.PushToast(new SimulatedToastSpec
 				{
@@ -52,15 +79,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 					IsLongDuration = _toastLongDuration.value,
 				});
 				NativeUiService.ShowToastMessage(_toastMessage.value, _toastLongDuration.value);
-			});
-			scroll.Add(toastBtn);
+			})));
 
 			scroll.Add(MakeSectionLabel("Review"));
-			scroll.Add(MakePrimaryButton("Request Review", () =>
+			scroll.Add(MakePrimaryButtonRow(MakePrimaryButton("Request Review", () =>
 			{
 				MobileSimulatorState.PushReview();
 				NativeUiService.RequestReview();
-			}));
+			})));
 
 			scroll.Add(MakeSectionLabel("Share"));
 
@@ -69,7 +95,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 			scroll.Add(_shareText);
 			scroll.Add(_shareUrl);
 
-			scroll.Add(MakePrimaryButton("Share", () =>
+			scroll.Add(MakePrimaryButtonRow(MakePrimaryButton("Share", () =>
 			{
 				MobileSimulatorState.PushShare(new SimulatedShareSpec
 				{
@@ -77,7 +103,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 					Url = _shareUrl.value,
 				});
 				NativeUiService.Share(_shareText.value, _shareUrl.value);
-			}));
+			})));
 
 			var bar = MakeActionBar();
 			bar.Add(MakePrimaryDangerButton("Dismiss All Mocks", () => MobileSimulatorState.PushDismissAll()));
@@ -87,6 +113,32 @@ namespace GameLovers.MobileServices.Editor.Explorer.Tabs
 		}
 
 		protected override void Refresh() { }
+
+		private void OnWindowPlatformChanged(SimulatedPlatform platform) =>
+			ApplyActionSheetButtonState(platform);
+
+		private void ApplyActionSheetButtonState(SimulatedPlatform platform)
+		{
+			if (_actionSheetBtn == null)
+			{
+				return;
+			}
+			var isAndroid = platform == SimulatedPlatform.Android;
+			_actionSheetBtn.SetEnabled(!isAndroid);
+			_actionSheetBtn.tooltip = isAndroid ? ActionSheetAndroidDisabledTooltip : null;
+		}
+
+		private static VisualElement MakePrimaryButtonRow(params Button[] buttons)
+		{
+			var row = new VisualElement();
+			row.style.flexDirection = FlexDirection.Row;
+			row.style.flexWrap = Wrap.Wrap;
+			foreach (var btn in buttons)
+			{
+				row.Add(btn);
+			}
+			return row;
+		}
 
 		private void PushAlert(bool isSheet)
 		{

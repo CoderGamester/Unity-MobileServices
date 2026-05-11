@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile Services Explorer**: Dockable editor window with eight tabs and a per-platform haptic envelope graph.
 - **Mobile Simulator window**: Truth-mirror that paints platform-shaped mocks (iOS / Android) of every native UI surface the package can trigger.
 - **Runtime Simulator Overlay**: Play-mode-only `UIDocument` overlay (opt-in via `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`) rendering the truth-mirror mocks inside Unity's Game / Simulator view at the simulated device's pixel grid. Composes with Unity's Device Simulator for correct safe-area / scale / `Application.platform` spoofing.
-- **Device Simulator Plugin**: `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim Mobile Services control panel inside Unity's Device Simulator window. Auto-syncs the simulated platform skin from the selected device profile; while alive, the Explorer's `Render as: iOS | Android` dropdown greys out.
+- **Device Simulator Plugin**: `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim Mobile Services control panel inside Unity's Device Simulator window. 
 - **Editor Platform Simulator**: Static API for driving device / permission / ATT / deep-link state in editor tests and the Explorer.
 - **Project Settings panel**: Per-permission usage descriptions, capability toggles, project scan, and an iOS Privacy Nutrition Label draft generator.
 - **Build Postprocessor**: Fail-by-default validation that injects `Info.plist`, `.entitlements`, and Android `mainTemplate.xml` entries on iOS / Android builds.
@@ -38,9 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated dependencies to target Unity 6 (6000.0+).
 - Legacy tap detection (replaced by Unity Input System's `TapInteraction`).
 - Gamepad input management (out of scope for mobile services), use the new input system configuration for that
-
-### Removed
-- **Editor-tooling automated tests**: removed the `GameLovers.MobileServices.Editor.Tests` assembly and its five test classes (`EditorPlatformSimulatorTest`, `MobileServicesBuildPostprocessorTest`, `MobileServicesExplorerWindowTest`, `MobileServicesSettingsTest`, `MobileSimulatorWindowTest`), along with the `InternalsVisibleTo("GameLovers.MobileServices.Editor.Tests")` grants on `Runtime/AssemblyInfo.cs` and the now-empty `Editor/AssemblyInfo.cs`. Editor tooling is now validated manually only — see `Tests/AGENTS.md` §1 / §9 for the policy and rationale.
 
 ### Migration
 This package consolidates three previously separate packages:

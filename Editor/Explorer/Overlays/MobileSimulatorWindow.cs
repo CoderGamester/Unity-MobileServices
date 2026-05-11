@@ -65,9 +65,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			_watermark.Add(_platformLabel);
 			root.Add(_watermark);
 
-			ApplyPlatformSheet(MobileSimulatorState.Platform);
+			ApplyPlatformSheet(MobileSimulatorState.WindowPlatform);
 
-			MobileSimulatorState.PlatformChanged += OnPlatformChanged;
+			MobileSimulatorState.WindowPlatformChanged += OnPlatformChanged;
 			MobileSimulatorState.AlertRequested += OnAlert;
 			MobileSimulatorState.ToastRequested += OnToast;
 			MobileSimulatorState.ShareRequested += OnShare;
@@ -79,7 +79,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		private void OnDisable()
 		{
-			MobileSimulatorState.PlatformChanged -= OnPlatformChanged;
+			MobileSimulatorState.WindowPlatformChanged -= OnPlatformChanged;
 			MobileSimulatorState.AlertRequested -= OnAlert;
 			MobileSimulatorState.ToastRequested -= OnToast;
 			MobileSimulatorState.ShareRequested -= OnShare;
@@ -88,6 +88,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			MobileSimulatorState.PermissionDialogRequested -= OnPermissionDialog;
 			MobileSimulatorState.DismissAllRequested -= OnDismissAll;
 		}
+
+		private static bool TargetsThisSurface(SimulatorTarget targets) =>
+			(targets & SimulatorTarget.StandaloneWindow) != 0;
 
 		private static StyleSheet FindStyleSheet(string fileBaseName)
 		{
@@ -137,17 +140,19 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Payload renderers ----
 
-		private void OnAlert(SimulatedAlertSpec spec)
+		private void OnAlert(SimulatorTarget targets, SimulatedAlertSpec spec)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			var dialog = MockBuilders.BuildAlert(MobileSimulatorState.Platform, spec, dismissCallback: ClearStage);
+			var dialog = MockBuilders.BuildAlert(MobileSimulatorState.WindowPlatform, spec, dismissCallback: ClearStage);
 			_stage.Add(dialog);
 		}
 
-		private void OnToast(SimulatedToastSpec spec)
+		private void OnToast(SimulatorTarget targets, SimulatedToastSpec spec)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			var toast = MockBuilders.BuildToast(MobileSimulatorState.Platform, spec);
+			var toast = MockBuilders.BuildToast(MobileSimulatorState.WindowPlatform, spec);
 			_stage.Add(toast);
 
 			// Toasts dismiss themselves on a real device — auto-clear the mock after the matching delay.
@@ -163,22 +168,25 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}).StartingIn((long)(seconds * 1000f));
 		}
 
-		private void OnShare(SimulatedShareSpec spec)
+		private void OnShare(SimulatorTarget targets, SimulatedShareSpec spec)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			_stage.Add(MockBuilders.BuildShareSheet(MobileSimulatorState.Platform, spec, dismissCallback: ClearStage));
+			_stage.Add(MockBuilders.BuildShareSheet(MobileSimulatorState.WindowPlatform, spec, dismissCallback: ClearStage));
 		}
 
-		private void OnReview()
+		private void OnReview(SimulatorTarget targets)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			_stage.Add(MockBuilders.BuildReviewPrompt(MobileSimulatorState.Platform, dismissCallback: ClearStage));
+			_stage.Add(MockBuilders.BuildReviewPrompt(MobileSimulatorState.WindowPlatform, dismissCallback: ClearStage));
 		}
 
-		private void OnNotificationBanner(SimulatedNotificationBannerSpec spec)
+		private void OnNotificationBanner(SimulatorTarget targets, SimulatedNotificationBannerSpec spec)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			var banner = MockBuilders.BuildNotificationBanner(MobileSimulatorState.Platform, spec);
+			var banner = MockBuilders.BuildNotificationBanner(MobileSimulatorState.WindowPlatform, spec);
 			_stage.Add(banner);
 			rootVisualElement.schedule.Execute(() =>
 			{
@@ -189,10 +197,11 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}).StartingIn(4000);
 		}
 
-		private void OnPermissionDialog(SimulatedPermissionDialogSpec spec)
+		private void OnPermissionDialog(SimulatorTarget targets, SimulatedPermissionDialogSpec spec)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
-			var dialog = MockBuilders.BuildPermissionDialog(MobileSimulatorState.Platform, spec, dismissCallback: result =>
+			var dialog = MockBuilders.BuildPermissionDialog(MobileSimulatorState.WindowPlatform, spec, dismissCallback: result =>
 			{
 				ClearStage();
 				spec.OnResolved?.Invoke(result);
@@ -200,8 +209,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			_stage.Add(dialog);
 		}
 
-		private void OnDismissAll()
+		private void OnDismissAll(SimulatorTarget targets)
 		{
+			if (!TargetsThisSurface(targets)) return;
 			ClearStage();
 		}
 
