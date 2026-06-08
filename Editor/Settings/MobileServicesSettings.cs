@@ -105,11 +105,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		/// <summary>
 		/// Opt-in: spawn the editor-only runtime simulator overlay (UIDocument inside the Game /
-		/// Simulator view) whenever the user enters play mode. The overlay paints the same mocks
-		/// the <c>MobileSimulatorWindow</c> renders, but pixel-aligned with the simulated device's
-		/// <c>Screen.*</c> values so what designers see matches what Apple's reviewer would see.
-		/// Default OFF — the overlay is opt-in to avoid spawning a <c>DontDestroyOnLoad</c> GameObject
-		/// in projects that have no use for it.
+		/// Simulator view) on its own whenever the user enters play mode, even when the Device
+		/// Simulator panel is not open. The overlay paints the truth-mirror mocks pixel-aligned with
+		/// the simulated device's <c>Screen.*</c> values so what designers see matches what Apple's
+		/// reviewer would see. Default OFF — this standalone play-mode spawn is opt-in to avoid a
+		/// <c>DontDestroyOnLoad</c> GameObject in projects that have no use for it. (When the Device
+		/// Simulator panel is open the overlay is kept alive regardless of this setting.)
 		/// </summary>
 		public bool EnableRuntimeSimulatorOverlay
 		{

@@ -17,9 +17,6 @@ namespace GameLovers.MobileServices.Device
 		/// <summary>Battery level / status / low-power-mode awareness.</summary>
 		IBatteryService Battery { get; }
 
-		/// <summary>Network reachability with change events.</summary>
-		IConnectivityService Connectivity { get; }
-
 		/// <summary>iOS audio session category override (silent-switch). No-op elsewhere.</summary>
 		IIosAudioSessionService AudioSession { get; }
 

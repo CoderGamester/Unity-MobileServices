@@ -14,7 +14,7 @@ Designer-focused haptic exploration sample.
 - The "Recorded sequence" label captures the last 16 triggers and their inter-trigger delays.
 - `Replay` replays the recorded sequence at the original timings (uses `WaitForSecondsRealtime` so `Time.timeScale` doesn't distort).
 - `Clear` empties the recording.
-- `Stop` cancels any active haptic (matters for the looped variants exposed via the Mobile Services Explorer).
+- `Stop` cancels any active haptic (matters for the looped variants exposed via the Device Simulator panel's Haptics foldout).
 
 ## Why it's a separate sample
 

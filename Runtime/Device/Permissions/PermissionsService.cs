@@ -45,7 +45,7 @@ namespace GameLovers.MobileServices.Device
 
 		/// <summary>
 		/// Snapshot of <see cref="Check"/> across every <see cref="AppPermission"/> value. Used by
-		/// the Mobile Services Explorer Permissions tab to render the per-permission status grid
+		/// the Device Simulator panel's Permissions foldout to render the per-permission status grid
 		/// without forcing callers to iterate the enum themselves.
 		/// </summary>
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>

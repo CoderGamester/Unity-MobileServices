@@ -36,7 +36,7 @@ public enum HapticPreset
 }
 ```
 
-The per-preset `(timings_ms, amplitudes_0_to_255)` envelopes live in `Runtime/Haptics/Internal/HapticEnvelopes.cs` and feed both `AndroidHapticsBackend` and the [Mobile Services Explorer](explorer.md) Haptics tab's envelope graph — single source of truth.
+The per-preset `(timings_ms, amplitudes_0_to_255)` envelopes live in `Runtime/Haptics/Internal/HapticEnvelopes.cs` and feed both `AndroidHapticsBackend` and the [Device Simulator panel](explorer.md)'s Haptics envelope graph — single source of truth.
 
 ## Looping semantics
 
@@ -75,7 +75,7 @@ Internal accessors on `HapticsService` (visible to the Editor assembly via `Inte
 - `CurrentDurationSeconds` — scheduled duration in real-time seconds (preset's natural duration for one-shots, `-1` for indefinite loop, explicit positive for finite).
 - `Backend` — the platform backend selected for this instance.
 
-These power the Explorer's **Haptics** tab status label.
+These power the Device Simulator panel's **Haptics** status read-out.
 
 ## Editor testing on a real device
 

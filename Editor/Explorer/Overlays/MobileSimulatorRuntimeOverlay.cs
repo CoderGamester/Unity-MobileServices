@@ -7,22 +7,23 @@ using UnityEngine.UIElements;
 namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 {
 	/// <summary>
-	/// Editor-only bootstrap that spawns an in-Game-view <see cref="UIDocument"/> overlay during
-	/// play mode, painting the same truth-mirror mocks as <see cref="MobileSimulatorWindow"/> but
-	/// pixel-aligned with the simulated device's <c>Screen.*</c> values. Opt-in via Project
-	/// Settings → GameLovers → Mobile Services → <c>Enable runtime simulator overlay</c>.
+	/// Editor-only bootstrap that spawns an in-Game-view <see cref="UIDocument"/> overlay - the
+	/// single simulator canvas - painting the truth-mirror mocks pixel-aligned with the simulated
+	/// device's <c>Screen.*</c> values.
 	/// </summary>
 	/// <remarks>
-	/// <para>The overlay renders inside Unity's runtime UIToolkit panel, so it composes natively
-	/// with Unity's Device Simulator: a designer can pick "iPhone 15 Pro" in <c>Window > General >
-	/// Device Simulator</c>, press Play, and the mock dialogs render at the right scale and inside
-	/// the correct safe-area inset for that device.</para>
+	/// <para>The overlay is alive whenever the Device Simulator plugin panel is open (edit OR play
+	/// mode) so a designer can fire a mock from the panel and see it inside the simulated phone
+	/// without entering play mode. It also still spawns on its own during play mode when the
+	/// opt-in <c>Project Settings &gt; GameLovers &gt; Mobile Services &gt; Enable runtime simulator
+	/// overlay</c> setting is on (so mocks render in a plain Game view even without the Device
+	/// Simulator window open). Both conditions feed a single idempotent <see cref="RefreshLifecycle"/>.</para>
+	/// <para>The overlay renders inside Unity's runtime UIToolkit panel - <see cref="UIDocument"/>
+	/// is <c>[ExecuteAlways]</c>, so its panel paints into the Game / Device Simulator view in edit
+	/// mode too. Interaction inside the mock is unreliable in the edit-mode Game view, so dismissal
+	/// is driven from the plugin panel; the overlay is treated as display-only.</para>
 	/// <para>The <see cref="PanelSettings"/> instance is constructed programmatically (rather than
-	/// shipped as a <c>.asset</c>) to keep the setup editor-only by construction — there's no asset
-	/// file consumers can accidentally reference from a runtime <c>UIDocument</c>.</para>
-	/// <para>Lifecycle: spawned on <see cref="PlayModeStateChange.EnteredPlayMode"/>, destroyed on
-	/// <see cref="PlayModeStateChange.ExitingPlayMode"/> (clean teardown — no paused-snapshot
-	/// preservation).</para>
+	/// shipped as a <c>.asset</c>) to keep the setup editor-only by construction.</para>
 	/// </remarks>
 	[InitializeOnLoad]
 	internal static class MobileSimulatorRuntimeOverlay
@@ -34,10 +35,24 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		private static GameObject _hostObject;
 		private static OverlayController _controller;
+		private static bool _pluginActive;
+		private static bool _inPlayMode;
 
 		static MobileSimulatorRuntimeOverlay()
 		{
+			_inPlayMode = EditorApplication.isPlaying;
 			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+		}
+
+		/// <summary>
+		/// Called by <c>MobileServicesDeviceSimulatorPlugin</c> when its panel UI is created or
+		/// destroyed, so the overlay is alive (edit OR play mode) exactly while the Device Simulator
+		/// window is open - in addition to the opt-in play-mode lifecycle.
+		/// </summary>
+		internal static void NotifyPluginActive(bool active)
+		{
+			_pluginActive = active;
+			RefreshLifecycle();
 		}
 
 		private static void OnPlayModeStateChanged(PlayModeStateChange change)
@@ -45,23 +60,42 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			switch (change)
 			{
 				case PlayModeStateChange.EnteredPlayMode:
-					if (MobileServicesSettings.instance.EnableRuntimeSimulatorOverlay)
-					{
-						Spawn();
-					}
+					_inPlayMode = true;
+					RefreshLifecycle();
 					break;
 				case PlayModeStateChange.ExitingPlayMode:
-					Teardown();
+					_inPlayMode = false;
+					RefreshLifecycle();
 					break;
 			}
 		}
 
-		private static void Spawn()
+		private static bool ShouldBeAlive =>
+			_pluginActive || (_inPlayMode && MobileServicesSettings.instance.EnableRuntimeSimulatorOverlay);
+
+		private static void RefreshLifecycle()
+		{
+			if (ShouldBeAlive)
+			{
+				EnsureSpawned();
+			}
+			else
+			{
+				Teardown();
+			}
+		}
+
+		private static void EnsureSpawned()
 		{
 			if (_hostObject != null)
 			{
 				return;
 			}
+
+			// A domain reload resets the statics but can leave the previous host GameObject behind
+			// (it is HideFlags.DontSave, not destroyed by reload in edit mode). Sweep any stale host
+			// so we never paint two overlays after a reload.
+			DestroyStaleHosts();
 
 			var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
 			panelSettings.name = "MobileSimulator.PanelSettings";
@@ -69,8 +103,17 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			// claimed the same priority. Tie-breaks fall back to GameObject name lexicographic order;
 			// "[EditorOnly] ..." sorts near the top thanks to the leading bracket.
 			panelSettings.sortingOrder = short.MaxValue;
-			panelSettings.scaleMode = PanelScaleMode.ConstantPixelSize;
-			panelSettings.match = 0f;
+			// Scale the mock USS (authored in logical-point units) UP to the device's native pixel
+			// grid. The Device Simulator reports Screen.width/height in PHYSICAL pixels (e.g. iPhone
+			// 15 Pro = 1179x2556), so ScaleWithScreenSize against a logical-phone reference resolution
+			// yields a scale factor ≈ the device's native scale (~3x) — i.e. 1 USS px ≈ 1 iOS point.
+			// Without this, ConstantPixelSize paints 1 USS px = 1 device px and every mock renders ~1/3
+			// size on a 3x screen. The reference aspect (≈19.5:9) matches modern tall phones, so the
+			// `match` blend barely matters; 0.5 keeps it sane if the device is rotated to landscape.
+			panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+			panelSettings.referenceResolution = new Vector2Int(390, 844);
+			panelSettings.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+			panelSettings.match = 0.5f;
 			panelSettings.targetTexture = null;
 			panelSettings.clearColor = false;
 			panelSettings.hideFlags = HideFlags.HideAndDontSave;
@@ -80,7 +123,12 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				hideFlags = HideFlags.DontSave,
 				tag = "EditorOnly",
 			};
-			Object.DontDestroyOnLoad(_hostObject);
+			// DontDestroyOnLoad is only meaningful (and only legal without a warning) in play mode;
+			// in edit mode the object simply lives in the active scene as a hidden, unsaved object.
+			if (Application.isPlaying)
+			{
+				Object.DontDestroyOnLoad(_hostObject);
+			}
 
 			var document = _hostObject.AddComponent<UIDocument>();
 			document.panelSettings = panelSettings;
@@ -97,15 +145,39 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}
 			if (_hostObject != null)
 			{
-				Object.Destroy(_hostObject);
+				DestroyHost(_hostObject);
 				_hostObject = null;
+			}
+			DestroyStaleHosts();
+		}
+
+		private static void DestroyStaleHosts()
+		{
+			foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+			{
+				if (go != null && go != _hostObject && go.name == HostObjectName)
+				{
+					DestroyHost(go);
+				}
+			}
+		}
+
+		private static void DestroyHost(GameObject go)
+		{
+			if (Application.isPlaying)
+			{
+				Object.Destroy(go);
+			}
+			else
+			{
+				Object.DestroyImmediate(go);
 			}
 		}
 
 		/// <summary>
 		/// Owns the visual tree + the <see cref="MobileSimulatorState"/> subscriptions for the
-		/// runtime overlay. Mirrors <see cref="MobileSimulatorWindow"/>'s renderer surface so the
-		/// same broker payload paints identically in both targets.
+		/// overlay. Same renderer surface the standalone window used to provide; the broker payload
+		/// paints the mocks here.
 		/// </summary>
 		private sealed class OverlayController
 		{
@@ -140,10 +212,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				rootContainer.style.top = 0;
 				rootContainer.style.right = 0;
 				rootContainer.style.bottom = 0;
-				// Override the standalone window's opaque dark background — the overlay must let
-				// the underlying Game / Simulator viewport show through. Mock scrims (when an alert
-				// or permission dialog is active) re-introduce their own dimming via the
-				// .mock-scrim USS rule.
+				// Override the dark background — the overlay must let the underlying Game / Simulator
+				// viewport show through. Mock scrims (when an alert or permission dialog is active)
+				// re-introduce their own dimming via the .mock-scrim USS rule.
 				rootContainer.style.backgroundColor = Color.clear;
 				// Empty stage must not steal clicks from the game. The scrim element inside an
 				// active mock has its own (default) picking mode and re-absorbs input on its own.
@@ -163,9 +234,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				watermark.Add(_platformLabel);
 				rootContainer.Add(watermark);
 
-				ApplyPlatformSheet(MobileSimulatorState.OverlayPlatform);
+				ApplyPlatformSheet(MobileSimulatorState.Platform);
 
-				MobileSimulatorState.OverlayPlatformChanged += OnPlatformChanged;
+				MobileSimulatorState.PlatformChanged += OnPlatformChanged;
 				MobileSimulatorState.AlertRequested += OnAlert;
 				MobileSimulatorState.ToastRequested += OnToast;
 				MobileSimulatorState.ShareRequested += OnShare;
@@ -177,7 +248,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 			internal void Dispose()
 			{
-				MobileSimulatorState.OverlayPlatformChanged -= OnPlatformChanged;
+				MobileSimulatorState.PlatformChanged -= OnPlatformChanged;
 				MobileSimulatorState.AlertRequested -= OnAlert;
 				MobileSimulatorState.ToastRequested -= OnToast;
 				MobileSimulatorState.ShareRequested -= OnShare;
@@ -186,9 +257,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				MobileSimulatorState.PermissionDialogRequested -= OnPermissionDialog;
 				MobileSimulatorState.DismissAllRequested -= OnDismissAll;
 			}
-
-			private static bool TargetsThisSurface(SimulatorTarget targets) =>
-				(targets & SimulatorTarget.RuntimeOverlay) != 0;
 
 			private static StyleSheet FindStyleSheet(string fileBaseName)
 			{
@@ -233,18 +301,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				}
 			}
 
-			private void OnAlert(SimulatorTarget targets, SimulatedAlertSpec spec)
+			private void OnAlert(SimulatedAlertSpec spec)
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				_stage.Add(MockBuilders.BuildAlert(MobileSimulatorState.OverlayPlatform, spec, ClearStage));
+				_stage.Add(MockBuilders.BuildAlert(MobileSimulatorState.Platform, spec, ClearStage));
 			}
 
-			private void OnToast(SimulatorTarget targets, SimulatedToastSpec spec)
+			private void OnToast(SimulatedToastSpec spec)
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				var toast = MockBuilders.BuildToast(MobileSimulatorState.OverlayPlatform, spec);
+				var toast = MockBuilders.BuildToast(MobileSimulatorState.Platform, spec);
 				_stage.Add(toast);
 				var seconds = spec.IsLongDuration ? 3.5f : 2.0f;
 				_root.schedule.Execute(() =>
@@ -256,25 +322,22 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				}).StartingIn((long)(seconds * 1000f));
 			}
 
-			private void OnShare(SimulatorTarget targets, SimulatedShareSpec spec)
+			private void OnShare(SimulatedShareSpec spec)
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				_stage.Add(MockBuilders.BuildShareSheet(MobileSimulatorState.OverlayPlatform, spec, ClearStage));
+				_stage.Add(MockBuilders.BuildShareSheet(MobileSimulatorState.Platform, spec, ClearStage));
 			}
 
-			private void OnReview(SimulatorTarget targets)
+			private void OnReview()
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				_stage.Add(MockBuilders.BuildReviewPrompt(MobileSimulatorState.OverlayPlatform, ClearStage));
+				_stage.Add(MockBuilders.BuildReviewPrompt(MobileSimulatorState.Platform, ClearStage));
 			}
 
-			private void OnNotificationBanner(SimulatorTarget targets, SimulatedNotificationBannerSpec spec)
+			private void OnNotificationBanner(SimulatedNotificationBannerSpec spec)
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				var banner = MockBuilders.BuildNotificationBanner(MobileSimulatorState.OverlayPlatform, spec);
+				var banner = MockBuilders.BuildNotificationBanner(MobileSimulatorState.Platform, spec);
 				_stage.Add(banner);
 				_root.schedule.Execute(() =>
 				{
@@ -285,11 +348,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				}).StartingIn(4000);
 			}
 
-			private void OnPermissionDialog(SimulatorTarget targets, SimulatedPermissionDialogSpec spec)
+			private void OnPermissionDialog(SimulatedPermissionDialogSpec spec)
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
-				var dialog = MockBuilders.BuildPermissionDialog(MobileSimulatorState.OverlayPlatform, spec, result =>
+				var dialog = MockBuilders.BuildPermissionDialog(MobileSimulatorState.Platform, spec, result =>
 				{
 					ClearStage();
 					spec.OnResolved?.Invoke(result);
@@ -297,9 +359,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				_stage.Add(dialog);
 			}
 
-			private void OnDismissAll(SimulatorTarget targets)
+			private void OnDismissAll()
 			{
-				if (!TargetsThisSurface(targets)) return;
 				ClearStage();
 			}
 

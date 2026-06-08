@@ -1,15 +1,12 @@
 # Device
 
-`IDeviceService` is an umbrella facade aggregating eight independently mockable sub-services. Each child interface is also independently registerable for testing.
+`IDeviceService` is an umbrella facade aggregating seven independently mockable sub-services. Each child interface is also independently registerable for testing.
 
 ```csharp
 IDeviceService device = new DeviceService();
 
 device.Battery.OnLowPowerModeChanged += () =>
     Debug.Log($"LPM -> {device.Battery.IsLowPowerMode}");
-
-device.Connectivity.OnStatusChanged += s =>
-    Debug.Log($"Reachability -> {s}");
 
 device.ScreenWake.KeepAwake = true;
 device.AudioSession.ConfigureForPlayback();
@@ -27,7 +24,6 @@ device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 | `SafeArea` | `ISafeAreaService` | `Screen.safeArea` with change events. Pairs with `SafeAreaContainer` UI Toolkit element. |
 | `ScreenWake` | `IScreenWakeService` | `Screen.sleepTimeout` toggle. Idempotent. |
 | `Battery` | `IBatteryService` | Level + status + low-power-mode events (iOS `NSProcessInfoPowerStateDidChangeNotification`, Android `PowerManager.isPowerSaveMode`). |
-| `Connectivity` | `IConnectivityService` | `Application.internetReachability` with change events. |
 | `AudioSession` | `IIosAudioSessionService` | iOS `AVAudioSession` category override (silent-switch). No-op on Android / Editor. |
 | `Permissions` | `IPermissionsService` | Unified iOS+Android runtime permissions. Task-based async. Multi-permission overload. |
 | `Att` | `IAttService` | iOS App Tracking Transparency. Direct `ATTrackingManager` bridge — no `com.unity.ads.ios-support` dependency. |

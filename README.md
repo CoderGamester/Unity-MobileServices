@@ -16,13 +16,13 @@ Building mobile-specific features in Unity often requires dealing with platform-
 | **Notification complexity** | Notification service wraps Unity Mobile Notifications with channel management + a fluent `service.Schedule().In(...).Title(...).Send()` builder |
 | **Custom gesture detection** | Gesture controller provides swipe and tap detection via Unity's EnhancedTouch |
 | **Haptic plugin sprawl** | Zero-dependency `IHapticsService` with 9 presets, custom intensity, and time-bounded looping — built directly on iOS/Android primitives |
-| **Scattered device APIs** | One `IDeviceService` umbrella over `SafeArea`, `ScreenWake`, `Battery`, `Connectivity`, `AudioSession`, `Permissions`, `Att`, `DeepLink` — each child also independently mockable |
+| **Scattered device APIs** | One `IDeviceService` umbrella over `SafeArea`, `ScreenWake`, `Battery`, `AudioSession`, `Permissions`, `Att`, `DeepLink` — each child also independently mockable |
 | **Deep-link routing boilerplate** | `IDeepLinkRouter.MapRoute("/promo/:id", handler)` over `IDeepLinkService` |
 | **iOS silent switch muting audio** | `device.AudioSession.ConfigureForPlayback()` overrides `AVAudioSession` category in one line |
 | **iOS App Tracking Transparency** | `device.Att.RequestAuthorizationAsync()` — direct `ATTrackingManager` bridge, no `com.unity.ads.ios-support` dependency |
 | **Cold-start deep link loss** | `device.DeepLink` queues the launch link for the first subscriber so you never miss it |
 | **Forgotten `Info.plist` keys → App Store rejection** | Project Settings panel + build postprocessor auto-inject `NS*UsageDescription` keys, `UIBackgroundModes`, entitlements, and Android manifest entries; fail-by-default validation lists every missing key |
-| **Editor testing challenges** | Mobile Services Explorer + truth-mirror simulator paint platform-shaped mocks; `EditorPlatformSimulator` drives state for unit tests |
+| **Editor testing challenges** | A Device Simulator plugin panel paints platform-shaped mocks inside the simulated phone (edit + play) with live diagnostics; `EditorPlatformSimulator` drives state for unit tests |
 
 **Built for production:** Uses Unity's official packages (`com.unity.mobile.notifications`, `com.unity.inputsystem`). Tested in real mobile games.
 
@@ -39,7 +39,7 @@ Building mobile-specific features in Unity often requires dealing with platform-
 | iOS | ✅ Fully supported |
 | Android | ✅ Fully supported |
 | Editor | ✅ Supported (no-op fallbacks + truth-mirror simulator) |
-| Standalone | ⚠️ Gestures + Connectivity + SafeArea + Battery (level/status); Haptics returns `IsSupported = false`; iOS audio session / ATT are no-ops |
+| Standalone | ⚠️ Gestures + SafeArea + Battery (level/status); Haptics returns `IsSupported = false`; iOS audio session / ATT are no-ops |
 | WebGL | ❌ Not supported |
 
 ## Installation
@@ -107,7 +107,6 @@ using GameLovers.MobileServices.Device;
 IDeviceService device = new DeviceService();
 
 device.Battery.OnLowPowerModeChanged += () => Debug.Log($"LPM -> {device.Battery.IsLowPowerMode}");
-device.Connectivity.OnStatusChanged   += s  => Debug.Log($"Reachability -> {s}");
 device.ScreenWake.KeepAwake = true;
 device.AudioSession.ConfigureForPlayback();
 
@@ -157,7 +156,7 @@ var camera = await mobile.Device.Permissions.RequestAsync(AppPermission.Camera);
 | `INotificationService` / `MobileNotificationService` | Local + remote notifications with channel CRUD, fluent `Schedule()` builder, 4 `OperatingMode`s |
 | `GestureController` | EnhancedTouch swipe + tap detection |
 | `IHapticsService` / `HapticsService` | 9 cross-platform presets + custom intensity + time-bounded looping |
-| `IDeviceService` / `DeviceService` | Umbrella over `SafeArea`, `ScreenWake`, `Battery`, `Connectivity`, `AudioSession`, `Permissions`, `Att`, `DeepLink` |
+| `IDeviceService` / `DeviceService` | Umbrella over `SafeArea`, `ScreenWake`, `Battery`, `AudioSession`, `Permissions`, `Att`, `DeepLink` |
 | `IDeepLinkRouter` / `DeepLinkRouter` | Path-pattern routing over `IDeepLinkService` |
 | `IMobileService` / `MobileService` | Package-wide umbrella facade (NativeUi / Notifications / Haptics / Device) |
 | `SafeAreaContainer` | UI Toolkit `VisualElement` that pads itself to the safe area |
@@ -168,10 +167,10 @@ For full per-subsystem API reference, see [`docs/`](docs/README.md).
 
 ## Editor tooling
 
-Two editor windows ship with the package:
+All Mobile Services editor tooling lives inside Unity's Device Simulator:
 
-- **`Tools > GameLovers > Mobile Services Explorer`** — 8-tab dockable window with live status, simulator hooks, and a per-preset haptic envelope graph.
-- **`Tools > GameLovers > Mobile Services Simulator Window`** — truth-mirror that paints platform-shaped mocks of every native UI surface (iOS / Android, swap via the Explorer's `Render as` toggle).
+- **`Window > General > Device Simulator`** — a **Mobile Services** panel appears automatically in the Control Panel. It bundles the controls (alerts / toasts / share / review / haptics / notifications / device state / permissions / ATT / deep links), live-state diagnostics, and a per-preset haptic envelope graph. Firing a mock paints it **inside the simulated phone screen** at the right scale and safe area, in **edit and play mode** — no second window, no platform toggle to keep in sync (the skin auto-syncs from the selected device profile).
+- **`EditorPlatformSimulator`** — static API for driving device / permission / ATT / deep-link state from edit-mode tests and scripted automation.
 
 Plus a Project Settings panel at **`Edit > Project Settings > GameLovers > Mobile Services`** for per-permission usage descriptions, capability toggles, and the auto-injection build postprocessor.
 
@@ -204,7 +203,7 @@ See [`docs/samples.md`](docs/samples.md) for setup details.
 | [docs/haptics.md](docs/haptics.md) | Haptics deep dive (presets, envelope, looping, backends) |
 | [docs/gestures.md](docs/gestures.md) | Gesture detection deep dive |
 | [docs/device.md](docs/device.md) | Device umbrella + 8 children + DeepLinkRouter |
-| [docs/explorer.md](docs/explorer.md) | Mobile Services Explorer & Truth-Mirror Simulator |
+| [docs/explorer.md](docs/explorer.md) | Device Simulator panel & in-Game-view simulator overlay |
 | [docs/build-pipeline.md](docs/build-pipeline.md) | Project Settings + build postprocessor (and manual fallback) |
 | [docs/samples.md](docs/samples.md) | Samples index |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Symptom-to-fix table |

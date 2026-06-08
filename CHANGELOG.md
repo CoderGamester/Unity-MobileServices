@@ -14,23 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gestures**: Advanced swipe detection with velocity and consistency tracking.
 - **iOS Audio Session**: Override the iOS silent switch so audio keeps playing.
 - **Haptics**: Zero-dependency cross-platform haptic feedback with 9 presets, custom intensity, and time-bounded looping.
-- **Device**: Umbrella facade over `SafeArea`, `ScreenWake`, `Battery` (with LPM awareness), `Connectivity`, `AudioSession`, `Permissions`, `Att`, and `DeepLink` sub-services.
+- **Device**: Umbrella facade over `SafeArea`, `ScreenWake`, `Battery` (with LPM awareness), `AudioSession`, `Permissions`, `Att`, and `DeepLink` sub-services.
 - **Permissions**: Unified iOS+Android runtime permissions (Camera, Microphone, Location, Photo Library, Notifications) with `Task`-based async and a multi-permission `RequestAsync(params AppPermission[])` overload.
 - **App Tracking Transparency**: iOS 14.5+ `ATTrackingManager` bridge with zero dependency on `com.unity.ads.ios-support`.
 - **Deep Links**: `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
 - **Deep Link Router**: Path-pattern routing over `IDeepLinkService` with captured params (`/promo/:id`).
 - **Notification Builder**: Fluent API — `service.Schedule().In(...).Title(...).Body(...).Channel(...).Send()`.
+- **`INotificationService.Mode`**: runtime-settable `OperatingMode` on the service. Previously the queueing modes (`Queue` / `ClearOnForegrounding` / `RescheduleAfterClearing`) — and the `OnLocalNotificationExpiredEvent` that only fires in queue mode — were unreachable through the public API (the host's mode field was never exposed); they are now drivable directly via `service.Mode`.
 - **Mobile Service umbrella**: Single DI registration exposing `NativeUi` / `Notifications` / `Haptics` / `Device`.
 - **Native UI instance interface**: `INativeUiService` + `NativeUiServiceInstance` forwarder for mockable consumer code.
-- **Mobile Services Explorer**: Dockable editor window with eight tabs and a per-platform haptic envelope graph.
-- **Mobile Simulator window**: Truth-mirror that paints platform-shaped mocks (iOS / Android) of every native UI surface the package can trigger.
-- **Runtime Simulator Overlay**: Play-mode-only `UIDocument` overlay (opt-in via `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`) rendering the truth-mirror mocks inside Unity's Game / Simulator view at the simulated device's pixel grid. Composes with Unity's Device Simulator for correct safe-area / scale / `Application.platform` spoofing.
-- **Device Simulator Plugin**: `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim Mobile Services control panel inside Unity's Device Simulator window. 
-- **Editor Platform Simulator**: Static API for driving device / permission / ATT / deep-link state in editor tests and the Explorer.
+- **Device Simulator Plugin**: the single Mobile Services editor surface — a `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds controls + live diagnostics + a per-preset haptic envelope graph inside Unity's Device Simulator window (Window > General > Device Simulator). Drives the in-Game-view simulator overlay so mocks render right inside the simulated phone screen, and auto-syncs the platform skin from the selected device profile.
+- **Runtime Simulator Overlay**: editor-only `UIDocument` overlay that paints the truth-mirror mocks (alerts, sheets, toasts, share, review, permission / ATT dialogs, heads-up banners) inside Unity's Game / Simulator view at the simulated device's pixel grid. Alive in **edit and play mode** whenever the Device Simulator panel is open, so you can preview a mock without entering play mode; also spawns on its own during play mode via the opt-in `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`. Composes with Unity's Device Simulator for correct safe-area / scale / `Application.platform` spoofing.
+- **Editor Platform Simulator**: Static API for driving device / permission / ATT / deep-link state in editor tests and the Device Simulator panel.
 - **Project Settings panel**: Per-permission usage descriptions, capability toggles, project scan, and an iOS Privacy Nutrition Label draft generator.
 - **Build Postprocessor**: Fail-by-default validation that injects `Info.plist`, `.entitlements`, and Android `mainTemplate.xml` entries on iOS / Android builds.
 - **Samples**: Four code-only samples — `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, `DeepLinkRouter`.
-- **Docs**: Per-subsystem deep-dive references under `docs/` plus editor-tooling guides for the Explorer and build pipeline.
+- **Docs**: Per-subsystem deep-dive references under `docs/` plus editor-tooling guides for the Device Simulator panel and build pipeline.
 
 ### Changed
 - Refactored all namespaces to `GameLovers.MobileServices.*`.

@@ -24,6 +24,13 @@ namespace GameLovers.MobileServices.Notifications
 		event Action<PendingNotification> OnLocalNotificationExpiredEvent;
 
 		/// <summary>
+		/// The queueing / delivery <see cref="OperatingMode"/> for the service. Defaults to
+		/// <see cref="OperatingMode.NoQueue"/>. Settable at runtime; the new value takes effect on the
+		/// next <see cref="ScheduleNotification"/> call and the next foreground/background transition.
+		/// </summary>
+		OperatingMode Mode { get; set; }
+
+		/// <summary>
 		/// Gets a collection of notifications that are scheduled or queued.
 		/// </summary>
 		IReadOnlyList<PendingNotification> PendingNotifications { get; }
@@ -78,6 +85,13 @@ namespace GameLovers.MobileServices.Notifications
 
 		/// <inheritdoc />
 		public IReadOnlyList<PendingNotification> PendingNotifications => _monoBehaviour.PendingNotifications;
+
+		/// <inheritdoc />
+		public OperatingMode Mode
+		{
+			get => _monoBehaviour.Mode;
+			set => _monoBehaviour.Mode = value;
+		}
 
 		/// <summary>The queueing / delivery mode the host MonoBehaviour was configured with.</summary>
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>

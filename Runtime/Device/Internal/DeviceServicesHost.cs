@@ -5,7 +5,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Device.Internal
 {
 	/// <summary>
-	/// Internal MonoBehaviour shared by all event-driven Device services (SafeArea, Battery, Connectivity).
+	/// Internal MonoBehaviour shared by all event-driven Device services (SafeArea, Battery).
 	/// Spawned lazily on first use, marked <c>DontDestroyOnLoad</c>. Exists so the runtime cost of the
 	/// Device subsystem is one auto-spawned GameObject instead of one per service.
 	/// </summary>

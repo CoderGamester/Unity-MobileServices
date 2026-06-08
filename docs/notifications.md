@@ -64,7 +64,13 @@ public enum OperatingMode
 }
 ```
 
-The mode is set on the host MonoBehaviour (`GameNotificationsMonoBehaviour.Mode`). `MobileNotificationService` doesn't expose a setter today — it can be flipped via `_monoBehaviour.Mode` if you reach into the host, or via the `NotificationsScheduler` sample for the lifecycle demo.
+Set the mode via `INotificationService.Mode` (defaults to `NoQueue`). It's settable at runtime and the new value takes effect on the next `ScheduleNotification` call and the next foreground/background transition:
+
+```csharp
+service.Mode = OperatingMode.QueueClearAndReschedule;
+```
+
+`OnLocalNotificationExpiredEvent` only fires while a `Queue` mode is active, so set the mode before scheduling if you rely on it. The `NotificationsScheduler` sample drives this live.
 
 ## Foreground delivery events
 
@@ -83,7 +89,7 @@ In `UNITY_EDITOR`:
 
 - `CreateNotification` returns an `EditorGameNotification` (in-memory POCO).
 - `ScheduleNotification` assigns a hashed-`DateTime` id if `Id == null` and returns a `PendingNotification` wrapper — the OS layer is NOT touched.
-- The Explorer's **Notifications** tab + the [Mobile Simulator](explorer.md) window combine to give you a banner-mock preview at the simulated delivery time, driven by the editor's update loop.
+- The [Device Simulator panel](explorer.md)'s **Notifications** foldout + the in-Game-view simulator overlay combine to give you a banner-mock preview at the simulated delivery time, driven by the editor's update loop.
 
 ## Teardown
 

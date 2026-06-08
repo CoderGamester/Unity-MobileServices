@@ -87,12 +87,13 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 				var captured = m;
 				AddButton(layoutGo.transform, m.ToString(), () =>
 				{
-					_currentMode = captured;
+					// Genuinely flips the live service mode — takes effect on the next schedule /
+					// foreground-background transition. Queue mode is what makes the
+					// OnLocalNotificationExpiredEvent reachable.
+					_service.Mode = captured;
+					_currentMode = _service.Mode;
 					_modeLabel.text = $"Mode: {_currentMode}";
 					Log($"Switched mode → {_currentMode}");
-					// NOTE: MobileNotificationService routes its mode via the host MonoBehaviour;
-					// you can extend this sample to call into the host directly if you need to
-					// flip modes at runtime. The default is NoQueue.
 				});
 			}
 

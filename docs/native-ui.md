@@ -63,4 +63,4 @@ Any combination of `text` / `url` / `imagePath` may be supplied. `imagePath` mus
 
 In `UNITY_EDITOR`, every method logs to console and returns. On unsupported platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops.
 
-The [Mobile Services Explorer](explorer.md) renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor without device builds.
+The [Device Simulator panel](explorer.md) renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor (edit or play mode) without device builds.

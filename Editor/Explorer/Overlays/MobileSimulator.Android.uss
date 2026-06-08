@@ -83,10 +83,26 @@
 }
 
 .simulator-root.platform-android .mock-notif-card {
-    background-color: rgba(30, 30, 36, 0.95);
-    border-radius: 14px;
-    border-left-width: 4px;
-    border-color: rgb(120, 180, 255);
+    background-color: rgb(252, 252, 255);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Material heads-up: small circular colored app icon + colored app name. */
+.simulator-root.platform-android .mock-notif-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: rgb(33, 150, 83);
+}
+
+.simulator-root.platform-android .mock-notif-icon Label {
+    font-size: 12px;
+}
+
+.simulator-root.platform-android .mock-notif-appname {
+    color: rgb(33, 150, 83);
 }
 
 .simulator-root.platform-android .mock-notif-title {

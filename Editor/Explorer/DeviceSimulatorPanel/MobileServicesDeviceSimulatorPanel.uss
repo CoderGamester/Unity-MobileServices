@@ -3,6 +3,11 @@
     padding: 6px;
 }
 
+/* The Device Simulator Control Panel column is narrow — wrap every label instead of clipping it. */
+#mobile-services-plugin-root Label {
+    white-space: normal;
+}
+
 .msp-header {
     flex-direction: column;
     margin-bottom: 6px;
@@ -33,8 +38,9 @@
 
 .msp-button {
     margin: 2px;
-    padding: 2px 6px;
-    height: 22px;
+    padding: 4px 6px;
+    min-height: 22px;
+    white-space: normal;
     -unity-text-align: middle-center;
 }
 
@@ -49,20 +55,100 @@
     margin-bottom: 2px;
 }
 
-.msp-overlay-hint {
-    flex-direction: column;
-    background-color: rgba(200, 160, 0, 0.18);
-    border-color: rgba(200, 160, 0, 0.5);
-    border-width: 1px;
-    border-radius: 3px;
-    padding: 6px 8px;
-    margin-bottom: 6px;
+/* ---- Diagnostics: section labels, rows, status pills (ported from the former Explorer USS) ---- */
+
+.tab-section-label {
+    -unity-font-style: bold;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    color: rgb(180, 210, 255);
 }
 
-.msp-overlay-hint-label {
-    color: rgb(230, 195, 60);
+.row {
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 4px;
+    border-bottom-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.row-label {
+    flex-grow: 1;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.row-value {
+    font-size: 11px;
+    color: rgb(200, 200, 200);
+    margin-right: 6px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- Haptics envelope graph ---- */
+
+.haptic-envelope-canvas {
+    height: 80px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    margin: 4px 0;
+}
+
+.haptic-bar {
+    background-color: rgba(120, 210, 255, 0.7);
+    border-radius: 1px;
+}
+
+/* ---- Permission status pills ---- */
+
+.perm-pill-granted {
+    background-color: rgba(50, 180, 50, 0.30);
+    border-color: rgba(80, 200, 80, 0.65);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(120, 240, 120);
     font-size: 10px;
-    -unity-font-style: italic;
-    white-space: normal;
-    margin-bottom: 4px;
+}
+
+.perm-pill-denied {
+    background-color: rgba(200, 50, 50, 0.30);
+    border-color: rgba(220, 80, 80, 0.65);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(255, 130, 130);
+    font-size: 10px;
+}
+
+.perm-pill-undetermined {
+    background-color: rgba(180, 180, 180, 0.25);
+    border-color: rgba(200, 200, 200, 0.55);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(220, 220, 220);
+    font-size: 10px;
+}
+
+.perm-pill-restricted {
+    background-color: rgba(200, 130, 0, 0.30);
+    border-color: rgba(220, 160, 0, 0.55);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(240, 200, 90);
+    font-size: 10px;
 }

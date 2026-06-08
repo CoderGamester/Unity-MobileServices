@@ -288,31 +288,49 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			wrapper.AddToClassList(platform == SimulatedPlatform.iOS ? "mock-notif-top-ios" : "mock-notif-top-android");
 			wrapper.pickingMode = PickingMode.Ignore;
 
+			// Real heads-up shape: [ app icon ] [ APP NAME ........ now / title / body ].
 			var card = new VisualElement();
 			card.AddToClassList("mock-notif-card");
 
-			if (!string.IsNullOrEmpty(spec.ChannelName))
-			{
-				var chan = new Label(spec.ChannelName.ToUpperInvariant());
-				chan.AddToClassList("mock-notif-channel");
-				card.Add(chan);
-			}
+			var appName = string.IsNullOrEmpty(spec.ChannelName) ? "Your App" : spec.ChannelName;
+
+			var icon = new VisualElement();
+			icon.AddToClassList("mock-notif-icon");
+			icon.Add(new Label(appName.Substring(0, 1).ToUpperInvariant()));
+			card.Add(icon);
+
+			var content = new VisualElement();
+			content.AddToClassList("mock-notif-content");
+
+			var header = new VisualElement();
+			header.AddToClassList("mock-notif-header");
+			var name = new Label(appName.ToUpperInvariant());
+			name.AddToClassList("mock-notif-appname");
+			header.Add(name);
+			var spacer = new VisualElement();
+			spacer.style.flexGrow = 1;
+			header.Add(spacer);
+			var time = new Label("now");
+			time.AddToClassList("mock-notif-time");
+			header.Add(time);
+			content.Add(header);
 
 			var title = new Label(spec.Title ?? string.Empty);
 			title.AddToClassList("mock-notif-title");
-			card.Add(title);
+			content.Add(title);
 
 			if (!string.IsNullOrEmpty(spec.SubTitle))
 			{
 				var subtitle = new Label(spec.SubTitle);
 				subtitle.AddToClassList("mock-notif-subtitle");
-				card.Add(subtitle);
+				content.Add(subtitle);
 			}
 
 			var body = new Label(spec.Body ?? string.Empty);
 			body.AddToClassList("mock-notif-body");
-			card.Add(body);
+			content.Add(body);
 
+			card.Add(content);
 			wrapper.Add(card);
 			return wrapper;
 		}

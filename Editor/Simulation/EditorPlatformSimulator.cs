@@ -9,7 +9,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 {
 	/// <summary>
 	/// Editor-only façade for driving platform state (battery, connectivity, safe area, deep links,
-	/// permissions, ATT) from edit-mode tests and the Mobile Services Explorer. See
+	/// permissions, ATT) from edit-mode tests and the Device Simulator panel. See
 	/// <c>docs/explorer.md</c> for the comparison with Unity's Device Simulator.
 	/// </summary>
 	public static class EditorPlatformSimulator
@@ -66,7 +66,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 		/// <summary>
 		/// Overrides <c>SystemInfo.batteryLevel</c> exposure on the next poll. The package does
 		/// not currently fan a battery-level event from the simulator (the runtime relies on
-		/// <c>SystemInfo</c> directly); the Explorer shows the value via the live snapshot.
+		/// <c>SystemInfo</c> directly); the Device Simulator panel shows the value via the live snapshot.
 		/// </summary>
 		public static void SetBatteryLevel(float level01)
 		{
@@ -78,22 +78,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 		public static void SetBatteryStatus(BatteryStatus status)
 		{
 			SimulatedDeviceState.BatteryStatus = status;
-		}
-
-		/// <summary>
-		/// Sets the connectivity override and drives the diff on every passed
-		/// <see cref="ConnectivityService"/>, firing <c>OnStatusChanged</c> if it transitions.
-		/// </summary>
-		public static void SetConnectivity(NetworkReachability reachability, params ConnectivityService[] services)
-		{
-			ConnectivityService.EditorReachabilityOverride = reachability;
-			if (services != null)
-			{
-				foreach (var s in services)
-				{
-					s?.SimulateStatusChanged();
-				}
-			}
 		}
 
 		// ---- Deep link ----
@@ -200,9 +184,9 @@ namespace GameLovers.MobileServices.Editor.Simulation
 	}
 
 	/// <summary>
-	/// Static carrier for simulator-driven device snapshot values that the Explorer surfaces
-	/// directly (the runtime <c>BatteryService</c> reads <c>SystemInfo</c> live and cannot be
-	/// re-routed in the editor without a full poll re-implementation; the explorer renders this
+	/// Static carrier for simulator-driven device snapshot values that the Device Simulator panel
+	/// surfaces directly (the runtime <c>BatteryService</c> reads <c>SystemInfo</c> live and cannot be
+	/// re-routed in the editor without a full poll re-implementation; the panel renders this
 	/// override alongside the real read as the simulator hint).
 	/// </summary>
 	public static class SimulatedDeviceState

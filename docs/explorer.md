@@ -1,75 +1,40 @@
-# Mobile Services Explorer & Truth-Mirror Simulator
+# Mobile Services Device Simulator Panel & Overlay
 
-Two editor windows ship with the package, both designed to be docked next to (or behind) the Game View while iterating on mobile UI surfaces.
+All Mobile Services editor tooling lives inside **Unity's Device Simulator** (`Window > General > Device Simulator`). There is no separate Explorer or Simulator window — a single **Mobile Services** panel provides the controls, the live diagnostics, and the haptic envelope graph, and an in-Game-view overlay paints the platform-shaped mocks **inside the simulated phone screen** (edit and play mode).
 
-## Mobile Services Explorer
+## The Mobile Services panel
 
-`Tools > GameLovers > Mobile Services Explorer`
+Open `Window > General > Device Simulator`, pick a device profile, and the **Mobile Services** panel appears automatically in the Control Panel (`UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` — Unity auto-discovers it; no menu item, no enable flow). The platform skin auto-syncs from the selected device profile (it reads `Application.platform`, which the Device Simulator spoofs for iOS / Android picks), so there is no platform toggle to keep in sync.
 
-Dockable `EditorWindow` (`MobileServicesExplorerWindow`) with eight tabs and a top-row `Render as: iOS | Android` dropdown. The dropdown drives the standalone `MobileSimulatorWindow`'s platform skin only — the in-Game-view runtime overlay carries its own platform value (auto-synced by the Device Simulator plugin from the selected device profile). An inline scope-hint label next to the dropdown spells this out.
+| Foldout | What it surfaces / drives |
+|---------|---------------------------|
+| **Native UI** | Alert (modal + sheet), toast (short/long), share, review. Title/message/text fields author the mock; buttons push the platform-shaped mock to the overlay AND call the real `NativeUiService` static methods (no-op in editor). The Action Sheet button greys out on Android (no native sheet idiom). |
+| **Haptics** | 9 preset buttons that plot the preset's **intensity-over-time curve** — a `Painter2D` line/area graph with **X = time (ms)** and **Y = intensity (0–1)**, drawn as a step waveform from the canonical `HapticEnvelopes` tables (the same data the Android backend feeds to `VibrationEffect.createWaveform`), with axis ticks. Haptics fire only on a physical device, so there are deliberately no play / stop controls here; the graph is the editor calibration cue. |
+| **Notifications** | A single **Show heads-up banner** preview (edit mode) that pushes the mock to the overlay, like the Native UI mocks. Live scheduling / channels / queueing / pending were removed — they ran on a throwaway `MobileNotificationService` disconnected from your game and duplicated the `NotificationsScheduler` sample (which drives the game's own service). |
+| **Gestures** | Last-detected swipe (direction / velocity / sameness / start+end) and last-detected tap (position / duration). In Play mode it uses a scene `GestureController` if one exists, otherwise **auto-spawns a hidden one** (and enables Input System Touch Simulation) so it works with zero setup — swipe / tap anywhere. |
+| **Permissions** | A per-`AppPermission` **state dropdown** — pick `Granted` / `Denied` / `NotDetermined` / `Restricted` and the running game / sample reads exactly that through `Check()` and `RequestAsync()` (the dropdown sets both the editor Check and next-Request overrides). Plus a `Reset all to default` button. No OS-prompt mock button — the prompt only makes sense at runtime when the game actually requests (drive it from your code or the Playground sample). |
+| **App Tracking Transparency** | A single **status dropdown** — pick the `AttStatus` and the running game / sample reads it through `CurrentStatus` / `RequestAuthorizationAsync()`. Plus a `Reset to default (Authorized)` button. No prompt mock button (same rationale as Permissions). |
 
-| Tab | What it surfaces / drives |
-|-----|---------------------------|
-| **Overview** | Card grid with one card per other tab. "Open" button on each card jumps to that tab. |
-| **Native UI** | Test alert (modal + sheet variants), toast, review, share. Buttons push the platform-shaped mocks to the simulator window AND call the real `NativeUiService` static methods (no-op in editor). |
-| **Haptics** | 9 preset buttons + custom intensity / duration row + loop controls + stop. **Envelope graph** plots `(timings_ms, amplitudes_0_to_1)` from the canonical `HapticEnvelopes` tables (same data the Android backend feeds to `VibrationEffect.createWaveform`). |
-| **Notifications** | Live `PendingNotifications` list, channel display, current `OperatingMode`. "Schedule test in 1s / 5s / 30s" buttons that surface a heads-up banner mock on the simulator at the simulated delivery moment. |
-| **Gestures** | Last-detected swipe (direction / velocity / sameness / start+end) and last-detected tap (position). Finds the live `GestureController` via `Object.FindFirstObjectByType`. |
-| **Device** | Live battery / connectivity / safe-area / KeepAwake / LPM read-outs plus a simulator panel: LPM toggle, connectivity dropdown, notch-inset apply / clear, DeviceService initialise / dispose. |
-| **Permissions** | 7-row grid (one per `AppPermission`): live status pill, Check, Request, Simulate-next-result dropdown, Show-Mock button. |
-| **ATT + Deep Link** | ATT status, Request, Show-Mock, Simulate-next-result dropdown. Deep-link inspector with `PendingColdStartLink` label, last-delivered URI label, URI input + Send-test-link button, Initialise-DeepLinkService button. |
+Deep links are intentionally **not** a panel foldout: `DeepLinkService.SimulateLinkActivated` is instance-scoped (no static override like Permissions/ATT), so the panel could only ever fire into a throwaway instance it owns — never your game's live service. Drive deep links from the `DeepLinkRouter` sample, or call `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` from your own bootstrap.
 
-### Implementation notes
+The header carries a single **Dismiss all mocks** button. Controls that drive live state (permission / ATT, and Gestures — which auto-attaches a `GestureController` in Play mode) need **Play mode**; the mock previews and the envelope graph work in **edit mode**. Each gated foldout also shows its own inline "Enter Play mode to enable these controls." banner so the reason its buttons are greyed is obvious when you expand it.
 
-- Each tab subclasses `MobileServiceTab` (mirrors `ServiceTab` in `com.gamelovers.services`).
-- Sticky-foldout state, digest-short-circuit, play-mode-aware refresh — all the workspace UIToolkit gotcha hardening is in the base.
-- The Explorer drives the simulator window via `MobileSimulatorState` (singleton broker / event bus). Tabs call `MobileSimulatorState.Push*` methods; the simulator subscribes and renders.
-- **Per-target routing**: every push carries a `SimulatorTarget` flag (defaults to `All` so every alive renderer paints). The Explorer broadcasts; the Device Simulator plugin scopes to `SimulatorTarget.RuntimeOverlay` so its mocks never reach the standalone window. Each renderer also tracks its own platform skin (`WindowPlatform` for the standalone window, `OverlayPlatform` for the runtime overlay), so neither steers the other.
+**Play-mode gating**: controls that drive live device state are **greyed out in edit mode** and re-enabled on entering Play — the **Permission / ATT state dropdowns** (their static overrides are only read by a running service, and a domain reload on entering Play would wipe an edit-mode setting anyway). An amber banner at the top of the panel explains this, and auto-hides once you're in Play mode. Edit-mode-safe controls — every native-UI mock push and the haptic preset buttons + envelope graph — stay enabled (they render to the overlay / graph without a running game).
 
-## Three rendering surfaces
+## The simulator overlay (the canvas)
 
-The same mock payloads — alerts, toasts, share sheets, review prompts, heads-up banners, permission / ATT dialogs — can be painted on **three different targets**, all driven by the same `MobileSimulatorState` broker. Pick the one(s) that fit your iteration loop:
+`MobileSimulatorRuntimeOverlay` is an editor-only `[InitializeOnLoad]` bootstrap that spawns a `[EditorOnly] MobileSimulatorOverlay` GameObject carrying a `UIDocument` with `PanelSettings.sortingOrder = short.MaxValue`. It renders **inside the Game / Simulator view at the simulated device's pixel grid**, so an "iOS top-banner toast" sits at the top of the simulated iPhone screen — not at the top of the editor's Game window.
 
-| Surface | When alive | Renders at |
-|---|---|---|
-| `MobileSimulatorWindow` | Edit-mode + Play-mode | Standalone dockable EditorWindow pixel grid |
-| `MobileSimulatorRuntimeOverlay` (opt-in) | Play-mode only | Inside the Game / Simulator view, at the simulated device's pixel grid |
-| `MobileServicesDeviceSimulatorPlugin` | Unity's Simulator view only | Control Panel **inside** Unity's Device Simulator window |
+- **Alive while the panel is open** — the plugin calls `MobileSimulatorRuntimeOverlay.NotifyPluginActive(true/false)` on create / destroy, so the overlay exists exactly while the Device Simulator panel is open, in **edit mode and play mode**. `UIDocument` is `[ExecuteAlways]`, so it paints in the edit-mode Game view too. Fire a mock from the panel without entering play mode and it renders immediately.
+- **Display-only in edit mode** — runtime-panel pointer input is unreliable in the edit-mode Game view, so the mock's own buttons are not relied upon; dismissal is driven from the panel's **Dismiss all mocks** button.
+- **Standalone play-mode spawn (opt-in)** — independently of the panel, the overlay also spawns on its own during play mode when `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` is on (default OFF), so the mocks render in a plain Game view even without the Device Simulator window open.
+- **Composes with Unity's Device Simulator** — pick "iPhone 15 Pro" in the Device Simulator, and the mocks render at the right scale and safe-area inset for that device.
 
-All three subscribe to the same `MobileSimulatorState` events, so pushing a mock from the Explorer fans out to whichever surfaces are currently alive — there's no risk of "drove the wrong one." The three USS files (`MobileSimulator.Common.uss` / `.iOS.uss` / `.Android.uss`) ship once in `Editor/Explorer/Overlays/` and are reused by both the window and the runtime overlay; the root element toggles `platform-ios` / `platform-android` classes so USS rules can scope on either.
+The same mock payloads — alerts, action sheets, toasts, share sheets, review prompts, heads-up banners, permission / ATT dialogs — are built by `MockBuilders` and skinned by the three USS files (`MobileSimulator.Common.uss` / `.iOS.uss` / `.Android.uss`); the root element toggles `platform-ios` / `platform-android` so USS rules can scope on either.
 
-### 1. `MobileSimulatorWindow` (edit-mode preview)
+## Persistent watermark
 
-`Tools > GameLovers > Mobile Services Simulator Window`
-
-Dockable EditorWindow that paints the platform-shaped mocks listed below. Alive in both edit mode and play mode. Use this when you want to preview a mock without entering play mode, or when you've docked it next to (instead of inside) the Game view.
-
-- iOS centered alert / bottom action sheet, Android Material 3 dialog
-- iOS top-banner toast / Android bottom-pill toast
-- iOS share grid / Android share list
-- iOS-style `SKStoreReviewController` rating prompt
-- iOS heads-up notification banner / Android heads-up card
-- iOS permission dialog + ATT dialog using the project's configured `NS*UsageDescription` text
-
-### 2. `MobileSimulatorRuntimeOverlay` (in-Game-view, play-mode-only, opt-in)
-
-Editor-only `[InitializeOnLoad]` bootstrap that — when enabled — spawns a `DontDestroyOnLoad` GameObject `[EditorOnly] MobileSimulatorOverlay` carrying a UIDocument with `PanelSettings.sortingOrder = short.MaxValue` whenever Unity enters play mode. The overlay renders **inside the Game / Simulator view at the simulated device's pixel grid**, so an "iOS top-banner toast" sits at the top of the simulated iPhone screen — not at the top of the editor's Game window.
-
-**Opt-in**: `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`. Default OFF. Toggling on requires a play-mode restart to pick up the change.
-
-**Lifetime**: spawned on `EnteredPlayMode`, destroyed instantly on `ExitingPlayMode` (clean teardown — no paused-snapshot preservation).
-
-**Composes with Unity's Device Simulator**: pick "iPhone 15 Pro" in `Window > General > Device Simulator`, enable the overlay setting, press Play — the mocks render at the right scale and safe-area inset for that device.
-
-### 3. `MobileServicesDeviceSimulatorPlugin` (Control Panel, Simulator view only)
-
-`UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds a slim action-button Control Panel inside Unity's Device Simulator window. Unity auto-discovers the plugin — no menu item, no enable flow.
-
-The panel groups action buttons by subsystem (Native UI / Notifications / Device state / Permissions / ATT / Deep Links) and includes a top-row `Open full Explorer →` button that jumps to the heavyweight diagnostic surface when needed. The plugin is **scoped to the runtime overlay**: every action button passes `SimulatorTarget.RuntimeOverlay`, including its own `Dismiss all mocks` button, so anything fired from this panel paints inside the simulated phone screen and never disturbs whatever the standalone Simulator window has open. The plugin **auto-syncs `MobileSimulatorState.OverlayPlatform`** from the selected device profile (reads `Application.platform`, which Unity's Device Simulator spoofs) — `WindowPlatform` is left alone, so the Explorer's `Render as: iOS | Android` dropdown stays interactive and authoritative for its own surface.
-
-### Persistent watermark
-
-All three surfaces carry a non-removable `[EDITOR SIMULATOR]` watermark. **By design** — prevents the "looked fine in editor, broke on device" trust collapse. Do not try to hide it.
+The overlay carries a non-removable `[EDITOR SIMULATOR]` watermark. **By design** — it prevents the "looked fine in editor, broke on device" trust collapse. Do not try to hide it.
 
 ## `EditorPlatformSimulator` static API
 
@@ -79,7 +44,6 @@ For code-driven tests / scripted automation, `GameLovers.MobileServices.Editor.S
 EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService);
 EditorPlatformSimulator.SetSafeArea(new Rect(0, 100, w, h-200), safeAreaService);
 EditorPlatformSimulator.ClearSafeAreaOverride(safeAreaService);
-EditorPlatformSimulator.SetConnectivity(NetworkReachability.NotReachable, connectivityService);
 EditorPlatformSimulator.SimulateDeepLink(new Uri("myapp://promo/x"), deepLinkService);
 EditorPlatformSimulator.QueuePermissionResult(AppPermission.Camera, PermissionStatus.Denied);
 EditorPlatformSimulator.SetPermissionCheckResult(AppPermission.Camera, PermissionStatus.Restricted);
@@ -87,7 +51,7 @@ EditorPlatformSimulator.QueueAttResult(AttStatus.Authorized);
 EditorPlatformSimulator.DismissAllOverlays();
 ```
 
-Each method either sets an internal static override on the runtime service (under `#if UNITY_EDITOR`) or pushes a payload through `MobileSimulatorState`.
+Each method either sets an internal static override on the runtime service (under `#if UNITY_EDITOR`) or pushes a payload through the `MobileSimulatorState` broker.
 
 ## What's NOT mirrored
 
@@ -95,15 +59,15 @@ Out of scope (deliberate):
 
 - **Audio proxy for haptics** (low-frequency oscillator burst per preset).
 
-The envelope graph is the calibration cue for haptics; designers iterate haptic feel on a paired device through the `HapticsPalette` sample. Device-frame overlays (iPhone 15 Pro / Pixel 8 cutout outlines, safe-area inset, `Application.platform` spoofing) are handled by Unity's Device Simulator natively — see the comparison section below; this package composes with it rather than reimplementing it.
+The envelope graph is the calibration cue for haptics; designers iterate haptic feel on a paired device through the `HapticsPalette` sample. Device-frame overlays (iPhone 15 Pro / Pixel 8 cutout outlines, safe-area inset, `Application.platform` spoofing) are handled by Unity's Device Simulator natively — this package composes with it rather than reimplementing it.
 
 ## Comparison with Unity's Device Simulator
 
-Unity ships a built-in **Device Simulator** (`Window > General > Device Simulator`). The two tools are **complementary, not competitive** — use both together.
+Unity's built-in **Device Simulator** and this package's tooling are **complementary** — in fact this package's panel *lives inside* Unity's Device Simulator.
 
 ### What Unity's Device Simulator does (and does well)
 
-- Wraps the Game view in a device frame (iPhone 15 Pro, Pixel 8, etc. — ~30 device profiles built in) with the correct screen aspect, notch / dynamic island cutout, and safe-area inset.
+- Wraps the Game view in a device frame (~30 device profiles) with the correct screen aspect, notch / dynamic island cutout, and safe-area inset.
 - Overrides Unity-level APIs to match the chosen device: `Screen.safeArea`, `Screen.dpi`, `Screen.width/height`, `Screen.orientation`, `Application.platform`, `SystemInfo.deviceModel`, etc.
 - Triggers `#if UNITY_IOS` / `#if UNITY_ANDROID` runtime branches by spoofing `Application.platform`.
 - Mouse-as-touch input, orientation flip, foreground/background pause toggles.
@@ -112,7 +76,7 @@ Unity ships a built-in **Device Simulator** (`Window > General > Device Simulato
 
 Native OS surfaces — `UIAlertController`, `UIActivityViewController`, `SKStoreReviewController`, `UNUserNotificationCenter` heads-up banners, the iOS permission prompt, the ATT prompt, Android's Material dialog and Toast — **live in the OS process, not in Unity's renderer**. The Device Simulator can't paint them because they don't exist in the editor at all. When `NativeUiService.ShowAlertPopUp(...)` is called in the editor, Unity's Device Simulator has nothing to show.
 
-| Surface | Unity Device Simulator | Mobile Simulator Window |
+| Surface | Unity Device Simulator | Mobile Services overlay |
 |---------|------------------------|--------------------------|
 | iOS alert / sheet (`ShowAlertPopUp`) | — | iOS-styled mock with the supplied buttons |
 | Android Material dialog | — | mock card with the supplied buttons |
@@ -121,44 +85,40 @@ Native OS surfaces — `UIAlertController`, `UIActivityViewController`, `SKStore
 | Review prompt | — | `SKStoreReviewController`-style mock |
 | Permission dialog | — | dialog rendered with project-configured `NSUsageDescription` |
 | ATT dialog | — | dialog rendered with `NSUserTrackingUsageDescription` |
-| Heads-up notification banner | — | iOS pill / Android card |
+| Heads-up notification banner | — | iOS / Android heads-up card with app icon, app-name + time header, bold title + body |
 | Device frame + bezels | full library | — |
 | Touch input via mouse | yes | — |
-| `Application.platform` spoofing | yes | — |
+| `Application.platform` spoofing | yes | — (consumes it to auto-skin) |
 
-The configured-usage-description piece is the strongest unique value: Unity's Device Simulator can't know what text Apple's review team will read for `NSCameraUsageDescription`, but the Mobile Simulator reads it from `MobileServicesSettings` and surfaces it in the dialog mock — making the editor preview match what'll appear on the device.
+The configured-usage-description piece is the strongest unique value: Unity's Device Simulator can't know what text Apple's review team will read for `NSCameraUsageDescription`, but the Mobile Services panel reads it from `MobileServicesSettings` and surfaces it in the dialog mock — making the editor preview match what'll appear on the device.
 
 ### Acknowledged overlap
 
-Three pieces of the package's editor tooling do overlap with Unity's Device Simulator. They earn their keep specifically for **test/automation paths** that Unity's interactive-only simulator doesn't expose. Note also that `MobileServicesDeviceSimulatorPlugin` is an _extension_ of Unity's Device Simulator (it registers via the official `DeviceSimulatorPlugin` API), not an overlap.
+A few pieces of `EditorPlatformSimulator` overlap with Unity's Device Simulator. They earn their keep specifically for **test/automation paths** that Unity's interactive-only simulator doesn't expose.
 
 | Feature | Unity Device Simulator | Why this package still ships it |
 |---------|------------------------|--------------------------------|
 | `EditorPlatformSimulator.SetSafeArea` | Richer (real device-accurate cutouts via device picker) | Programmatic API — drives `SafeAreaService.OnSafeAreaChanged` deterministically from unit tests |
 | `EditorPlatformSimulator.SetIosLowPowerMode` | "Low Battery" toggle in newer versions | Programmatic — fires `BatteryService.OnLowPowerModeChanged` for tests |
-| Explorer's `Render as: iOS \| Android` toggle | Richer (per-device + per-platform via picker) | Only swaps the USS skin for the standalone Simulator window's mock dialogs; orthogonal to platform spoofing. The runtime overlay's skin is auto-synced from the device profile by the Device Simulator plugin (`OverlayPlatform`), so the two surfaces don't fight over a single platform value. |
 
 If your iteration loop is interactive (designer-paired phone or just clicking around), Unity's Device Simulator wins for safe-area / platform / device-frame work. If your iteration loop is scripted (CI tests, automated previews), the `EditorPlatformSimulator` API is the path. Use both — they don't conflict.
 
-### Recommended workflow
+## Recommended workflow
 
-**For most iteration loops** (designer paired with phone, or just clicking around):
-
-1. Open Unity's Device Simulator (`Window > General > Device Simulator`) and pick a target device. The Mobile Services plugin panel appears in the Control Panel automatically — fire mocks from there next to the simulated phone screen.
-2. Enable `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` if you want the mocks to render **inside** the simulated phone screen at the correct safe area / scale.
-3. Press Play — the runtime overlay spawns and renders the mocks inside the Game view.
-4. Keep the Explorer dockable handy for live-state diagnostics (haptic envelope graph, gesture last-event, pending notifications list, etc.) — open `Tools > GameLovers > Mobile Services Explorer` whenever you need it.
-
-**For scripted automation / CI**: skip the windows entirely and call `EditorPlatformSimulator.Set*` / `Queue*` directly from your test setup.
+1. Open Unity's Device Simulator (`Window > General > Device Simulator`) and pick a target device. The **Mobile Services** panel appears in the Control Panel automatically.
+2. Fire mocks from the panel — they render inside the simulated phone screen immediately, in edit mode. No play-mode round-trip and no second window to dock.
+3. Press Play to drive the live-state controls (permission / ATT state, last gesture) that need a running consumer.
+4. For scripted automation / CI: skip the UI and call `EditorPlatformSimulator.Set*` / `Queue*` directly from your test setup.
 
 ## When to use which
 
 | Need | Use |
 |------|-----|
-| Watch live service state during play mode | Explorer |
+| Preview what an iOS alert / toast / share / review will look like (no play mode) | Mobile Services panel Native UI buttons — fire the mock into the overlay |
+| Render the mock inside the simulated phone screen at correct scale | Device Simulator device profile + the overlay (alive while the panel is open) |
+| Watch live service state during play mode | Mobile Services panel diagnostics (Play mode) |
+| Set a permission / ATT state your running game reads | Mobile Services panel — the Permissions / ATT state dropdowns |
 | Drive a permission Request result for a unit test | `EditorPlatformSimulator.QueuePermissionResult` |
-| Preview what an iOS alert / ATT prompt will look like | Simulator window or runtime overlay |
-| Render the mock inside the simulated phone screen at correct scale | Runtime overlay (`Editor tooling > Enable runtime simulator overlay`) + Unity's Device Simulator |
-| Fire a mock without leaving the simulated phone view | Device Simulator plugin panel (Control Panel) |
 | Test that your code subscribes to `OnLowPowerModeChanged` correctly | `EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService)` |
-| Demo a deep link routing flow without launching from the OS | DeepLinkRouter sample + Explorer's "Send test link" button |
+| Render mocks in a plain Game view during play without the Device Simulator open | `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` |
+| Demo a deep link routing flow without launching from the OS | DeepLinkRouter sample, or `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` |

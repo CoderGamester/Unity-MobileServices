@@ -14,8 +14,6 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public IBatteryService Battery { get; }
 		/// <inheritdoc />
-		public IConnectivityService Connectivity { get; }
-		/// <inheritdoc />
 		public IIosAudioSessionService AudioSession { get; }
 		/// <inheritdoc />
 		public IPermissionsService Permissions { get; }
@@ -26,7 +24,7 @@ namespace GameLovers.MobileServices.Device
 
 		/// <summary>
 		/// Constructs the umbrella with the default child implementations for the current platform.
-		/// All host-dependent children (SafeArea, Battery, Connectivity) share a single
+		/// The host-dependent children (SafeArea, Battery) share a single
 		/// <see cref="DeviceServicesHost"/> spawned by this constructor — no extra GameObjects.
 		/// </summary>
 		public DeviceService() : this(BuildDefaults()) { }
@@ -39,7 +37,6 @@ namespace GameLovers.MobileServices.Device
 			ISafeAreaService safeArea,
 			IScreenWakeService screenWake,
 			IBatteryService battery,
-			IConnectivityService connectivity,
 			IIosAudioSessionService audioSession,
 			IPermissionsService permissions,
 			IAttService att,
@@ -48,24 +45,23 @@ namespace GameLovers.MobileServices.Device
 			SafeArea = safeArea;
 			ScreenWake = screenWake;
 			Battery = battery;
-			Connectivity = connectivity;
 			AudioSession = audioSession;
 			Permissions = permissions;
 			Att = att;
 			DeepLink = deepLink;
 		}
 
-		// Tuple-routed delegating ctor so the 3 host-dependent children share one explicit host
-		// instance constructed up-front, not 3 separate accesses to the singleton during a
+		// Tuple-routed delegating ctor so the host-dependent children share one explicit host
+		// instance constructed up-front, not separate accesses to the singleton during a
 		// constructor chain (cleaner ownership signal in the umbrella's call stack).
-		private DeviceService((ISafeAreaService, IScreenWakeService, IBatteryService, IConnectivityService,
+		private DeviceService((ISafeAreaService, IScreenWakeService, IBatteryService,
 			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService) defaults)
-			: this(defaults.Item1, defaults.Item2, defaults.Item3, defaults.Item4,
-				   defaults.Item5, defaults.Item6, defaults.Item7, defaults.Item8)
+			: this(defaults.Item1, defaults.Item2, defaults.Item3,
+				   defaults.Item4, defaults.Item5, defaults.Item6, defaults.Item7)
 		{
 		}
 
-		private static (ISafeAreaService, IScreenWakeService, IBatteryService, IConnectivityService,
+		private static (ISafeAreaService, IScreenWakeService, IBatteryService,
 			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService) BuildDefaults()
 		{
 			var host = DeviceServicesHost.Instance;
@@ -73,7 +69,6 @@ namespace GameLovers.MobileServices.Device
 				new SafeAreaService(host),
 				new ScreenWakeService(),
 				new BatteryService(host),
-				new ConnectivityService(host),
 				new IosAudioSessionService(),
 				new PermissionsService(),
 				new AttService(),
@@ -84,7 +79,6 @@ namespace GameLovers.MobileServices.Device
 		{
 			(SafeArea as IDisposable)?.Dispose();
 			(Battery as IDisposable)?.Dispose();
-			(Connectivity as IDisposable)?.Dispose();
 			(DeepLink as IDisposable)?.Dispose();
 		}
 	}

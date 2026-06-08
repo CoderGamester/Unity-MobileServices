@@ -32,4 +32,4 @@ Most surfaces (haptics, native UI, real notifications, ATT, native deep-link del
 - `MobileNotificationService` returns an `EditorGameNotification` — `Schedule` doesn't actually queue with the OS.
 - `IPermissionsService.RequestAsync` short-circuits to `Granted` (or whatever `EditorPlatformSimulator.QueuePermissionResult` was last asked to return).
 
-The Mobile Services Explorer (`Tools > GameLovers > Mobile Services Explorer`) and the Mobile Simulator window (`Tools > GameLovers > Mobile Services Simulator Window`) bridge the editor gap by painting platform-shaped mocks of every native UI surface; open those windows next to the playground sample for the best in-editor iteration loop.
+The Mobile Services panel inside Unity's Device Simulator (`Window > General > Device Simulator`) bridges the editor gap by painting platform-shaped mocks of every native UI surface inside the simulated phone screen; open the Device Simulator next to the playground sample for the best in-editor iteration loop.

@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace GameLoversEditor.MobileServices.Tests
 {
 	/// <summary>
-	/// Pins the per-preset envelope tables that the Mobile Services Explorer's haptic envelope graph
+	/// Pins the per-preset envelope tables that the Device Simulator panel's haptic envelope graph
 	/// and the runtime <see cref="AndroidHapticsBackend"/> both read from. Asserting on shape +
 	/// expected first-row values catches accidental drift if someone edits the float tables.
 	/// </summary>

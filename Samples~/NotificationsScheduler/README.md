@@ -3,7 +3,7 @@
 Lifecycle-focused notifications sample. Educates on the three concerns the kitchen-sink playground deliberately hides:
 
 1. **Channel CRUD** — add channels at runtime and observe the first-channel-becomes-default-on-Android rule.
-2. **`OperatingMode` toggles** — `NoQueue` / `Queue` / `QueueAndClear` / `QueueClearAndReschedule`. The buttons switch the displayed value; rewire the host MonoBehaviour to consume the change if your app needs runtime mode flips.
+2. **`OperatingMode` toggles** — `NoQueue` / `Queue` / `QueueAndClear` / `QueueClearAndReschedule`. The buttons set `INotificationService.Mode` directly, so the change takes effect live on the next schedule / foreground-background transition.
 3. **Persistence-on-background round trip** — the `OnLocalNotificationDeliveredEvent` and `OnLocalNotificationExpiredEvent` events log what happens when you background and foreground the app while a queued notification is pending.
 
 ## Setup

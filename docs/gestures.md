@@ -69,5 +69,5 @@ The `IMobileService` umbrella doesn't expose Gestures — `GestureController` is
 ## Editor
 
 - Editor pointer simulation requires `TouchSimulation` on a scene GameObject (Unity Input System feature).
-- The Mobile Services Explorer's **Gestures** tab finds the live `GestureController` via `Object.FindFirstObjectByType` and surfaces the last-detected swipe + tap metrics.
+- The Device Simulator panel's **Gestures** foldout finds the live `GestureController` via `Object.FindFirstObjectByType` and surfaces the last-detected swipe + tap metrics.
 - End-to-end gesture detection isn't unit-tested — it requires the Input System's `InputTestFixture`. Only the math (`ActiveGesture` / `SwipeInput` / `TapInput`) is covered. `GestureController` has a smoke test verifying subscribe/unsubscribe lifecycle.

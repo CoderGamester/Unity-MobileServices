@@ -6,7 +6,7 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 
 | Symptom | Fix |
 |---------|-----|
-| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Use the [Mobile Simulator window](explorer.md) to preview platform-shaped mocks. |
+| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](explorer.md) to preview platform-shaped mocks inside the simulated phone. |
 | `ShowAlertPopUp` throws `SystemException` | Running on an unsupported platform (Standalone, WebGL). Mobile-only API. |
 | iOS alert button callback fires the wrong handler | Two buttons in the same alert share their `Text`. iOS matches by text — keep button texts unique within a single alert. |
 | `RequestReview()` does nothing on Android | Missing `com.google.android.play:review:2.0.1` in `mainTemplate.gradle`. The call logs an error and returns; it does NOT throw. |
@@ -44,7 +44,6 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | Symptom | Fix |
 |---------|-----|
 | `IsLowPowerMode` is always false in editor | Editor short-circuits LPM detection. Use `EditorPlatformSimulator.SetIosLowPowerMode(true, battery)` to drive the change. |
-| `Connectivity.OnStatusChanged` never fires | Polls once per second + on focus regain. For editor preview, use `EditorPlatformSimulator.SetConnectivity(...)`. |
 | `device.Att.CurrentStatus` returns `Authorized` on Android | Android has no ATT equivalent — the service returns `Authorized` unconditionally. Don't read this as "the user authorized"; gate tracking-init on `Application.platform == RuntimePlatform.IPhonePlayer`. |
 | Cold-start deep link is lost | Construct `DeepLinkService` early — before scene load. `Application.absoluteURL` is cleared by Unity once consumed. |
 | Second subscriber to `OnLinkActivated` doesn't receive the cold-start link | By design — the link represents a single user action, replayed to the FIRST subscriber only. |
@@ -64,5 +63,6 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | iOS build fails with `[GameLovers.MobileServices] iOS build failed because…` | A referenced permission has an empty usage description. Open Project Settings > GameLovers > Mobile Services and fill the missing field, or enable `Allow build with placeholder usage descriptions` for CI builds (Apple will reject those placeholders on submission). |
 | iOS build succeeds but App Store rejects with "placeholder text in NSCameraUsageDescription" | You shipped a build with the soft-mode placeholder. Fill in real usage descriptions in the settings panel and rebuild. |
 | Android build doesn't pick up `<uses-permission>` entries | Your project lacks `Assets/Plugins/Android/mainTemplate.xml`. Enable `Player Settings > Publishing Settings > Custom Main Manifest` and rebuild. |
-| Mobile Services Explorer "Open" buttons do nothing | The Explorer window is closed. Open via `Tools > GameLovers > Mobile Services Explorer`. |
-| Truth-mirror simulator shows generic Unity dialogs | The simulator USS files didn't load. Verify `Editor/Explorer/Overlays/MobileSimulator.Common.uss` is present in the package and re-import. |
+| The Mobile Services panel is missing from the Device Simulator | Open `Window > General > Device Simulator` and look in the Control Panel column. The panel is auto-discovered; if it's absent, ensure the `GameLovers.MobileServices.Editor` assembly compiled (check the Console for errors). |
+| Mocks fired from the panel don't render | The overlay paints into the Game / Simulator view — keep the Device Simulator window visible. In a plain Game view during play without the Device Simulator open, enable `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`. |
+| Simulator overlay shows generic Unity dialogs | The simulator USS files didn't load. Verify `Editor/Explorer/Overlays/MobileSimulator.Common.uss` is present in the package and re-import. |

@@ -43,6 +43,7 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			BuildUi();
 			WireDeviceEvents();
 			WireDeepLink();
+			WireGestures();
 		}
 
 		private void OnDestroy()
@@ -53,6 +54,10 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 				_gestures.Swiped -= OnSwiped;
 				_gestures.Tapped -= OnTapped;
 			}
+#if UNITY_EDITOR
+			// Pair of the editor-only TouchSimulation.Enable() in WireGestures.
+			UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Disable();
+#endif
 		}
 
 		private void Update()
@@ -73,7 +78,6 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			{
 				_deviceLabel.text =
 					$"Battery {_device.Battery.Level:P0} ({_device.Battery.Status}) | LPM {_device.Battery.IsLowPowerMode}\n" +
-					$"Connectivity {_device.Connectivity.Status}\n" +
 					$"KeepAwake {_device.ScreenWake.KeepAwake}\n" +
 					$"ATT {_device.Att.CurrentStatus}";
 			}
@@ -105,11 +109,17 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			_deviceLabel = AddLabel(layoutGroup.transform, "Device state…");
 
 			AddSectionHeader(layoutGroup.transform, "Native UI");
-			AddButton(layoutGroup.transform, "Show Alert", () => NativeUiService.ShowAlertPopUp(
+			AddButton(layoutGroup.transform, "Show Alert (modal)", () => NativeUiService.ShowAlertPopUp(
 				false, "Delete Save?", "This cannot be undone.",
 				new AlertButton { Text = "Cancel", Style = AlertButtonStyle.Cancel, Callback = () => Log("Alert: Cancel") },
 				new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, Callback = () => Log("Alert: Delete") }));
-			AddButton(layoutGroup.transform, "Show Toast", () => NativeUiService.ShowToastMessage("Item Collected!", false));
+			AddButton(layoutGroup.transform, "Show Action Sheet", () => NativeUiService.ShowAlertPopUp(
+				true, "Photo options", "Choose an action",
+				new AlertButton { Text = "Cancel", Style = AlertButtonStyle.Cancel, Callback = () => Log("Sheet: Cancel") },
+				new AlertButton { Text = "Replace", Style = AlertButtonStyle.Default, Callback = () => Log("Sheet: Replace") },
+				new AlertButton { Text = "Remove", Style = AlertButtonStyle.Destructive, Callback = () => Log("Sheet: Remove") }));
+			AddButton(layoutGroup.transform, "Show Toast (short)", () => NativeUiService.ShowToastMessage("Item Collected!", false));
+			AddButton(layoutGroup.transform, "Show Toast (long)", () => NativeUiService.ShowToastMessage("Saved to cloud — this is a long toast.", true));
 			AddButton(layoutGroup.transform, "Request Review", NativeUiService.RequestReview);
 			AddButton(layoutGroup.transform, "Share", () => NativeUiService.Share("Check out my high score!", "https://example.com"));
 
@@ -135,6 +145,13 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			AddButton(layoutGroup.transform, "Cancel all", () => { _notifications.CancelAllScheduledNotifications(); Log("Cancelled all"); });
 
 			AddSectionHeader(layoutGroup.transform, "Permissions");
+			AddButton(layoutGroup.transform, "Check all (sync)", () =>
+			{
+				foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
+				{
+					Log($"Check {p}: {_device.Permissions.Check(p)}");
+				}
+			});
 			foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
 			{
 				var captured = p;
@@ -152,6 +169,9 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 				Log($"ATT: {result}");
 			});
 
+			AddSectionHeader(layoutGroup.transform, "Gestures");
+			AddLabel(layoutGroup.transform, "Swipe or tap anywhere — events print to the log below (editor uses Input System Touch Simulation).");
+
 			AddSectionHeader(layoutGroup.transform, "Other");
 			AddButton(layoutGroup.transform, "Toggle KeepAwake", () => _device.ScreenWake.KeepAwake = !_device.ScreenWake.KeepAwake);
 			AddButton(layoutGroup.transform, "Configure Audio (iOS)", _device.AudioSession.ConfigureForPlayback);
@@ -164,12 +184,23 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			_device.Battery.OnLevelChanged       += () => Log($"Battery {_device.Battery.Level:P0}");
 			_device.Battery.OnStatusChanged      += () => Log($"Battery status {_device.Battery.Status}");
 			_device.Battery.OnLowPowerModeChanged += () => Log($"LPM {_device.Battery.IsLowPowerMode}");
-			_device.Connectivity.OnStatusChanged += s  => Log($"Connectivity {s}");
 		}
 
 		private void WireDeepLink()
 		{
 			_device.DeepLink.OnLinkActivated += uri => Log($"Deep link: {uri}");
+		}
+
+		private void WireGestures()
+		{
+			// GestureController is a MonoBehaviour; it enables EnhancedTouchSupport in OnEnable.
+			_gestures = gameObject.AddComponent<GestureController>();
+			_gestures.Swiped += OnSwiped;
+			_gestures.Tapped += OnTapped;
+#if UNITY_EDITOR
+			// Convert editor mouse drags/clicks into touches so the gesture demo works without a device.
+			UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Enable();
+#endif
 		}
 
 		private void Log(string message)

@@ -15,7 +15,7 @@ namespace GameLovers.MobileServices.Device
 
 #if UNITY_EDITOR
 		// Editor-only simulator override. When set, the LateUpdate poll reports this rect
-		// instead of Screen.safeArea so the Explorer can drive notch/dynamic-island previews.
+		// instead of Screen.safeArea so the Device Simulator panel can drive notch/dynamic-island previews.
 		internal static Rect? EditorSafeAreaOverride;
 #endif
 
@@ -68,7 +68,7 @@ namespace GameLovers.MobileServices.Device
 #if UNITY_EDITOR
 		/// <summary>
 		/// Editor-only simulator hook. Forces an immediate diff against
-		/// <see cref="EditorSafeAreaOverride"/> so the Explorer's "Set Safe Area" affordance
+		/// <see cref="EditorSafeAreaOverride"/> so the Device Simulator panel's notch-inset affordance
 		/// surfaces the change without waiting for the next LateUpdate tick.
 		/// </summary>
 		internal void SimulateSafeAreaChanged()
