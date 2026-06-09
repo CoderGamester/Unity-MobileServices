@@ -93,9 +93,44 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 	public static class MobileSimulatorState
 	{
 		private const string PlatformPrefKey = "GameLovers.MobileServicesSimulator.Platform";
+		private const string EnabledPrefKey = "GameLovers.MobileServicesSimulator.Enabled";
 
 		private static SimulatedPlatform _platform = SimulatedPlatform.iOS;
+		private static bool _enabled = true;
 		private static bool _initialized;
+
+		// ---- Enabled (master switch) ----
+
+		/// <summary>
+		/// Fires when <see cref="Enabled"/> changes — the master switch that gates every plugin
+		/// control and shows/hides the in-Game-view simulator banner.
+		/// </summary>
+		public static event Action<bool> EnabledChanged;
+
+		/// <summary>
+		/// Master switch for the editor simulator. When on, the plugin's controls are interactive
+		/// and the in-Game-view "[EDITOR SIMULATOR]" banner is shown; when off, the controls are
+		/// greyed out and the banner is hidden. Persisted to <see cref="EditorPrefs"/>.
+		/// </summary>
+		public static bool Enabled
+		{
+			get
+			{
+				EnsureInitialized();
+				return _enabled;
+			}
+			set
+			{
+				EnsureInitialized();
+				if (_enabled == value)
+				{
+					return;
+				}
+				_enabled = value;
+				EditorPrefs.SetBool(EnabledPrefKey, value);
+				EnabledChanged?.Invoke(value);
+			}
+		}
 
 		// ---- Platform ----
 
@@ -157,6 +192,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}
 			_initialized = true;
 			_platform = (SimulatedPlatform)EditorPrefs.GetInt(PlatformPrefKey, (int)SimulatedPlatform.iOS);
+			_enabled = EditorPrefs.GetBool(EnabledPrefKey, true);
 		}
 	}
 }

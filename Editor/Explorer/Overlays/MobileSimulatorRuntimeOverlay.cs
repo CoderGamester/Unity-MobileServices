@@ -183,6 +183,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		{
 			private readonly VisualElement _root;
 			private readonly VisualElement _stage;
+			private readonly VisualElement _watermark;
 			private readonly Label _platformLabel;
 			private readonly StyleSheet _commonSheet;
 			private readonly StyleSheet _iosSheet;
@@ -225,17 +226,19 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				_stage.AddToClassList("simulator-stage");
 				rootContainer.Add(_stage);
 
-				var watermark = new VisualElement { name = "simulator-watermark" };
-				watermark.AddToClassList("simulator-watermark");
-				watermark.pickingMode = PickingMode.Ignore;
-				watermark.Add(new Label("[EDITOR SIMULATOR]"));
+				_watermark = new VisualElement { name = "simulator-watermark" };
+				_watermark.AddToClassList("simulator-watermark");
+				_watermark.pickingMode = PickingMode.Ignore;
+				_watermark.Add(new Label("[EDITOR SIMULATOR]"));
 				_platformLabel = new Label();
 				_platformLabel.AddToClassList("simulator-platform-label");
-				watermark.Add(_platformLabel);
-				rootContainer.Add(watermark);
+				_watermark.Add(_platformLabel);
+				rootContainer.Add(_watermark);
 
 				ApplyPlatformSheet(MobileSimulatorState.Platform);
+				ApplyEnabledState(MobileSimulatorState.Enabled);
 
+				MobileSimulatorState.EnabledChanged += OnEnabledChanged;
 				MobileSimulatorState.PlatformChanged += OnPlatformChanged;
 				MobileSimulatorState.AlertRequested += OnAlert;
 				MobileSimulatorState.ToastRequested += OnToast;
@@ -248,6 +251,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 			internal void Dispose()
 			{
+				MobileSimulatorState.EnabledChanged -= OnEnabledChanged;
 				MobileSimulatorState.PlatformChanged -= OnPlatformChanged;
 				MobileSimulatorState.AlertRequested -= OnAlert;
 				MobileSimulatorState.ToastRequested -= OnToast;
@@ -270,6 +274,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 					}
 				}
 				return null;
+			}
+
+			private void OnEnabledChanged(bool enabled) => ApplyEnabledState(enabled);
+
+			private void ApplyEnabledState(bool enabled)
+			{
+				if (_watermark != null)
+				{
+					_watermark.style.display = enabled ? DisplayStyle.Flex : DisplayStyle.None;
+				}
 			}
 
 			private void OnPlatformChanged(SimulatedPlatform platform) => ApplyPlatformSheet(platform);

@@ -17,7 +17,7 @@ Open `Window > General > Device Simulator`, pick a device profile, and the **Mob
 
 Deep links are intentionally **not** a panel foldout: `DeepLinkService.SimulateLinkActivated` is instance-scoped (no static override like Permissions/ATT), so the panel could only ever fire into a throwaway instance it owns — never your game's live service. Drive deep links from the `DeepLinkRouter` sample, or call `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` from your own bootstrap.
 
-The header carries a single **Dismiss all mocks** button. Controls that drive live state (permission / ATT, and Gestures — which auto-attaches a `GestureController` in Play mode) need **Play mode**; the mock previews and the envelope graph work in **edit mode**. Each gated foldout also shows its own inline "Enter Play mode to enable these controls." banner so the reason its buttons are greyed is obvious when you expand it.
+The header carries an **Editor Simulator** master-switch toggle: it enables/disables every section below as a group and shows/hides the in-Game-view `[EDITOR SIMULATOR]` banner (state persisted to `EditorPrefs`); turning it off also clears any visible mock. Dismissal lives per-section — **Dismiss all UIs** in the Native UI foldout and **Dismiss Banner** in the Notifications foldout. Controls that drive live state (permission / ATT, and Gestures — which auto-attaches a `GestureController` in Play mode) need **Play mode**; the mock previews and the envelope graph work in **edit mode**. Each gated foldout also shows its own inline "Enter Play mode to enable these controls." banner so the reason its buttons are greyed is obvious when you expand it.
 
 **Play-mode gating**: controls that drive live device state are **greyed out in edit mode** and re-enabled on entering Play — the **Permission / ATT state dropdowns** (their static overrides are only read by a running service, and a domain reload on entering Play would wipe an edit-mode setting anyway). An amber banner at the top of the panel explains this, and auto-hides once you're in Play mode. Edit-mode-safe controls — every native-UI mock push and the haptic preset buttons + envelope graph — stay enabled (they render to the overlay / graph without a running game).
 
@@ -26,15 +26,15 @@ The header carries a single **Dismiss all mocks** button. Controls that drive li
 `MobileSimulatorRuntimeOverlay` is an editor-only `[InitializeOnLoad]` bootstrap that spawns a `[EditorOnly] MobileSimulatorOverlay` GameObject carrying a `UIDocument` with `PanelSettings.sortingOrder = short.MaxValue`. It renders **inside the Game / Simulator view at the simulated device's pixel grid**, so an "iOS top-banner toast" sits at the top of the simulated iPhone screen — not at the top of the editor's Game window.
 
 - **Alive while the panel is open** — the plugin calls `MobileSimulatorRuntimeOverlay.NotifyPluginActive(true/false)` on create / destroy, so the overlay exists exactly while the Device Simulator panel is open, in **edit mode and play mode**. `UIDocument` is `[ExecuteAlways]`, so it paints in the edit-mode Game view too. Fire a mock from the panel without entering play mode and it renders immediately.
-- **Display-only in edit mode** — runtime-panel pointer input is unreliable in the edit-mode Game view, so the mock's own buttons are not relied upon; dismissal is driven from the panel's **Dismiss all mocks** button.
+- **Display-only in edit mode** — runtime-panel pointer input is unreliable in the edit-mode Game view, so the mock's own buttons are not relied upon; dismissal is driven from the panel's per-section dismiss buttons (**Dismiss all UIs** / **Dismiss Banner**).
 - **Standalone play-mode spawn (opt-in)** — independently of the panel, the overlay also spawns on its own during play mode when `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` is on (default OFF), so the mocks render in a plain Game view even without the Device Simulator window open.
 - **Composes with Unity's Device Simulator** — pick "iPhone 15 Pro" in the Device Simulator, and the mocks render at the right scale and safe-area inset for that device.
 
 The same mock payloads — alerts, action sheets, toasts, share sheets, review prompts, heads-up banners, permission / ATT dialogs — are built by `MockBuilders` and skinned by the three USS files (`MobileSimulator.Common.uss` / `.iOS.uss` / `.Android.uss`); the root element toggles `platform-ios` / `platform-android` so USS rules can scope on either.
 
-## Persistent watermark
+## Editor Simulator watermark
 
-The overlay carries a non-removable `[EDITOR SIMULATOR]` watermark. **By design** — it prevents the "looked fine in editor, broke on device" trust collapse. Do not try to hide it.
+The overlay paints an `[EDITOR SIMULATOR]` watermark in the Game view while the simulator is enabled (the header **Editor Simulator** toggle / `MobileSimulatorState.Enabled`). It exists to prevent the "looked fine in editor, broke on device" trust collapse — it is tied to the master switch, so it disappears only when the whole simulator is turned off (which also disables every panel control).
 
 ## `EditorPlatformSimulator` static API
 

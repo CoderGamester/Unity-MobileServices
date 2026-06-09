@@ -55,6 +55,11 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		// Amber banners shown only in edit mode (the top global one + one inside each gated foldout).
 		private readonly List<VisualElement> _editModeBanners = new List<VisualElement>();
 
+		// Master switch (mirrors MobileSimulatorState.Enabled): the header toggle stays interactive
+		// while every section below it is enabled/disabled as a group.
+		private Toggle _enabledToggle;
+		private VisualElement _sectionsContainer;
+
 		// ---- Held service instances (created on demand; disposed in OnDestroy) ----
 		private readonly PermissionsService _permissions = new PermissionsService();
 		private readonly AttService _att = new AttService();
@@ -120,13 +125,18 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			scroll.style.flexGrow = 1;
 
 			scroll.Add(BuildHeader());
-			scroll.Add(BuildPlayModeBanner());
-			scroll.Add(BuildNativeUiSection());
-			scroll.Add(BuildHapticsSection());
-			scroll.Add(BuildNotificationsSection());
-			scroll.Add(BuildGesturesSection());
-			scroll.Add(BuildPermissionsSection());
-			scroll.Add(BuildAttSection());
+
+			// Everything below the header is gated as a group by the master switch. The header (with
+			// the enable toggle) stays interactive so the user can always turn the simulator back on.
+			_sectionsContainer = new VisualElement { name = "msp-sections" };
+			_sectionsContainer.Add(BuildPlayModeBanner());
+			_sectionsContainer.Add(BuildNativeUiSection());
+			_sectionsContainer.Add(BuildHapticsSection());
+			_sectionsContainer.Add(BuildNotificationsSection());
+			_sectionsContainer.Add(BuildGesturesSection());
+			_sectionsContainer.Add(BuildPermissionsSection());
+			_sectionsContainer.Add(BuildAttSection());
+			scroll.Add(_sectionsContainer);
 
 			root.Add(scroll);
 
@@ -143,10 +153,15 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			RebuildEnvelope();
 			RefreshDiagnostics();
 			RefreshPlayModeGating();
+			ApplyEnabledState(MobileSimulatorState.Enabled);
 			ApplyActionSheetButtonState(MobileSimulatorState.Platform);
 			MobileSimulatorState.PlatformChanged += OnPlatformChanged;
+			MobileSimulatorState.EnabledChanged += OnEnabledChanged;
 			root.RegisterCallback<DetachFromPanelEvent>(_ =>
-				MobileSimulatorState.PlatformChanged -= OnPlatformChanged);
+			{
+				MobileSimulatorState.PlatformChanged -= OnPlatformChanged;
+				MobileSimulatorState.EnabledChanged -= OnEnabledChanged;
+			});
 
 			return root;
 		}
@@ -181,12 +196,30 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			note.AddToClassList("msp-note");
 			header.Add(note);
 
-			var dismissBtn = new Button(MobileSimulatorState.PushDismissAll) { text = "Dismiss all mocks" };
-			dismissBtn.AddToClassList("msp-button");
-			dismissBtn.AddToClassList("msp-button-danger");
-			header.Add(dismissBtn);
+			// Master switch: shows/hides the in-Game-view "[EDITOR SIMULATOR]" banner and enables /
+			// disables every section below. Stays interactive even when the sections are disabled.
+			_enabledToggle = new Toggle("Editor Simulator") { value = MobileSimulatorState.Enabled };
+			_enabledToggle.AddToClassList("msp-enabled-toggle");
+			_enabledToggle.RegisterValueChangedCallback(evt => MobileSimulatorState.Enabled = evt.newValue);
+			header.Add(_enabledToggle);
 
 			return header;
+		}
+
+		private void OnEnabledChanged(bool enabled) => ApplyEnabledState(enabled);
+
+		/// <summary>
+		/// Applies the master switch: greys out every section as a group and, when turning the
+		/// simulator off, clears any mock currently painted in the in-Game-view overlay.
+		/// </summary>
+		private void ApplyEnabledState(bool enabled)
+		{
+			_enabledToggle?.SetValueWithoutNotify(enabled);
+			_sectionsContainer?.SetEnabled(enabled);
+			if (!enabled)
+			{
+				MobileSimulatorState.PushDismissAll();
+			}
 		}
 
 		/// <summary>
@@ -292,6 +325,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				MobileSimulatorState.PushReview();
 				NativeUiService.RequestReview();
 			}));
+
+			var dismissBtn = MakeActionButton("Dismiss all UIs", MobileSimulatorState.PushDismissAll);
+			dismissBtn.AddToClassList("msp-button-danger");
+			foldout.Add(dismissBtn);
 
 			return foldout;
 		}
@@ -563,6 +600,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				Title = DefaultNotificationTitle,
 				Body = DefaultNotificationBody,
 			})));
+
+			var dismissBtn = MakeActionButton("Dismiss Banner", MobileSimulatorState.PushDismissAll);
+			dismissBtn.AddToClassList("msp-button-danger");
+			foldout.Add(dismissBtn);
 
 			return foldout;
 		}
