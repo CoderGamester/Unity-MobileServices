@@ -39,6 +39,16 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		public void Builder_SubtitleIdSmallIconLargeIcon_AssignsAllFields()
+		{
+			_service.Schedule().Subtitle("S").Id(42).SmallIcon("sm").LargeIcon("lg").Send();
+			Assert.AreEqual("S", _stub.Subtitle);
+			Assert.AreEqual(42, _stub.Id);
+			Assert.AreEqual("sm", _stub.SmallIcon);
+			Assert.AreEqual("lg", _stub.LargeIcon);
+		}
+
+		[Test]
 		public void In_AssignsDeliveryTimeRelativeToNow()
 		{
 			var before = DateTime.Now;

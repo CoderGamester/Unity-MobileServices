@@ -66,6 +66,16 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		public void DefaultCtor_InEditor_SelectsEditorBackend_NotSupported()
+		{
+			var haptics = new HapticsService();
+
+			Assert.IsTrue(haptics.Enabled);
+			Assert.IsFalse(haptics.IsSupported);
+			Assert.IsFalse(haptics.IsPlaying);
+		}
+
+		[Test]
 		public void PlayPreset_None_NoBackendCall()
 		{
 			_haptics.PlayPreset(HapticPreset.None);

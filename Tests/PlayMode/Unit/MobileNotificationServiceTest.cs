@@ -86,5 +86,48 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(_service.CancelAllScheduledNotifications);
 			Assert.DoesNotThrow(_service.DismissAllDisplayedNotifications);
 		}
+
+		[Test]
+		public void Mode_SetValue_RoundTripsThroughHost()
+		{
+			Assert.AreEqual(OperatingMode.NoQueue, _service.Mode);
+
+			_service.Mode = OperatingMode.Queue;
+			Assert.AreEqual(OperatingMode.Queue, _service.Mode);
+
+			_service.Mode = OperatingMode.NoQueue;
+			Assert.AreEqual(OperatingMode.NoQueue, _service.Mode);
+		}
+
+		[Test]
+		public void PendingNotifications_FreshService_IsEmpty()
+		{
+			Assert.IsNotNull(_service.PendingNotifications);
+			Assert.AreEqual(0, _service.PendingNotifications.Count);
+		}
+
+		[Test]
+		public void OnLocalNotificationDeliveredEvent_EditorSchedule_DoesNotFire()
+		{
+			var fireCount = 0;
+			_service.OnLocalNotificationDeliveredEvent += _ => fireCount++;
+
+			_service.ScheduleNotification(_service.CreateNotification());
+
+			Assert.AreEqual(0, fireCount,
+				"Delivery is platform-driven (manual-only per Tests/AGENTS.md §9); scheduling in the Editor must not synchronously fire the delivered event.");
+		}
+
+		[Test]
+		public void OnLocalNotificationExpiredEvent_EditorSchedule_DoesNotFire()
+		{
+			var fireCount = 0;
+			_service.OnLocalNotificationExpiredEvent += _ => fireCount++;
+
+			_service.ScheduleNotification(_service.CreateNotification());
+
+			Assert.AreEqual(0, fireCount,
+				"Foreground-expiry is platform-driven (manual-only per Tests/AGENTS.md §9); scheduling in the Editor must not synchronously fire the expired event.");
+		}
 	}
 }

@@ -32,6 +32,16 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.AreEqual(Screen.safeArea, _service.SafeArea);
 		}
 
+		[Test]
+		public void DefaultCtor_UsesSharedHost_CapturesInitialSafeArea()
+		{
+			var service = new SafeAreaService();
+
+			Assert.AreEqual(Screen.safeArea, service.SafeArea);
+
+			service.Dispose();
+		}
+
 		[UnityTest]
 		public IEnumerator Tick_ScreenSafeAreaUnchanged_DoesNotFireEvent()
 		{

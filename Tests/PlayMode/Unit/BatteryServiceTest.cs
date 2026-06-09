@@ -39,5 +39,17 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(_service.Dispose);
 			Assert.DoesNotThrow(_service.Dispose, "Dispose should be idempotent (subtracting an already-removed handler is a no-op).");
 		}
+
+		[Test]
+		public void DefaultCtor_UsesSharedHost_CapturesInitialState()
+		{
+			var service = new BatteryService();
+
+			Assert.AreEqual(SystemInfo.batteryLevel, service.Level);
+			Assert.AreEqual(SystemInfo.batteryStatus, service.Status);
+			Assert.IsFalse(service.IsLowPowerMode);
+
+			service.Dispose();
+		}
 	}
 }
