@@ -36,6 +36,24 @@
     -unity-font-style: bold;
 }
 
+/* Highlighted info card — more visible than .msp-note for section-level guidance. */
+.msp-banner {
+    background-color: rgba(80, 130, 200, 0.12);
+    border-left-width: 3px;
+    border-left-color: rgba(120, 170, 240, 0.85);
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 6px 8px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+.msp-banner-label {
+    font-size: 10px;
+    color: rgb(205, 218, 240);
+    white-space: normal;
+}
+
 .msp-button-row {
     flex-direction: row;
     flex-wrap: wrap;

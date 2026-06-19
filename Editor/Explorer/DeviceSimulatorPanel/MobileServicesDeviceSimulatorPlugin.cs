@@ -40,27 +40,29 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private const string DefaultShareUrl = "https://example.com/game";
 		private const string DefaultNotificationTitle = "Reward ready!";
 		private const string DefaultNotificationBody = "Your daily quest reward is waiting.";
-		private const string PlayModeTooltip =
-			"Requires Play mode — this spawns a runtime host or reads/drives live device state.";
+		private const string PlayModeTooltip = "Requires Play mode — this spawns a runtime host or reads/drives live device state.";
+		private const string DisabledTooltip = "Disabled in edit mode — this reads/drives live device state.";
+
+		// ---- User-facing panel copy (edit here to tweak wording) ----
+		private const string HeaderNote = "Fires native-UI mocks into the simulated phone screen (edit + play). Live diagnostics below need Play mode.";
+		private const string PlayModeBannerText = "Some controls are disabled until you enter Play mode, they spawn runtime hosts or read/drive live device state. Mock previews, haptic presets, and the envelope graph work in edit mode.";
+		private const string HapticsNote = "Haptics fire only on a physical device. Select a preset to inspect its vibration envelope (the editor calibration cue).";
+		private const string NotificationsNote = "Preview the heads-up banner (works in edit mode). For live scheduling / channels / queueing / pending, use the NotificationsScheduler sample — it drives the game's own service.";
+		private const string PermissionsInfo = "The first runtime RequestAsync() on a NotDetermined permission shows the OS prompt in the overlay; afterwards it is cached.";
+		private const string AttInfo = "The first runtime RequestAuthorizationAsync() on a NotDetermined status shows the ATT prompt in the overlay (iOS skin only); afterwards it is cached.";
+
 		private const float EnvelopePlotHeight = 110f;
 		private const float EnvelopeYAxisWidth = 30f;
 
 		public override string title => "Mobile Services";
 
-		// Controls that need Play mode (spawn a DontDestroyOnLoad host or read/drive live device
-		// state). Greyed out + tooltip'd in edit mode; re-enabled on entering Play. Edit-mode-safe
-		// controls (mock pushes, haptic presets + envelope graph, permission/ATT short-circuits) are
-		// never added here.
 		private readonly List<VisualElement> _playModeControls = new List<VisualElement>();
-		// Amber banners shown only in edit mode (the top global one + one inside each gated foldout).
 		private readonly List<VisualElement> _editModeBanners = new List<VisualElement>();
 
-		// Master switch (mirrors MobileSimulatorState.Enabled): the header toggle stays interactive
-		// while every section below it is enabled/disabled as a group.
 		private Toggle _enabledToggle;
 		private VisualElement _sectionsContainer;
 
-		// ---- Held service instances (created on demand; disposed in OnDestroy) ----
+		// ---- Held service instances ----
 		private readonly PermissionsService _permissions = new PermissionsService();
 		private readonly AttService _att = new AttService();
 
@@ -95,9 +97,13 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 		// ---- Permissions state controls ----
 		private readonly Dictionary<AppPermission, EnumField> _permStateFields = new Dictionary<AppPermission, EnumField>();
+		private VisualElement _permPendingRow;
+		private Label _permPendingLabel;
+		private AppPermission? _permPending;
 
 		// ---- ATT state control ----
 		private EnumField _attStateField;
+		private VisualElement _attPendingRow;
 
 		public override void OnCreate()
 		{
@@ -108,6 +114,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		public override void OnDestroy()
 		{
 			MobileSimulatorRuntimeOverlay.NotifyPluginActive(false);
+			EditorPlatformSimulator.Disengage();
 			DetachGestureController();
 			CleanupSpawnedGestures();
 		}
@@ -117,7 +124,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var root = new VisualElement { name = "mobile-services-plugin-root" };
 			LoadStyleSheet(root);
 
-			// Rebuilt fresh each time the panel UI is created — drop any stale control refs.
+			// OnCreateUI can run again (panel re-docked); drop stale control refs from the prior tree.
 			_playModeControls.Clear();
 			_editModeBanners.Clear();
 
@@ -126,8 +133,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 			scroll.Add(BuildHeader());
 
-			// Everything below the header is gated as a group by the master switch. The header (with
-			// the enable toggle) stays interactive so the user can always turn the simulator back on.
+			// Everything below the header is gated as a group by the master switch; the header itself
+			// stays interactive so the simulator can always be turned back on.
 			_sectionsContainer = new VisualElement { name = "msp-sections" };
 			_sectionsContainer.Add(BuildPlayModeBanner());
 			_sectionsContainer.Add(BuildNativeUiSection());
@@ -151,9 +158,11 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			}).Every(500);
 
 			RebuildEnvelope();
+			// Engage before the first diagnostics refresh so Check() / CurrentStatus already read the
+			// simulated store when the dropdowns sync.
+			ApplyEnabledState(MobileSimulatorState.Enabled);
 			RefreshDiagnostics();
 			RefreshPlayModeGating();
-			ApplyEnabledState(MobileSimulatorState.Enabled);
 			ApplyActionSheetButtonState(MobileSimulatorState.Platform);
 			MobileSimulatorState.PlatformChanged += OnPlatformChanged;
 			MobileSimulatorState.EnabledChanged += OnEnabledChanged;
@@ -166,10 +175,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			return root;
 		}
 
-		/// <summary>
-		/// Reads <see cref="Application.platform"/> (spoofed by the Device Simulator to match the
-		/// selected device) and writes the single <see cref="MobileSimulatorState.Platform"/> skin.
-		/// </summary>
 		private static void SyncPlatformFromHost()
 		{
 			switch (Application.platform)
@@ -192,12 +197,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			titleLabel.AddToClassList("msp-title");
 			header.Add(titleLabel);
 
-			var note = new Label("Fires native-UI mocks into the simulated phone screen (edit + play). Live diagnostics below need Play mode.");
+			var note = new Label(HeaderNote);
 			note.AddToClassList("msp-note");
 			header.Add(note);
 
-			// Master switch: shows/hides the in-Game-view "[EDITOR SIMULATOR]" banner and enables /
-			// disables every section below. Stays interactive even when the sections are disabled.
 			_enabledToggle = new Toggle("Editor Simulator") { value = MobileSimulatorState.Enabled };
 			_enabledToggle.AddToClassList("msp-enabled-toggle");
 			_enabledToggle.RegisterValueChangedCallback(evt => MobileSimulatorState.Enabled = evt.newValue);
@@ -208,30 +211,27 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 		private void OnEnabledChanged(bool enabled) => ApplyEnabledState(enabled);
 
-		/// <summary>
-		/// Applies the master switch: greys out every section as a group and, when turning the
-		/// simulator off, clears any mock currently painted in the in-Game-view overlay.
-		/// </summary>
 		private void ApplyEnabledState(bool enabled)
 		{
 			_enabledToggle?.SetValueWithoutNotify(enabled);
 			_sectionsContainer?.SetEnabled(enabled);
-			if (!enabled)
+			if (enabled)
 			{
+				EditorPlatformSimulator.Engage();
+			}
+			else
+			{
+				EditorPlatformSimulator.Disengage();
 				MobileSimulatorState.PushDismissAll();
 			}
 		}
 
-		/// <summary>
-		/// One amber banner explaining why a subset of controls is greyed out in edit mode. Auto-hides
-		/// in Play mode via <see cref="RefreshPlayModeGating"/>. Reuses the existing overlay-hint style.
-		/// </summary>
 		private VisualElement BuildPlayModeBanner()
 		{
 			var banner = new VisualElement { name = "msp-playmode-hint" };
 			banner.AddToClassList("msp-overlay-hint");
 
-			var label = new Label("Some controls are disabled until you enter Play mode — they spawn runtime hosts or read/drive live device state. Mock previews, haptic presets, and the envelope graph work in edit mode.");
+			var label = new Label(PlayModeBannerText);
 			label.AddToClassList("msp-overlay-hint-label");
 			banner.Add(label);
 
@@ -239,27 +239,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			return banner;
 		}
 
-		/// <summary>
-		/// Inline edit-mode banner placed inside a gated foldout, so when the user expands a section
-		/// whose buttons are greyed they see why. Auto-hidden in Play mode via
-		/// <see cref="RefreshPlayModeGating"/>.
-		/// </summary>
-		private VisualElement MakeSectionPlayModeBanner(string message = "Enter Play mode to enable these controls.")
-		{
-			var banner = new VisualElement();
-			banner.AddToClassList("msp-overlay-hint");
-			var label = new Label(message);
-			label.AddToClassList("msp-overlay-hint-label");
-			banner.Add(label);
-			_editModeBanners.Add(banner);
-			return banner;
-		}
-
-		/// <summary>
-		/// Registers <paramref name="control"/> as Play-mode-only and returns it (for inline use at
-		/// the add site). <see cref="RefreshPlayModeGating"/> greys these out + tooltips them in edit
-		/// mode and re-enables them in Play.
-		/// </summary>
 		private T GatePlayMode<T>(T control) where T : VisualElement
 		{
 			_playModeControls.Add(control);
@@ -375,7 +354,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var foldout = new Foldout { text = "Haptics", value = false };
 			foldout.AddToClassList("msp-foldout");
 
-			var note = new Label("Haptics fire only on a physical device. Select a preset to inspect its vibration envelope (the editor calibration cue).");
+			var note = new Label(HapticsNote);
 			note.AddToClassList("msp-note");
 			foldout.Add(note);
 
@@ -405,12 +384,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			return foldout;
 		}
 
-		/// <summary>
-		/// Builds the intensity-over-time graph: a Y-axis tick column (intensity 0..1) + a vector plot
-		/// canvas (drawn via <c>Painter2D</c>) + an X-axis row (time in ms). The waveform is a step
-		/// curve — each <c>HapticEnvelopes</c> segment holds its amplitude for its duration (that's how
-		/// <c>VibrationEffect.createWaveform</c> plays it), with the area under it filled.
-		/// </summary>
+		// Step curve, not a smooth line: each HapticEnvelopes segment holds its amplitude for its
+		// duration, which is exactly how VibrationEffect.createWaveform plays it.
 		private VisualElement BuildEnvelopeGraph()
 		{
 			var graph = new VisualElement();
@@ -424,7 +399,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var plotRow = new VisualElement();
 			plotRow.style.flexDirection = FlexDirection.Row;
 
-			// Y axis: intensity ticks (1 at top → 0 at bottom).
 			var yAxis = new VisualElement();
 			yAxis.style.width = EnvelopeYAxisWidth;
 			yAxis.style.height = EnvelopePlotHeight;
@@ -446,7 +420,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 			graph.Add(plotRow);
 
-			// X axis: 0 ms … total ms.
 			var xAxis = new VisualElement();
 			xAxis.style.flexDirection = FlexDirection.Row;
 			xAxis.style.marginLeft = EnvelopeYAxisWidth;
@@ -585,12 +558,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var foldout = new Foldout { text = "Notifications", value = false };
 			foldout.AddToClassList("msp-foldout");
 
-			// Preview only — pushes the heads-up mock to the overlay like the Native UI mocks (works in
-			// edit mode). Live scheduling / channels / queueing / pending were removed: they ran on a
-			// throwaway MobileNotificationService disconnected from the game and duplicated the
-			// NotificationsScheduler sample (which drives the game's own service). The mock is the
-			// panel-unique value here.
-			var note = new Label("Preview the heads-up banner (works in edit mode). For live scheduling / channels / queueing / pending, use the NotificationsScheduler sample — it drives the game's own service.");
+			// Preview-only by design: live scheduling / channels / queueing would run on a throwaway
+			// MobileNotificationService disconnected from the game, duplicating the NotificationsScheduler sample.
+			var note = new Label(NotificationsNote);
 			note.AddToClassList("msp-note");
 			foldout.Add(note);
 
@@ -666,11 +636,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			_gestureController = null;
 		}
 
-		/// <summary>
-		/// Spawns a hidden, editor-only <see cref="GestureController"/> (and enables Input System
-		/// Touch Simulation so editor mouse drags count as touches) so the Gestures read-out works
-		/// with zero scene setup. Used only when the scene has no GestureController of its own.
-		/// </summary>
 		private GestureController EnsureSpawnedGestureController()
 		{
 			if (_spawnedGestureController != null)
@@ -711,16 +676,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		{
 			var foldout = new Foldout { text = "Permissions", value = false };
 			foldout.AddToClassList("msp-foldout");
-			foldout.Add(MakeSectionPlayModeBanner());
 
-			// Set each permission's simulated state directly. The dropdown drives BOTH the editor
-			// Check override and the next-Request override, so the running game / sample reads exactly
-			// this value through Check() and RequestAsync(). The OS prompt mock isn't shown here — it
-			// only makes sense at runtime, when the game actually requests (drive it from your code or
-			// the Mobile Services Playground sample).
-			var note = new Label("Set each permission's simulated state — the running game / sample reads it via Check() / RequestAsync().");
-			note.AddToClassList("msp-note");
-			foldout.Add(note);
+			foldout.Add(MakeBanner(PermissionsInfo));
 
 			_permStateFields.Clear();
 			foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
@@ -735,26 +692,44 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				var stateField = new EnumField(_permissions.Check(p));
 				stateField.style.minWidth = 130;
 				stateField.RegisterValueChangedCallback(evt =>
-				{
-					var status = (PermissionStatus)evt.newValue;
-					EditorPlatformSimulator.SetPermissionCheckResult(captured, status);
-					EditorPlatformSimulator.QueuePermissionResult(captured, status);
-				});
+					EditorPlatformSimulator.SetPermissionState(captured, (PermissionStatus)evt.newValue));
 				_permStateFields[p] = stateField;
-				// Play-mode only: the override is read by a running service, and a domain reload on
-				// entering Play would wipe anything set in edit mode anyway.
-				row.Add(GatePlayMode(stateField));
+				// Writes EditorPrefs, so it is meaningful in edit mode too (survives the Play domain
+				// reload) — no play-mode gate.
+				row.Add(stateField);
 				foldout.Add(row);
 			}
 
-			foldout.Add(GatePlayMode(MakeActionButton("Reset all to default (Granted)", () =>
+			// Fallback for resolving a pending runtime prompt from the panel, since overlay clicks are
+			// unreliable in the edit-mode Game view. Visible only while a prompt is pending (the poll
+			// toggles it); play-mode gated because prompts only pend at runtime.
+			_permPendingRow = new VisualElement();
+			_permPendingRow.style.flexDirection = FlexDirection.Row;
+			_permPendingRow.style.alignItems = Align.Center;
+			_permPendingRow.style.display = DisplayStyle.None;
+			_permPendingLabel = new Label();
+			_permPendingLabel.style.flexGrow = 1;
+			_permPendingRow.Add(_permPendingLabel);
+			_permPendingRow.Add(GatePlayMode(MakeActionButton("Allow", () =>
 			{
-				foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
+				if (_permPending.HasValue)
 				{
-					EditorPlatformSimulator.SetPermissionCheckResult(p, null);
-					EditorPlatformSimulator.QueuePermissionResult(p, null);
+					EditorPlatformSimulator.ResolvePendingPermissionPrompt(_permPending.Value, true);
 				}
 			})));
+			var denyBtn = MakeActionButton("Don't Allow", () =>
+			{
+				if (_permPending.HasValue)
+				{
+					EditorPlatformSimulator.ResolvePendingPermissionPrompt(_permPending.Value, false);
+				}
+			});
+			denyBtn.AddToClassList("msp-button-danger");
+			_permPendingRow.Add(GatePlayMode(denyBtn));
+			foldout.Add(_permPendingRow);
+
+			foldout.Add(MakeActionButton("Reset all to NotDetermined (reinstall / Reset Privacy)",
+				EditorPlatformSimulator.ResetAllPermissions));
 
 			return foldout;
 		}
@@ -765,15 +740,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		{
 			var foldout = new Foldout { text = "App Tracking Transparency", value = false };
 			foldout.AddToClassList("msp-foldout");
-			foldout.Add(MakeSectionPlayModeBanner());
 
-			// Set the simulated ATT status directly. QueueAttResult drives BOTH the CurrentStatus
-			// override and the next-Request override, so the running game / sample reads exactly this
-			// value. The ATT prompt mock isn't shown here — it only makes sense at runtime, when the
-			// game actually requests authorization.
-			var note = new Label("Set the simulated ATT status — the running game / sample reads it via CurrentStatus / RequestAuthorizationAsync().");
-			note.AddToClassList("msp-note");
-			foldout.Add(note);
+			foldout.Add(MakeBanner(AttInfo));
 
 			var stateRow = new VisualElement();
 			stateRow.style.flexDirection = FlexDirection.Row;
@@ -782,12 +750,27 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			_attStateField = new EnumField(_att.CurrentStatus);
 			_attStateField.style.flexGrow = 1;
 			_attStateField.style.marginLeft = 6;
-			_attStateField.RegisterValueChangedCallback(evt => EditorPlatformSimulator.QueueAttResult((AttStatus)evt.newValue));
-			// Play-mode only (same reason as Permissions: read by a running service; reset on Play entry).
-			stateRow.Add(GatePlayMode(_attStateField));
+			_attStateField.RegisterValueChangedCallback(evt => EditorPlatformSimulator.SetAttState((AttStatus)evt.newValue));
+			stateRow.Add(_attStateField);
 			foldout.Add(stateRow);
 
-			foldout.Add(GatePlayMode(MakeActionButton("Reset to default (Authorized)", () => EditorPlatformSimulator.QueueAttResult(null))));
+			// Panel fallback for resolving a pending runtime ATT prompt (overlay clicks are unreliable
+			// in the edit-mode Game view). Visible only while a prompt is pending; play-mode gated.
+			_attPendingRow = new VisualElement();
+			_attPendingRow.style.flexDirection = FlexDirection.Row;
+			_attPendingRow.style.alignItems = Align.Center;
+			_attPendingRow.style.display = DisplayStyle.None;
+			var attPendingLabel = new Label("ATT prompt pending");
+			attPendingLabel.style.flexGrow = 1;
+			_attPendingRow.Add(attPendingLabel);
+			_attPendingRow.Add(GatePlayMode(MakeActionButton("Allow", () => EditorPlatformSimulator.ResolvePendingAttPrompt(true))));
+			var attDeny = MakeActionButton("Ask Not to Track", () => EditorPlatformSimulator.ResolvePendingAttPrompt(false));
+			attDeny.AddToClassList("msp-button-danger");
+			_attPendingRow.Add(GatePlayMode(attDeny));
+			foldout.Add(_attPendingRow);
+
+			foldout.Add(MakeActionButton("Reset to NotDetermined (reinstall / Reset Privacy)",
+				EditorPlatformSimulator.ResetAtt));
 
 			return foldout;
 		}
@@ -826,7 +809,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			}
 			else
 			{
-				// Left play mode — drop the auto-spawned controller + touch simulation.
 				CleanupSpawnedGestures();
 			}
 
@@ -866,17 +848,41 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 		private void RefreshPermissionDiagnostics()
 		{
-			// Keep each dropdown in sync with the effective Check() result (the source of truth), so a
-			// "Reset all" or a state change driven from elsewhere is reflected without a notify loop.
+			// SetValueWithoutNotify so syncing the dropdown to Check() doesn't re-fire SetPermissionState.
 			foreach (var kv in _permStateFields)
 			{
 				kv.Value.SetValueWithoutNotify(_permissions.Check(kv.Key));
+			}
+
+			AppPermission? pending = null;
+			foreach (AppPermission p in Enum.GetValues(typeof(AppPermission)))
+			{
+				if (EditorPlatformSimulator.HasPendingPermissionPrompt(p))
+				{
+					pending = p;
+					break;
+				}
+			}
+			_permPending = pending;
+			if (_permPendingRow != null)
+			{
+				_permPendingRow.style.display = pending.HasValue ? DisplayStyle.Flex : DisplayStyle.None;
+				if (pending.HasValue && _permPendingLabel != null)
+				{
+					_permPendingLabel.text = $"Prompt pending: {pending.Value}";
+				}
 			}
 		}
 
 		private void RefreshAttDiagnostics()
 		{
 			_attStateField?.SetValueWithoutNotify(_att.CurrentStatus);
+			if (_attPendingRow != null)
+			{
+				_attPendingRow.style.display = EditorPlatformSimulator.HasPendingAttPrompt
+					? DisplayStyle.Flex
+					: DisplayStyle.None;
+			}
 		}
 
 		private static Button MakeActionButton(string text, Action onClick)
@@ -884,6 +890,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var btn = new Button(onClick) { text = text };
 			btn.AddToClassList("msp-button");
 			return btn;
+		}
+
+		private static VisualElement MakeBanner(string text)
+		{
+			var banner = new VisualElement();
+			banner.AddToClassList("msp-banner");
+			var label = new Label(text);
+			label.AddToClassList("msp-banner-label");
+			banner.Add(label);
+			return banner;
 		}
 
 		private static void LoadStyleSheet(VisualElement root)

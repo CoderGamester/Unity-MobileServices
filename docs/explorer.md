@@ -12,14 +12,14 @@ Open `Window > General > Device Simulator`, pick a device profile, and the **Mob
 | **Haptics** | 9 preset buttons that plot the preset's **intensity-over-time curve** — a `Painter2D` line/area graph with **X = time (ms)** and **Y = intensity (0–1)**, drawn as a step waveform from the canonical `HapticEnvelopes` tables (the same data the Android backend feeds to `VibrationEffect.createWaveform`), with axis ticks. Haptics fire only on a physical device, so there are deliberately no play / stop controls here; the graph is the editor calibration cue. |
 | **Notifications** | A single **Show heads-up banner** preview (edit mode) that pushes the mock to the overlay, like the Native UI mocks. Live scheduling / channels / queueing / pending were removed — they ran on a throwaway `MobileNotificationService` disconnected from your game and duplicated the `NotificationsScheduler` sample (which drives the game's own service). |
 | **Gestures** | Last-detected swipe (direction / velocity / sameness / start+end) and last-detected tap (position / duration). In Play mode it uses a scene `GestureController` if one exists, otherwise **auto-spawns a hidden one** (and enables Input System Touch Simulation) so it works with zero setup — swipe / tap anywhere. |
-| **Permissions** | A per-`AppPermission` **state dropdown** — pick `Granted` / `Denied` / `NotDetermined` / `Restricted` and the running game / sample reads exactly that through `Check()` and `RequestAsync()` (the dropdown sets both the editor Check and next-Request overrides). Plus a `Reset all to default` button. No OS-prompt mock button — the prompt only makes sense at runtime when the game actually requests (drive it from your code or the Playground sample). |
-| **App Tracking Transparency** | A single **status dropdown** — pick the `AttStatus` and the running game / sample reads it through `CurrentStatus` / `RequestAuthorizationAsync()`. Plus a `Reset to default (Authorized)` button. No prompt mock button (same rationale as Permissions). |
+| **Permissions** | A per-`AppPermission` **state dropdown** that is the **Settings surface** — pick `Granted` / `Denied` / `NotDetermined` / `Restricted`, mirroring the user toggling the permission in the OS Settings app. It models the **real OS lifecycle**: when the running game calls `RequestAsync()` on a `NotDetermined` permission the first time, the OS prompt renders in the overlay and resolves when the user answers; the decision persists (`EditorPrefs`) and repeat requests return the cached decision with no prompt. Set the dropdown back to `NotDetermined` (or hit `Reset all to NotDetermined`) to re-arm the prompt. A play-mode-gated **Allow / Don't Allow** fallback appears while a prompt is pending (overlay clicks are unreliable in the edit-mode Game view). |
+| **App Tracking Transparency** | A single **status dropdown** (the Settings surface) that models the same lifecycle: the first runtime `RequestAuthorizationAsync()` on a `NotDetermined` status shows the ATT prompt in the overlay (**iOS skin only** — Android / other skins return `Authorized`), then caches the decision. Plus a `Reset to NotDetermined` button and a pending-prompt **Allow / Ask Not to Track** fallback. |
 
 Deep links are intentionally **not** a panel foldout: `DeepLinkService.SimulateLinkActivated` is instance-scoped (no static override like Permissions/ATT), so the panel could only ever fire into a throwaway instance it owns — never your game's live service. Drive deep links from the `DeepLinkRouter` sample, or call `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` from your own bootstrap.
 
-The header carries an **Editor Simulator** master-switch toggle: it enables/disables every section below as a group and shows/hides the in-Game-view `[EDITOR SIMULATOR]` banner (state persisted to `EditorPrefs`); turning it off also clears any visible mock. Dismissal lives per-section — **Dismiss all UIs** in the Native UI foldout and **Dismiss Banner** in the Notifications foldout. Controls that drive live state (permission / ATT, and Gestures — which auto-attaches a `GestureController` in Play mode) need **Play mode**; the mock previews and the envelope graph work in **edit mode**. Each gated foldout also shows its own inline "Enter Play mode to enable these controls." banner so the reason its buttons are greyed is obvious when you expand it.
+The header carries an **Editor Simulator** master-switch toggle: it enables/disables every section below as a group and shows/hides the in-Game-view `[EDITOR SIMULATOR]` banner (state persisted to `EditorPrefs`); turning it off also clears any visible mock. While the simulator is on the panel **engages** the OS-faithful Permission / ATT overrides (`EditorPlatformSimulator.Engage()`); turning it off (or closing the panel) **disengages** them so a non-engaged editor session keeps the default `Granted` / `Authorized` short-circuit. Dismissal lives per-section — **Dismiss all UIs** in the Native UI foldout and **Dismiss Banner** in the Notifications foldout.
 
-**Play-mode gating**: controls that drive live device state are **greyed out in edit mode** and re-enabled on entering Play — the **Permission / ATT state dropdowns** (their static overrides are only read by a running service, and a domain reload on entering Play would wipe an edit-mode setting anyway). An amber banner at the top of the panel explains this, and auto-hides once you're in Play mode. Edit-mode-safe controls — every native-UI mock push and the haptic preset buttons + envelope graph — stay enabled (they render to the overlay / graph without a running game).
+**Play-mode gating**: the **Permission / ATT state dropdowns** and their reset buttons are the Settings surface and now write `EditorPrefs`, so they are meaningful in **edit mode** too (the decision survives the Play domain reload) — they are no longer greyed out. The controls that still need **Play mode** are the ones that act on a running consumer: the pending-prompt **Allow / Don't Allow** fallback buttons (a prompt only pends when the game actually calls `RequestAsync()` at runtime) and the Gestures read-out (which auto-attaches a `GestureController` in Play mode). An amber banner at the top of the panel explains the remaining gating and auto-hides in Play mode. Edit-mode-safe controls — every native-UI mock push, the haptic preset buttons + envelope graph, and the state dropdowns — stay enabled.
 
 ## The simulator overlay (the canvas)
 
@@ -41,17 +41,27 @@ The overlay paints an `[EDITOR SIMULATOR]` watermark in the Game view while the 
 For code-driven tests / scripted automation, `GameLovers.MobileServices.Editor.Simulation.EditorPlatformSimulator` exposes:
 
 ```csharp
+EditorPlatformSimulator.Engage();   // install the OS-faithful Permission / ATT overrides
 EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService);
 EditorPlatformSimulator.SetSafeArea(new Rect(0, 100, w, h-200), safeAreaService);
 EditorPlatformSimulator.ClearSafeAreaOverride(safeAreaService);
 EditorPlatformSimulator.SimulateDeepLink(new Uri("myapp://promo/x"), deepLinkService);
-EditorPlatformSimulator.QueuePermissionResult(AppPermission.Camera, PermissionStatus.Denied);
-EditorPlatformSimulator.SetPermissionCheckResult(AppPermission.Camera, PermissionStatus.Restricted);
-EditorPlatformSimulator.QueueAttResult(AttStatus.Authorized);
+
+// Permissions / ATT model the real OS lifecycle: set the persisted decision (the "Settings"
+// surface), or leave it NotDetermined so the first RequestAsync() shows a prompt in the overlay.
+EditorPlatformSimulator.SetPermissionState(AppPermission.Camera, PermissionStatus.Denied);
+EditorPlatformSimulator.GetPermissionState(AppPermission.Camera);   // read it back
+EditorPlatformSimulator.ResetAllPermissions();                      // re-arm every prompt
+EditorPlatformSimulator.ResolvePendingPermissionPrompt(AppPermission.Camera, allow: true);
+EditorPlatformSimulator.SetAttState(AttStatus.Authorized);
+EditorPlatformSimulator.ResetAtt();
+EditorPlatformSimulator.ResolvePendingAttPrompt(allow: false);
+
 EditorPlatformSimulator.DismissAllOverlays();
+EditorPlatformSimulator.Disengage(); // restore the default Granted / Authorized short-circuit
 ```
 
-Each method either sets an internal static override on the runtime service (under `#if UNITY_EDITOR`) or pushes a payload through the `MobileSimulatorState` broker.
+`Engage()` installs the editor overrides so `Check()` / `CurrentStatus` read the persisted simulated decision and a `RequestAsync()` on a `NotDetermined` entry pushes a prompt through the `MobileSimulatorState` broker; `Disengage()` removes them. The `Set*` / `Reset*` helpers write the `EditorPrefs`-backed store; `ResolvePending*` answers a prompt that is awaiting a decision. Other methods set an internal static override on the runtime service (under `#if UNITY_EDITOR`) or push a payload through the broker.
 
 ## What's NOT mirrored
 
@@ -107,8 +117,8 @@ If your iteration loop is interactive (designer-paired phone or just clicking ar
 
 1. Open Unity's Device Simulator (`Window > General > Device Simulator`) and pick a target device. The **Mobile Services** panel appears in the Control Panel automatically.
 2. Fire mocks from the panel — they render inside the simulated phone screen immediately, in edit mode. No play-mode round-trip and no second window to dock.
-3. Press Play to drive the live-state controls (permission / ATT state, last gesture) that need a running consumer.
-4. For scripted automation / CI: skip the UI and call `EditorPlatformSimulator.Set*` / `Queue*` directly from your test setup.
+3. Press Play and call `RequestAsync()` / `RequestAuthorizationAsync()` from your consumer to see the OS prompt render in the overlay (or resolve a pending prompt from the panel's Allow / Don't Allow fallback); the last-gesture read-out also needs Play mode.
+4. For scripted automation / CI: skip the UI and call `EditorPlatformSimulator.Engage()` + `Set*` / `Reset*` / `ResolvePending*` directly from your test setup.
 
 ## When to use which
 
@@ -117,8 +127,9 @@ If your iteration loop is interactive (designer-paired phone or just clicking ar
 | Preview what an iOS alert / toast / share / review will look like (no play mode) | Mobile Services panel Native UI buttons — fire the mock into the overlay |
 | Render the mock inside the simulated phone screen at correct scale | Device Simulator device profile + the overlay (alive while the panel is open) |
 | Watch live service state during play mode | Mobile Services panel diagnostics (Play mode) |
-| Set a permission / ATT state your running game reads | Mobile Services panel — the Permissions / ATT state dropdowns |
-| Drive a permission Request result for a unit test | `EditorPlatformSimulator.QueuePermissionResult` |
+| Set a permission / ATT state your running game reads | Mobile Services panel — the Permissions / ATT state dropdowns (the Settings surface) |
+| See the OS permission / ATT prompt the first time your game requests | Leave the state `NotDetermined`, press Play, call `RequestAsync()` — the prompt renders in the overlay |
+| Drive a permission Request result for a unit test | `EditorPlatformSimulator.SetPermissionState` (cached) or leave `NotDetermined` + `ResolvePendingPermissionPrompt` |
 | Test that your code subscribes to `OnLowPowerModeChanged` correctly | `EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService)` |
 | Render mocks in a plain Game view during play without the Device Simulator open | `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` |
 | Demo a deep link routing flow without launching from the OS | DeepLinkRouter sample, or `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` |

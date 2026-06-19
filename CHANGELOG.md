@@ -5,6 +5,13 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Device Simulator now reproduces the real OS permission / ATT prompt lifecycle.** The Permissions and ATT foldouts are no longer instant state-setters: their dropdowns are the **Settings surface** (writing an `EditorPrefs`-backed simulated-decision store, default `NotDetermined`), and at runtime the first `RequestAsync()` / `RequestAuthorizationAsync()` on a `NotDetermined` entry shows the OS prompt **in the in-Game-view overlay** (with the project-configured usage description, ATT iOS-skin only) and completes the returned `Task` when the user answers. The decision then persists and repeat requests return the cached result with no re-prompt — set the dropdown back to `NotDetermined` or use the new **Reset to NotDetermined** buttons to re-arm it. A play-mode **Allow / Don't Allow** fallback resolves a pending prompt from the panel. The state dropdowns are now usable in edit mode (the store survives the Play domain reload), so they are no longer play-mode-gated.
+- `EditorPlatformSimulator`: added `Engage` / `Disengage`, `SetPermissionState` / `GetPermissionState` / `ResetAllPermissions` / `HasPendingPermissionPrompt` / `ResolvePendingPermissionPrompt`, and the ATT equivalents; removed the superseded `QueuePermissionResult` / `SetPermissionCheckResult` / `QueueAttResult`.
+- Added editor-only `EditorRequestAsyncOverride` hooks to `PermissionsService` and `AttService` (taking precedence over the synchronous request override) so the simulator can await the user's prompt answer. With no override installed the editor still short-circuits to `Granted` / `Authorized`.
+
 ## [1.0.0] - 2026-05-05
 
 ### Added

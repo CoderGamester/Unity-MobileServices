@@ -21,11 +21,16 @@ namespace GameLovers.MobileServices.Device
 #endif
 
 #if UNITY_EDITOR
-		// Editor-only override hooks consumed by EditorPlatformSimulator. When set, the editor
-		// short-circuit paths consult these instead of returning the default Granted. Keeps
-		// runtime non-Editor builds untouched.
+		// Editor-only override hooks consumed by EditorPlatformSimulator so the Device Simulator can
+		// model the real OS flow in the editor. When set, the editor short-circuit paths consult these
+		// instead of returning the default Granted; when unset, the default is unchanged and runtime
+		// non-Editor builds carry none of this surface.
+		//   - EditorCheckOverride / EditorRequestOverride: synchronous reads (the simulated persisted decision).
+		//   - EditorRequestAsyncOverride: the first request for a NotDetermined permission shows a prompt and the
+		//     returned Task completes when the user answers; takes precedence over the synchronous EditorRequestOverride.
 		internal static Func<AppPermission, PermissionStatus> EditorCheckOverride;
 		internal static Func<AppPermission, PermissionStatus> EditorRequestOverride;
+		internal static Func<AppPermission, Task<PermissionStatus>> EditorRequestAsyncOverride;
 #endif
 
 		/// <inheritdoc />
@@ -63,6 +68,11 @@ namespace GameLovers.MobileServices.Device
 		public Task<PermissionStatus> RequestAsync(AppPermission permission)
 		{
 #if UNITY_EDITOR
+			var asyncOver = EditorRequestAsyncOverride;
+			if (asyncOver != null)
+			{
+				return asyncOver(permission);
+			}
 			var over = EditorRequestOverride;
 			return Task.FromResult(over != null ? over(permission) : PermissionStatus.Granted);
 #elif UNITY_IOS

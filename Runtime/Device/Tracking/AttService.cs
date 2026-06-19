@@ -17,10 +17,16 @@ namespace GameLovers.MobileServices.Device
 #endif
 
 #if UNITY_EDITOR
-		// Editor-only override hooks consumed by EditorPlatformSimulator. When set, the editor
-		// short-circuit paths consult these instead of returning the default Authorized.
+		// Editor-only override hooks consumed by EditorPlatformSimulator so the Device Simulator can
+		// model the real OS flow in the editor. When set, the editor short-circuit paths consult these
+		// instead of returning the default Authorized; when unset, the default is unchanged and runtime
+		// non-Editor builds carry none of this surface.
+		//   - EditorCurrentStatusOverride / EditorRequestResultOverride: synchronous reads (the simulated persisted decision).
+		//   - EditorRequestAsyncOverride: the first request shows the ATT prompt and the returned Task completes when the
+		//     user answers; takes precedence over the synchronous EditorRequestResultOverride.
 		internal static AttStatus? EditorCurrentStatusOverride;
 		internal static AttStatus? EditorRequestResultOverride;
+		internal static Func<Task<AttStatus>> EditorRequestAsyncOverride;
 #endif
 
 		/// <inheritdoc />
@@ -47,6 +53,11 @@ namespace GameLovers.MobileServices.Device
 			_GameLoversAttRequestAuthorization(id, "AttCallbackReceiver", "OnAttResult");
 			return tcs.Task;
 #elif UNITY_EDITOR
+			var asyncOver = EditorRequestAsyncOverride;
+			if (asyncOver != null)
+			{
+				return asyncOver();
+			}
 			return Task.FromResult(EditorRequestResultOverride ?? AttStatus.Authorized);
 #else
 			return Task.FromResult(AttStatus.Authorized);
