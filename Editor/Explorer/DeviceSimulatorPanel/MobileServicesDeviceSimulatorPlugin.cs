@@ -50,7 +50,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private const string NotificationsNote = "Preview the heads-up banner (works in edit mode). For live scheduling / channels / queueing / pending, use the NotificationsScheduler sample — it drives the game's own service.";
 		private const string PermissionsInfo = "The first runtime RequestAsync() on a NotDetermined permission shows the OS prompt in the overlay; afterwards it is cached.";
 		private const string AttInfo = "The first runtime RequestAuthorizationAsync() on a NotDetermined status shows the ATT prompt in the overlay (iOS skin only); afterwards it is cached.";
-
 		private const float EnvelopePlotHeight = 110f;
 		private const float EnvelopeYAxisWidth = 30f;
 
@@ -297,12 +296,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			{
 				MobileSimulatorState.PushShare(new SimulatedShareSpec { Text = _shareText.value, Url = _shareUrl.value });
 				NativeUiService.Share(_shareText.value, _shareUrl.value);
-			}));
-
-			foldout.Add(MakeActionButton("Review prompt", () =>
-			{
-				MobileSimulatorState.PushReview();
-				NativeUiService.RequestReview();
 			}));
 
 			var dismissBtn = MakeActionButton("Dismiss all UIs", MobileSimulatorState.PushDismissAll);

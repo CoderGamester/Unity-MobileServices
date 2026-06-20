@@ -11,7 +11,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 	{
 		public HashSet<AppPermission> ReferencedPermissions { get; } = new HashSet<AppPermission>();
 		public bool UsesAtt;
-		public bool UsesAudioSession;
 		public bool UsesNotifications;
 		public bool UsesDeepLinks;
 		public bool UsesNativeUiShare;
@@ -30,7 +29,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 			var notificationsType = typeof(MobileServices.Notifications.MobileNotificationService);
 			var deepLinkType = typeof(DeepLinkService);
-			var audioSessionType = typeof(IosAudioSessionService);
 			var permissionsType = typeof(PermissionsService);
 			var permissionsInterface = typeof(IPermissionsService);
 			var attType = typeof(AttService);
@@ -65,7 +63,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 					if (type == null) continue;
 					if (TypeReferences(type, notificationsType))     result.UsesNotifications = true;
 					if (TypeReferences(type, deepLinkType))          result.UsesDeepLinks = true;
-					if (TypeReferences(type, audioSessionType))      result.UsesAudioSession = true;
 					if (TypeReferences(type, attType) ||
 					    TypeReferences(type, attInterface))          result.UsesAtt = true;
 					if (TypeReferences(type, permissionsType) ||

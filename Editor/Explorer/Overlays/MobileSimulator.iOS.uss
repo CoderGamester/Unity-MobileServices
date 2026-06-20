@@ -100,3 +100,18 @@
 .simulator-root.platform-ios .mock-notif-icon {
     border-radius: 9px;
 }
+
+/* StoreKit review sheet: a compact centered card titled with the app name. */
+.simulator-root.platform-ios .mock-review-card-ios {
+    width: 74%;
+    max-width: 270px;
+    align-items: center;
+}
+
+.simulator-root.platform-ios .mock-review-card-ios .mock-card-title {
+    font-size: 15px;
+}
+
+.simulator-root.platform-ios .mock-review-card-ios .mock-card-message {
+    -unity-text-align: middle-center;
+}

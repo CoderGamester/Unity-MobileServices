@@ -18,12 +18,20 @@ namespace GameLovers.MobileServices.NativeUi
 		public AlertButtonStyle Style;
 		public Action Callback;
 	}
-	
+
 	/// <summary>
 	/// This service provides the functionality to call native UI screens
 	/// </summary>
 	public static class NativeUiService
 	{
+#if UNITY_EDITOR
+		// Editor-only override hook consumed by EditorPlatformSimulator so the Device Simulator can model
+		// the real "shown when requested" review flow in the editor (mirroring the Permissions / ATT
+		// EditorRequest*Override hooks). When set, RequestReview routes here instead of logging; when
+		// unset, the editor branch keeps its plain Debug.Log no-op. Player builds carry none of this.
+		internal static System.Action EditorRequestReviewOverride;
+#endif
+
 		/// <summary>
 		/// Shows an alert native OS message popup with the given <paramref name="title"/>, <paramref name="message"/>
 		/// and the <paramref name="buttons"/> ordered from left to right.
@@ -57,13 +65,13 @@ namespace GameLovers.MobileServices.NativeUi
 			{
 				alertDialog.Call("setTitle", title);
 				alertDialog.Call("setMessage", message);
-				
-				for (var i = 0; i < buttons.Length; i++) 
+
+				for (var i = 0; i < buttons.Length; i++)
 				{
-					alertDialog.Call("setButton", ConvertToAndroidStyle(buttons[i].Style), 
+					alertDialog.Call("setButton", ConvertToAndroidStyle(buttons[i].Style),
 						buttons[i].Text, new AndroidButtonCallback(buttons[i].Callback));
 				}
-				
+
 				alertDialog.Call("show");
 			}
 #else
@@ -92,9 +100,9 @@ namespace GameLovers.MobileServices.NativeUi
 			{
 				var duration = isLongDuration ? toastClass.GetStatic<int>("LENGTH_LONG") : toastClass.GetStatic<int>("LENGTH_SHORT");
 				var toast = toastClass.CallStatic<AndroidJavaObject>("makeText", unityActivity, message, duration);
-				
+
 				toast.Call("show");
-				
+
 				toast.Dispose();
 			}
 #else
@@ -109,16 +117,30 @@ namespace GameLovers.MobileServices.NativeUi
 		/// On Editor / unsupported platforms this is a safe no-op.
 		/// </summary>
 		/// <remarks>
-		/// Android requires the Play Core Review library on the consumer's classpath. Add to
-		/// <c>mainTemplate.gradle</c>:
-		/// <c>implementation 'com.google.android.play:review:2.0.1'</c> (or newer).
-		/// Without that dependency this call logs an error and returns; it does not throw.
+		/// Fire-and-forget: neither platform exposes a "was actually shown" signal (the OS may silently
+		/// suppress the prompt under its own throttling quota — that is normal and is NOT an error).
+		/// Because there is no success callback, this logs when the prompt is requested. When the
+		/// platform DOES surface an error (Android's Play flow cannot run — Play Core library missing,
+		/// the request flow failed, or launch threw), it is logged as a warning / error.
+		/// On Android the Play In-App Review library is auto-injected at build time by
+		/// <c>MobileServicesBuildPostprocessor</c> (Project Settings &gt; GameLovers &gt; Mobile Services).
+		/// If you opt out of that injection you must add it yourself to <c>mainTemplate.gradle</c>:
+		/// <c>implementation 'com.google.android.play:review:2.0.2'</c> (or newer). This never throws.
 		/// </remarks>
 		public static void RequestReview()
 		{
 #if UNITY_EDITOR
-			Debug.Log("Request Review is not available in the editor.");
+			if (EditorRequestReviewOverride != null)
+			{
+				EditorRequestReviewOverride.Invoke();
+			}
+			else
+			{
+				Debug.Log("[GameLovers.MobileServices] RequestReview() is a no-op in the editor unless the Mobile Services Device Simulator is enabled.");
+			}
 #elif UNITY_IOS
+			// SKStoreReviewController gives no success/error callback — log that we requested it.
+			Debug.Log("[GameLovers.MobileServices] Requested App Store review prompt (SKStoreReviewController). The OS decides whether to actually show it; there is no callback.");
 			RequestReviewNative();
 #elif UNITY_ANDROID
 			RequestReviewAndroid();
@@ -225,13 +247,16 @@ namespace GameLovers.MobileServices.NativeUi
 				{
 					if (!task.Call<bool>("isSuccessful"))
 					{
-						Debug.LogWarning("[GameLovers.MobileServices] requestReviewFlow returned an unsuccessful task.");
+						Debug.LogWarning("[GameLovers.MobileServices] requestReviewFlow returned an unsuccessful task — the review prompt cannot be shown.");
 						return;
 					}
 
 					using var reviewInfo = task.Call<AndroidJavaObject>("getResult");
 					using var launchTask = _manager.Call<AndroidJavaObject>("launchReviewFlow", _activity, reviewInfo);
 					_ = launchTask;
+					// launchReviewFlow's task completes when the flow finishes, but the OS gives no
+					// "was actually displayed" signal (it may be suppressed by quota — not an error).
+					Debug.Log("[GameLovers.MobileServices] Launched Play In-App Review flow. The OS decides whether to actually show it; there is no shown callback.");
 				}
 				catch (Exception e)
 				{
@@ -243,12 +268,12 @@ namespace GameLovers.MobileServices.NativeUi
 
 #if UNITY_IOS
 		internal delegate void AlertButtonDelegate(string buttonText);
-		
-		[System.Runtime.InteropServices.DllImport("__Internal")] 
-		private static extern void AlertMessage(bool isSheet, string title, string message, string[] buttonsText, 
+
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversAlertMessage")]
+		private static extern void AlertMessage(bool isSheet, string title, string message, string[] buttonsText,
 			int[] buttonsStyle, int buttonsLength, AlertButtonDelegate alertButtonCallback);
-		
-		[System.Runtime.InteropServices.DllImport("__Internal")] 
+
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversToastMessage")]
 		private static extern void ToastMessage(string message, bool isLongDuration);
 
 		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversRequestReview")]
@@ -280,7 +305,7 @@ namespace GameLovers.MobileServices.NativeUi
 		private class AndroidButtonCallback : AndroidJavaProxy
 		{
 			private readonly Action _callback;
-			
+
 			public AndroidButtonCallback(Action callback) : base("android.content.DialogInterface$OnClickListener")
 			{
 				_callback = callback;

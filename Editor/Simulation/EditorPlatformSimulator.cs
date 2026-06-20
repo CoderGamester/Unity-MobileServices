@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using GameLovers.MobileServices.Device;
 using GameLovers.MobileServices.Editor.Explorer.Overlays;
 using GameLovers.MobileServices.Editor.Settings;
+using GameLovers.MobileServices.NativeUi;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,7 +18,28 @@ namespace GameLovers.MobileServices.Editor.Simulation
 	/// </summary>
 	public static class EditorPlatformSimulator
 	{
-		// ---- Device state ----
+		/// <summary>
+		/// Static carrier for simulator-driven device snapshot values that the Device Simulator panel
+		/// surfaces directly (the runtime <c>BatteryService</c> reads <c>SystemInfo</c> live and cannot be
+		/// re-routed in the editor without a full poll re-implementation; the panel renders this
+		/// override alongside the real read as the simulator hint).
+		/// </summary>
+		public static class SimulatedDeviceState
+		{
+			public static float? BatteryLevel;
+			public static BatteryStatus? BatteryStatus;
+		}
+
+		private const string PermStorePrefix = "GameLovers.MobileServicesSimulator.Perm.";
+		private const string AttStoreKey = "GameLovers.MobileServicesSimulator.Att";
+
+		private static bool _engaged;
+		private static readonly Dictionary<AppPermission, Action<bool>> _pendingPermissionResolvers =
+			new Dictionary<AppPermission, Action<bool>>();
+		private static Action<bool> _pendingAttResolver;
+
+		/// <summary>True while the ATT prompt is awaiting a decision (e.g. for a panel fallback).</summary>
+		public static bool HasPendingAttPrompt => _pendingAttResolver != null;
 
 		/// <summary>
 		/// Flips the simulator's low-power-mode override AND fans the change through every
@@ -83,8 +105,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			SimulatedDeviceState.BatteryStatus = status;
 		}
 
-		// ---- Deep link ----
-
 		/// <summary>
 		/// Mimics the OS handing the app a runtime deep link (post-launch). Supersedes any pending
 		/// cold-start link and fans the URI through every <c>OnLinkActivated</c> subscriber.
@@ -101,8 +121,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			}
 		}
 
-		// ---- Engage / disengage (install the OS-faithful overrides) ----
-
 		/// <summary>
 		/// Installs the editor overrides that make <see cref="PermissionsService"/> and
 		/// <see cref="AttService"/> behave like the real OS: <see cref="IPermissionsService.Check"/> /
@@ -118,6 +136,9 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorRequestAsyncOverride = RequestPermissionAsync;
 			AttService.EditorCurrentStatusOverride = ReadAttStore();
 			AttService.EditorRequestAsyncOverride = RequestAttAsync;
+			// Review is fire-and-forget (no OS success callback) — the same RequestReview() the game
+			// calls drives the overlay mock in edit + play mode, mirroring the Permissions / ATT hooks.
+			NativeUiService.EditorRequestReviewOverride = () => MobileSimulatorState.PushReview();
 		}
 
 		/// <summary>
@@ -134,11 +155,10 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			AttService.EditorCurrentStatusOverride = null;
 			AttService.EditorRequestResultOverride = null;
 			AttService.EditorRequestAsyncOverride = null;
+			NativeUiService.EditorRequestReviewOverride = null;
 			_pendingPermissionResolvers.Clear();
 			_pendingAttResolver = null;
 		}
-
-		// ---- Permissions (the "Settings" surface + reset) ----
 
 		/// <summary>
 		/// Sets the persisted simulated decision for <paramref name="permission"/> — the editor
@@ -182,8 +202,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			resolve(allow);
 		}
 
-		// ---- ATT (the "Settings" surface + reset) ----
-
 		/// <summary>
 		/// Sets the persisted simulated ATT decision. Setting <see cref="AttStatus.NotDetermined"/>
 		/// re-arms the first-time prompt.
@@ -195,9 +213,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 
 		/// <summary>Resets ATT to <see cref="AttStatus.NotDetermined"/> (reinstall / Reset Privacy).</summary>
 		public static void ResetAtt() => WriteAttStore(AttStatus.NotDetermined);
-
-		/// <summary>True while the ATT prompt is awaiting a decision (e.g. for a panel fallback).</summary>
-		public static bool HasPendingAttPrompt => _pendingAttResolver != null;
 
 		/// <summary>Resolves a pending ATT prompt from outside the overlay (panel fallback).</summary>
 		public static void ResolvePendingAttPrompt(bool allow)
@@ -211,20 +226,8 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			resolve(allow);
 		}
 
-		// ---- Overlay dismissal ----
-
 		/// <summary>Closes any active simulator-overlay dialog without firing a button callback.</summary>
 		public static void DismissAllOverlays() => MobileSimulatorState.PushDismissAll();
-
-		// ---- Internals ----
-
-		private const string PermStorePrefix = "GameLovers.MobileServicesSimulator.Perm.";
-		private const string AttStoreKey = "GameLovers.MobileServicesSimulator.Att";
-
-		private static bool _engaged;
-		private static readonly Dictionary<AppPermission, Action<bool>> _pendingPermissionResolvers =
-			new Dictionary<AppPermission, Action<bool>>();
-		private static Action<bool> _pendingAttResolver;
 
 		private static PermissionStatus ReadPermissionStore(AppPermission permission) =>
 			(PermissionStatus)EditorPrefs.GetInt(PermStorePrefix + permission, (int)PermissionStatus.NotDetermined);
@@ -267,7 +270,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			MobileSimulatorState.PushPermissionDialog(new SimulatedPermissionDialogSpec
 			{
 				TypeName = Humanize(permission),
-				UsageDescription = MobileServicesSettings.instance.GetUsageDescriptionEn(permission),
+				UsageDescription = MobileServicesConfig.Instance.GetUsageDescriptionEn(permission),
 				IsAtt = false,
 				OnResolved = Resolve,
 			});
@@ -301,7 +304,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			MobileSimulatorState.PushPermissionDialog(new SimulatedPermissionDialogSpec
 			{
 				IsAtt = true,
-				UsageDescription = MobileServicesSettings.instance.GetAttUsageDescriptionEn(),
+				UsageDescription = MobileServicesConfig.Instance.GetAttUsageDescriptionEn(),
 				OnResolved = Resolve,
 			});
 			return tcs.Task;
@@ -321,17 +324,5 @@ namespace GameLovers.MobileServices.Editor.Simulation
 					return permission.ToString();
 			}
 		}
-	}
-
-	/// <summary>
-	/// Static carrier for simulator-driven device snapshot values that the Device Simulator panel
-	/// surfaces directly (the runtime <c>BatteryService</c> reads <c>SystemInfo</c> live and cannot be
-	/// re-routed in the editor without a full poll re-implementation; the panel renders this
-	/// override alongside the real read as the simulator hint).
-	/// </summary>
-	public static class SimulatedDeviceState
-	{
-		public static float? BatteryLevel;
-		public static BatteryStatus? BatteryStatus;
 	}
 }

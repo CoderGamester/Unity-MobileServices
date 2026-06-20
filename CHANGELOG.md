@@ -5,19 +5,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Changed
-- **Device Simulator now reproduces the real OS permission / ATT prompt lifecycle.** The Permissions and ATT foldouts are no longer instant state-setters: their dropdowns are the **Settings surface** (writing an `EditorPrefs`-backed simulated-decision store, default `NotDetermined`), and at runtime the first `RequestAsync()` / `RequestAuthorizationAsync()` on a `NotDetermined` entry shows the OS prompt **in the in-Game-view overlay** (with the project-configured usage description, ATT iOS-skin only) and completes the returned `Task` when the user answers. The decision then persists and repeat requests return the cached result with no re-prompt — set the dropdown back to `NotDetermined` or use the new **Reset to NotDetermined** buttons to re-arm it. A play-mode **Allow / Don't Allow** fallback resolves a pending prompt from the panel. The state dropdowns are now usable in edit mode (the store survives the Play domain reload), so they are no longer play-mode-gated.
-- `EditorPlatformSimulator`: added `Engage` / `Disengage`, `SetPermissionState` / `GetPermissionState` / `ResetAllPermissions` / `HasPendingPermissionPrompt` / `ResolvePendingPermissionPrompt`, and the ATT equivalents; removed the superseded `QueuePermissionResult` / `SetPermissionCheckResult` / `QueueAttResult`.
-- Added editor-only `EditorRequestAsyncOverride` hooks to `PermissionsService` and `AttService` (taking precedence over the synchronous request override) so the simulator can await the user's prompt answer. With no override installed the editor still short-circuits to `Granted` / `Authorized`.
-
-## [1.0.0] - 2026-05-05
+## [1.0.0] - Unreleased
 
 ### Added
 - Initial release of consolidated **Mobile Services** package.
-- **Native UI**: Alerts, sheets, and toasts for iOS/Android, Review request and Share button with different networks.
-- **Notifications**: Comprehensive local and remote notification management.
+- **Native UI**: Alerts, action sheets, and toasts for iOS/Android, plus OS review request and a share sheet (text / URL / image).
+- **Notifications**: Local notification scheduling and management (channels, queueing, fluent `Schedule().In(...).Title(...).Body(...).Channel(...).Send()` builder).
 - **Gestures**: Advanced swipe detection with velocity and consistency tracking.
 - **iOS Audio Session**: Override the iOS silent switch so audio keeps playing.
 - **Haptics**: Zero-dependency cross-platform haptic feedback with 9 presets, custom intensity, and time-bounded looping.
@@ -26,16 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **App Tracking Transparency**: iOS 14.5+ `ATTrackingManager` bridge with zero dependency on `com.unity.ads.ios-support`.
 - **Deep Links**: `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
 - **Deep Link Router**: Path-pattern routing over `IDeepLinkService` with captured params (`/promo/:id`).
-- **Notification Builder**: Fluent API — `service.Schedule().In(...).Title(...).Body(...).Channel(...).Send()`.
-- **`INotificationService.Mode`**: runtime-settable `OperatingMode` on the service. Previously the queueing modes (`Queue` / `ClearOnForegrounding` / `RescheduleAfterClearing`) — and the `OnLocalNotificationExpiredEvent` that only fires in queue mode — were unreachable through the public API (the host's mode field was never exposed); they are now drivable directly via `service.Mode`.
-- **Mobile Service umbrella**: Single DI registration exposing `NativeUi` / `Notifications` / `Haptics` / `Device`.
+- **Mobile Service umbrella**: `IMobileService` — single DI registration aggregating `NativeUi` / `Notifications` / `Haptics` / `Device`.
 - **Native UI instance interface**: `INativeUiService` + `NativeUiServiceInstance` forwarder for mockable consumer code.
-- **Device Simulator Plugin**: the single Mobile Services editor surface — a `UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` subclass that embeds controls + live diagnostics + a per-preset haptic envelope graph inside Unity's Device Simulator window (Window > General > Device Simulator). Drives the in-Game-view simulator overlay so mocks render right inside the simulated phone screen, and auto-syncs the platform skin from the selected device profile.
-- **Runtime Simulator Overlay**: editor-only `UIDocument` overlay that paints the truth-mirror mocks (alerts, sheets, toasts, share, review, permission / ATT dialogs, heads-up banners) inside Unity's Game / Simulator view at the simulated device's pixel grid. Alive in **edit and play mode** whenever the Device Simulator panel is open, so you can preview a mock without entering play mode; also spawns on its own during play mode via the opt-in `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`. Composes with Unity's Device Simulator for correct safe-area / scale / `Application.platform` spoofing.
-- **Device Simulator master switch**: an `Editor Simulator` toggle in the panel header (state in `MobileSimulatorState.Enabled`, persisted to `EditorPrefs`) enables/disables every section as a group and shows/hides the in-Game-view `[EDITOR SIMULATOR]` banner; turning it off clears any visible mock. Per-section dismiss buttons replace the former global one — `Dismiss all UIs` in Native UI and `Dismiss Banner` in Notifications.
-- **Editor Platform Simulator**: Static API for driving device / permission / ATT / deep-link state in editor tests and the Device Simulator panel.
-- **Project Settings panel**: Per-permission usage descriptions, capability toggles, project scan, and an iOS Privacy Nutrition Label draft generator.
-- **Build Postprocessor**: Fail-by-default validation that injects `Info.plist`, `.entitlements`, and Android `mainTemplate.xml` entries on iOS / Android builds.
+- **Device Simulator Plugin**: A `DeviceSimulatorPlugin` embedded in Unity's Device Simulator window that drives platform-shaped native-UI mocks into the simulated phone screen (edit + play), with live diagnostics and a per-preset haptic envelope graph.
+- **Mobile Services Config asset**: Editor `ScriptableObject` (open via `Tools > GameLovers > Mobile Services > Select Mobile Services Config`) for per-permission **localized** usage descriptions, capability toggles, Android manifest opt-ins, and the Play In-App Review Gradle auto-injection.
+- **Build Postprocessor**: Auto-injects iOS `Info.plist` usage descriptions (+ per-locale `<locale>.lproj/InfoPlist.strings` for device-language localization), entitlements, Android manifest entries, and the Play In-App Review Gradle dependency; fail-fast validation lists every missing key.
 - **Samples**: Four code-only samples — `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, `DeepLinkRouter`.
 - **Docs**: Per-subsystem deep-dive references under `docs/` plus editor-tooling guides for the Device Simulator panel and build pipeline.
 
@@ -43,8 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored all namespaces to `GameLovers.MobileServices.*`.
 - Updated assembly definition to `GameLovers.MobileServices`.
 - Updated dependencies to target Unity 6 (6000.0+).
-- Legacy tap detection (replaced by Unity Input System's `TapInteraction`).
-- Gamepad input management (out of scope for mobile services), use the new input system configuration for that
+
+### Removed
+- Removed legacy tap detection — use Unity Input System's `TapInteraction`.
+- Removed gamepad input management — out of scope for mobile services; configure it via the Input System directly.
 
 ### Migration
 This package consolidates three previously separate packages:

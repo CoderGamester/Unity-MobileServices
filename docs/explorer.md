@@ -8,12 +8,14 @@ Open `Window > General > Device Simulator`, pick a device profile, and the **Mob
 
 | Foldout | What it surfaces / drives |
 |---------|---------------------------|
-| **Native UI** | Alert (modal + sheet), toast (short/long), share, review. Title/message/text fields author the mock; buttons push the platform-shaped mock to the overlay AND call the real `NativeUiService` static methods (no-op in editor). The Action Sheet button greys out on Android (no native sheet idiom). |
+| **Native UI** | Alert (modal + sheet), toast (short/long), share. Title/message/text fields author the mock; buttons push the platform-shaped mock to the overlay AND call the real `NativeUiService` static methods (no-op in editor). The Action Sheet button greys out on Android (no native sheet idiom). |
 | **Haptics** | 9 preset buttons that plot the preset's **intensity-over-time curve** — a `Painter2D` line/area graph with **X = time (ms)** and **Y = intensity (0–1)**, drawn as a step waveform from the canonical `HapticEnvelopes` tables (the same data the Android backend feeds to `VibrationEffect.createWaveform`), with axis ticks. Haptics fire only on a physical device, so there are deliberately no play / stop controls here; the graph is the editor calibration cue. |
 | **Notifications** | A single **Show heads-up banner** preview (edit mode) that pushes the mock to the overlay, like the Native UI mocks. Live scheduling / channels / queueing / pending were removed — they ran on a throwaway `MobileNotificationService` disconnected from your game and duplicated the `NotificationsScheduler` sample (which drives the game's own service). |
 | **Gestures** | Last-detected swipe (direction / velocity / sameness / start+end) and last-detected tap (position / duration). In Play mode it uses a scene `GestureController` if one exists, otherwise **auto-spawns a hidden one** (and enables Input System Touch Simulation) so it works with zero setup — swipe / tap anywhere. |
 | **Permissions** | A per-`AppPermission` **state dropdown** that is the **Settings surface** — pick `Granted` / `Denied` / `NotDetermined` / `Restricted`, mirroring the user toggling the permission in the OS Settings app. It models the **real OS lifecycle**: when the running game calls `RequestAsync()` on a `NotDetermined` permission the first time, the OS prompt renders in the overlay and resolves when the user answers; the decision persists (`EditorPrefs`) and repeat requests return the cached decision with no prompt. Set the dropdown back to `NotDetermined` (or hit `Reset all to NotDetermined`) to re-arm the prompt. A play-mode-gated **Allow / Don't Allow** fallback appears while a prompt is pending (overlay clicks are unreliable in the edit-mode Game view). |
 | **App Tracking Transparency** | A single **status dropdown** (the Settings surface) that models the same lifecycle: the first runtime `RequestAuthorizationAsync()` on a `NotDetermined` status shows the ATT prompt in the overlay (**iOS skin only** — Android / other skins return `Authorized`), then caches the decision. Plus a `Reset to NotDetermined` button and a pending-prompt **Allow / Ask Not to Track** fallback. |
+
+App review is intentionally **not** a panel foldout: it is stateless and fire-and-forget, so there is nothing to configure and no manual trigger to expose (an info-only foldout would not earn its place). Like Permissions / ATT, the review prompt is **shown only when your game code calls** `NativeUiService.RequestReview()` (play mode). While the simulator is engaged, the editor-only `EditorRequestReviewOverride` hook then renders the platform-shaped mock in the overlay — the iOS StoreKit centered star sheet (titled with `Application.productName`) or the Android Play bottom sheet — and the mock's own buttons close it, just like the real prompt. A log is written when the prompt is shown (mirroring the device, which gives no "was shown" callback).
 
 Deep links are intentionally **not** a panel foldout: `DeepLinkService.SimulateLinkActivated` is instance-scoped (no static override like Permissions/ATT), so the panel could only ever fire into a throwaway instance it owns — never your game's live service. Drive deep links from the `DeepLinkRouter` sample, or call `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` from your own bootstrap.
 
@@ -27,7 +29,6 @@ The header carries an **Editor Simulator** master-switch toggle: it enables/disa
 
 - **Alive while the panel is open** — the plugin calls `MobileSimulatorRuntimeOverlay.NotifyPluginActive(true/false)` on create / destroy, so the overlay exists exactly while the Device Simulator panel is open, in **edit mode and play mode**. `UIDocument` is `[ExecuteAlways]`, so it paints in the edit-mode Game view too. Fire a mock from the panel without entering play mode and it renders immediately.
 - **Display-only in edit mode** — runtime-panel pointer input is unreliable in the edit-mode Game view, so the mock's own buttons are not relied upon; dismissal is driven from the panel's per-section dismiss buttons (**Dismiss all UIs** / **Dismiss Banner**).
-- **Standalone play-mode spawn (opt-in)** — independently of the panel, the overlay also spawns on its own during play mode when `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` is on (default OFF), so the mocks render in a plain Game view even without the Device Simulator window open.
 - **Composes with Unity's Device Simulator** — pick "iPhone 15 Pro" in the Device Simulator, and the mocks render at the right scale and safe-area inset for that device.
 
 The same mock payloads — alerts, action sheets, toasts, share sheets, review prompts, heads-up banners, permission / ATT dialogs — are built by `MockBuilders` and skinned by the three USS files (`MobileSimulator.Common.uss` / `.iOS.uss` / `.Android.uss`); the root element toggles `platform-ios` / `platform-android` so USS rules can scope on either.
@@ -92,7 +93,7 @@ Native OS surfaces — `UIAlertController`, `UIActivityViewController`, `SKStore
 | Android Material dialog | — | mock card with the supplied buttons |
 | Toast (iOS / Android) | — | top-pill / bottom-pill mock |
 | Share sheet | — | iOS grid / Android list mock |
-| Review prompt | — | `SKStoreReviewController`-style mock |
+| Review prompt | — | iOS `SKStoreReviewController` star sheet / Android Play bottom-sheet mock |
 | Permission dialog | — | dialog rendered with project-configured `NSUsageDescription` |
 | ATT dialog | — | dialog rendered with `NSUserTrackingUsageDescription` |
 | Heads-up notification banner | — | iOS / Android heads-up card with app icon, app-name + time header, bold title + body |
@@ -100,7 +101,7 @@ Native OS surfaces — `UIAlertController`, `UIActivityViewController`, `SKStore
 | Touch input via mouse | yes | — |
 | `Application.platform` spoofing | yes | — (consumes it to auto-skin) |
 
-The configured-usage-description piece is the strongest unique value: Unity's Device Simulator can't know what text Apple's review team will read for `NSCameraUsageDescription`, but the Mobile Services panel reads it from `MobileServicesSettings` and surfaces it in the dialog mock — making the editor preview match what'll appear on the device.
+The configured-usage-description piece is the strongest unique value: Unity's Device Simulator can't know what text Apple's review team will read for `NSCameraUsageDescription`, but the Mobile Services panel reads it from `MobileServicesConfig` and surfaces it in the dialog mock — making the editor preview match what'll appear on the device.
 
 ### Acknowledged overlap
 
@@ -124,12 +125,12 @@ If your iteration loop is interactive (designer-paired phone or just clicking ar
 
 | Need | Use |
 |------|-----|
-| Preview what an iOS alert / toast / share / review will look like (no play mode) | Mobile Services panel Native UI buttons — fire the mock into the overlay |
+| Preview what an iOS alert / toast / share will look like (no play mode) | Mobile Services panel Native UI buttons — fire the mock into the overlay |
+| See the iOS / Android review prompt mock | Call `NativeUiService.RequestReview()` from your game in play mode (simulator engaged) — like ATT / Permissions, there is no manual panel trigger |
 | Render the mock inside the simulated phone screen at correct scale | Device Simulator device profile + the overlay (alive while the panel is open) |
 | Watch live service state during play mode | Mobile Services panel diagnostics (Play mode) |
 | Set a permission / ATT state your running game reads | Mobile Services panel — the Permissions / ATT state dropdowns (the Settings surface) |
 | See the OS permission / ATT prompt the first time your game requests | Leave the state `NotDetermined`, press Play, call `RequestAsync()` — the prompt renders in the overlay |
 | Drive a permission Request result for a unit test | `EditorPlatformSimulator.SetPermissionState` (cached) or leave `NotDetermined` + `ResolvePendingPermissionPrompt` |
 | Test that your code subscribes to `OnLowPowerModeChanged` correctly | `EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService)` |
-| Render mocks in a plain Game view during play without the Device Simulator open | `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay` |
 | Demo a deep link routing flow without launching from the OS | DeepLinkRouter sample, or `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)` |

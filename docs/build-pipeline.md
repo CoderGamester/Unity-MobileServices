@@ -1,42 +1,39 @@
-# Build Pipeline & Project Settings
+# Build Pipeline & Config
 
-The package ships a build postprocessor (`MobileServicesBuildPostprocessor`) and a Project Settings panel (`Edit > Project Settings > GameLovers > Mobile Services`) that together automate the iOS Info.plist / .entitlements / Android manifest mutations the framework's permission and capability surface needs.
+The package ships a build postprocessor (`MobileServicesBuildPostprocessor`) and a `MobileServicesConfig` asset that together automate the iOS Info.plist / .entitlements / Android manifest / gradle mutations the framework's permission and capability surface needs.
 
-## Project Settings panel
+## Mobile Services Config asset
 
-Open via `Edit > Project Settings > GameLovers > Mobile Services`.
+`MobileServicesConfig` is an **editor-only `ScriptableObject` asset** (not a Project Settings page). Open it via **`Tools > GameLovers > Mobile Services > Select Mobile Services Config`** — this finds the single config anywhere in the project (`AssetDatabase.FindAssets`) or creates one under `Assets/Editor/` on first use, then selects it so you edit it in the Inspector. Keep it under an `Editor/` folder (the type lives in the Editor assembly, so the asset is editor-only and never ships in a player build). The asset is intended to be committed to VCS — it's team-shared state.
 
-Sections:
+The Inspector (`MobileServicesConfigEditor`) shows:
 
-- **Status badge** — `All required keys configured` (green) when every referenced permission has an English usage description, `N missing key(s) — fix before iOS build` (red) otherwise.
-- **Usage descriptions** — one row per `AppPermission` that maps to an Info.plist key (Notifications is excluded — iOS doesn't surface it as a key). Each row has a `Missing` red pill, a multi-line text area for the English copy, and a `Suggest copy` button that drops in a starter sentence honouring Apple's review guidelines.
-- **AppTracking** — `NSUserTrackingUsageDescription` text. Only marked missing when the App Tracking capability is enabled below.
-- **Capabilities** — `Push Notifications`, `Background Audio`, `App Tracking`, `Associated Domains` (with a domain-list text area, one per line, e.g. `applinks:example.com`).
+- **Status box** — info when every referenced permission has an English usage description; a warning listing the count otherwise.
+- **Usage descriptions (localized)** — `Permission Descriptions` is a list with one entry per `AppPermission`, and each holds a **per-locale list** of `(LocaleCode, UsageDescription)`. The `en` value is the base; add `fr`, `pt-BR`, … to localize. (Notifications has no iOS Info.plist key, so it's not emitted.)
+- **App Tracking (ATT) Description** — the per-locale `NSUserTrackingUsageDescription` list. Only marked missing when the App Tracking capability is enabled.
+- **Capabilities** — `Push Notifications`, `App Tracking`, `Associated Domains` (+ domain list). (Background audio is not here — use Unity's own **Player Settings > iOS > Behavior in Background = Custom > Audio**.)
 - **Android manifest** — `CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `READ_MEDIA_IMAGES`, `POST_NOTIFICATIONS`, share-chooser `<queries>` block.
-- **Build behaviour** — `Allow build with placeholder usage descriptions` toggle. **OFF by default.** When ON, missing usage descriptions are auto-injected as `[GameLovers placeholder — replace before App Store submission]` instead of failing the build. Apple WILL reject those placeholders on submission — by design.
-- **Tools** — `Scan project for used services` (reflection-based pre-fill of capability toggles), `Generate iOS Privacy Nutrition Label draft` (Markdown summary of declared data uses for App Store submission).
+- **Android dependencies** — `Include Play Review Dependency` toggle (**ON by default**) + editable `Play Review Coordinate` (default `com.google.android.play:review:2.0.2`). When on, the Play In-App Review library is auto-injected into the generated Gradle project so `NativeUiService.RequestReview()` works with zero manual setup.
+- **Build behaviour** — `Manage Native Build Manually` (**OFF by default**) — when ON, the package writes nothing to the iOS/Android build and skips the iOS usage-description validation. It's the single escape for teams that configure the native build (Xcode / Gradle) themselves. (This is *build* configuration — unrelated to render post-processing.)
+- **Tools** — `Scan project for used services` (reflection-based pre-fill of capability toggles), `Fill missing English descriptions with suggested copy`, `Generate iOS Privacy Nutrition Label draft`.
 
-The settings asset is persisted to `ProjectSettings/MobileServicesSettings.asset` and is intended to be committed to VCS — it's team-shared state.
+Accessed in code via `MobileServicesConfig.Instance` (cached locator; returns a transient default if no asset exists, so build/tests never fail).
 
 ## Build postprocessor
 
 `MobileServicesBuildPostprocessor : IPostprocessBuildWithReport` runs on every iOS / Android build.
 
-### Validation step (fail-by-default)
+### Validation step (fail-fast)
 
-Reads the settings asset + runs the project scanner. For each referenced permission that has an Info.plist key but an empty usage description, the postprocessor:
-
-1. **Default (soft mode OFF)** — throws `BuildFailedException` with a message listing every missing key and a fix hint pointing at the Project Settings panel.
-2. **Soft mode ON** — injects `[GameLovers placeholder]` and logs a warning. The build proceeds. The submission to App Store will be rejected.
-
-Same logic applies to `NSUserTrackingUsageDescription` when the App Tracking capability is enabled.
+Reads the config asset + runs the project scanner. For each referenced permission that has an Info.plist key but an empty usage description, the postprocessor throws `BuildFailedException` listing every missing key, with a fix hint pointing at the config asset (and the `Fill missing English descriptions with suggested copy` button). The same applies to `NSUserTrackingUsageDescription` when App Tracking is enabled. To bypass validation entirely (you manage `Info.plist` yourself), enable `Manage Native Build Manually`.
 
 ### iOS injection step
 
 After validation, the postprocessor mutates the post-build Xcode project:
 
-- **Info.plist** — writes every configured usage description string. Appends `UIBackgroundModes: audio` when the Background Audio capability is on.
-- **Entitlements** — opens / creates `GameLoversMobileServices.entitlements` via `ProjectCapabilityManager` and adds Push Notifications / Background Modes (audio) / Associated Domains capabilities per the settings.
+- **Info.plist** — writes every configured **base (`en`)** usage description string. When any non-`en` locale is configured, also writes `CFBundleLocalizations` (+ `CFBundleDevelopmentRegion`).
+- **Localized usage descriptions** — for every non-`en` `LocaleEntry`, writes a `<locale>.lproj/InfoPlist.strings` file (the platform-native format: `"NSCameraUsageDescription" = "…";`) and registers it on the main target so Xcode copies it into the app bundle. iOS then shows the description in the device language, falling back to the `Info.plist` base value. (The in-memory `PBXProject` is saved before `ProjectCapabilityManager` runs so the registration isn't clobbered.)
+- **Entitlements** — opens / creates `GameLoversMobileServices.entitlements` via `ProjectCapabilityManager` and adds Push Notifications / Associated Domains capabilities per the settings.
 
 Idempotent — re-running against the same Xcode project produces no diff if the configured state already matches.
 
@@ -49,7 +46,31 @@ Patches `Assets/Plugins/Android/mainTemplate.xml`:
 
 If `mainTemplate.xml` is absent, the postprocessor logs a warning pointing at `Player Settings > Publishing Settings > Custom Main Manifest` — Unity won't generate one automatically.
 
-The postprocessor also logs a one-time hint about the `com.google.android.play:review:2.0.1` gradle dependency that `NativeUiService.RequestReview()` needs on Android.
+### Android Gradle dependency step (Play In-App Review)
+
+`MobileServicesBuildPostprocessor` also implements `IPostGenerateGradleAndroidProject`. When `Include Play Review dependency` is on (the default), it injects `implementation '<coordinate>'` (default `com.google.android.play:review:2.0.2`) into the generated module `build.gradle` so `NativeUiService.RequestReview()` works on Android with zero manual setup.
+
+- **Conflict-safe**: it scans every `.gradle` file in the generated project and skips entirely if `com.google.android.play:review` is already declared by any source (hand-written gradle, EDM4U, another SDK) — it never double-declares or fights your version pin.
+- **Editable**: repoint `PlayReviewDependencyCoordinate` to an internal mirror or a pinned/forced version to resolve a Gradle conflict.
+- **Opt-out**: turn `Include Play Review dependency` off for non-Play targets (Amazon / Huawei / sideload) and declare it yourself.
+
+## Build mutation map & escape hatches
+
+Everything the package writes at build time, and how to override or disable each piece. The contract is **additive, idempotent, individually opt-out-able, and always yields to consumer-owned config** — you can resolve any third-party-SDK conflict without forking the package.
+
+| Platform | What is written | File | Override / opt-out |
+|----------|-----------------|------|--------------------|
+| iOS | Base (`en`) usage description strings | `Info.plist` | Per-permission text in the config asset; set the key yourself and it is not overwritten |
+| iOS | Localized usage descriptions + `CFBundleLocalizations` | `<locale>.lproj/InfoPlist.strings` | Add/remove `LocaleEntry` rows per permission/ATT; emitted only for non-`en` locales |
+| iOS | Push / Associated Domains capabilities | `GameLoversMobileServices.entitlements` | Per-capability toggles (see entitlements caveat below) |
+| Android | `<uses-permission>` entries | `mainTemplate.xml` | Per-permission Android-manifest toggles; skipped if already present |
+| Android | Share `<queries>` block | `mainTemplate.xml` | `IncludeShareQueriesBlock` toggle; skipped if `ACTION_SEND` already present |
+| Android | `com.google.android.play:review` dependency | generated `build.gradle` | `IncludePlayReviewDependency` toggle + editable `PlayReviewDependencyCoordinate`; skipped if already declared anywhere |
+
+Cross-cutting controls:
+
+- **`Manage Native Build Manually`** (`ManageNativeBuildManually`, default OFF) — global escape. Makes the package perform zero native-build configuration (and skips the fail-fast iOS usage-description validation). For teams that fully configure the native build themselves or via another build tool.
+- **iOS entitlements caveat** — capabilities are written to a dedicated `GameLoversMobileServices.entitlements`. Xcode allows only one entitlements file per target, so if another SDK ships its own, disable the package's capability toggles and fold the keys into the other SDK's file (or use the kill-switch and manage entitlements yourself). Plist keys are set, not blind-overwritten when a value already exists.
 
 ## Project scanner
 
@@ -57,7 +78,6 @@ The postprocessor also logs a one-time hint about the `com.google.android.play:r
 
 - `MobileNotificationService` → `UsesNotifications` (drives Push Notifications capability)
 - `DeepLinkService` → `UsesDeepLinks` (drives Associated Domains capability)
-- `IosAudioSessionService` → `UsesAudioSession` (drives Background Audio capability)
 - `AttService` / `IAttService` → `UsesAtt` (drives App Tracking capability)
 - `PermissionsService` / `IPermissionsService` → flags every `AppPermission` as potentially required
 - `NativeUiService` → `UsesNativeUiShare` (drives Android share-chooser queries block)
@@ -66,7 +86,7 @@ The scan is intentionally pessimistic for permissions — when permissions are r
 
 ## Manual fallback
 
-Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` by hand can opt out of the automation by leaving every capability toggle off in the settings panel. The postprocessor's validation step still runs but with nothing to inject. In that case, the configuration steps you need to follow:
+Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` by hand can opt out of the automation by leaving every capability toggle off in the config asset (or enabling `Manage Native Build Manually`). The postprocessor's validation step still runs but with nothing to inject. In that case, the configuration steps you need to follow:
 
 ### iOS Info.plist
 
@@ -85,7 +105,6 @@ Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` 
 | Capability | Entitlement |
 |------------|-------------|
 | Push Notifications | `aps-environment` (set to `development` or `production`) |
-| Background Audio | Add `audio` to `UIBackgroundModes` in Info.plist |
 | Associated Domains | `com.apple.developer.associated-domains` array |
 
 ### Android manifest
@@ -108,6 +127,8 @@ Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` 
 
 ### Android gradle (for `NativeUiService.RequestReview()`)
 
+Auto-injected by default (see the Android Gradle dependency step above). Only needed manually if you turn `Include Play Review dependency` off:
+
 ```gradle
-implementation 'com.google.android.play:review:2.0.1'
+implementation 'com.google.android.play:review:2.0.2'
 ```

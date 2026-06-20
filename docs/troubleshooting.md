@@ -54,15 +54,14 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 |---------|-----|
 | `RequestAsync` resolves to `Granted` in editor without prompting | Editor short-circuits to `Granted`. Use `EditorPlatformSimulator.QueuePermissionResult(...)` to override. |
 | `Permission.READ_MEDIA_IMAGES` denied on Android < 13 | The permission is auto-granted below API 33. The service returns `Granted` immediately via Unity's `Permission.HasUserAuthorizedPermission` short-circuit. Add the legacy `READ_EXTERNAL_STORAGE` for that path. |
-| iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open Project Settings > GameLovers > Mobile Services or rely on the build postprocessor to fail the build (default). |
+| iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` or rely on the build postprocessor to fail the build (default). |
 
 ## Editor / Build
 
 | Symptom | Fix |
 |---------|-----|
-| iOS build fails with `[GameLovers.MobileServices] iOS build failed because…` | A referenced permission has an empty usage description. Open Project Settings > GameLovers > Mobile Services and fill the missing field, or enable `Allow build with placeholder usage descriptions` for CI builds (Apple will reject those placeholders on submission). |
-| iOS build succeeds but App Store rejects with "placeholder text in NSCameraUsageDescription" | You shipped a build with the soft-mode placeholder. Fill in real usage descriptions in the settings panel and rebuild. |
+| iOS build fails with `[GameLovers.MobileServices] iOS build failed because…` | A referenced permission has an empty usage description. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` and fill the missing field (the `Fill missing English descriptions with suggested copy` button is a quick start), or enable `Manage Native Build Manually` if you manage `Info.plist` yourself. |
 | Android build doesn't pick up `<uses-permission>` entries | Your project lacks `Assets/Plugins/Android/mainTemplate.xml`. Enable `Player Settings > Publishing Settings > Custom Main Manifest` and rebuild. |
 | The Mobile Services panel is missing from the Device Simulator | Open `Window > General > Device Simulator` and look in the Control Panel column. The panel is auto-discovered; if it's absent, ensure the `GameLovers.MobileServices.Editor` assembly compiled (check the Console for errors). |
-| Mocks fired from the panel don't render | The overlay paints into the Game / Simulator view — keep the Device Simulator window visible. In a plain Game view during play without the Device Simulator open, enable `Project Settings > GameLovers > Mobile Services > Editor tooling > Enable runtime simulator overlay`. |
+| Mocks fired from the panel don't render | The overlay paints into the Game / Simulator view — keep the Device Simulator window open (the overlay is alive only while the Device Simulator panel is open). |
 | Simulator overlay shows generic Unity dialogs | The simulator USS files didn't load. Verify `Editor/Explorer/Overlays/MobileSimulator.Common.uss` is present in the package and re-import. |

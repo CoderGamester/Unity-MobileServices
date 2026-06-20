@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 // ReSharper disable once CheckNamespace
@@ -164,8 +166,17 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		}
 
 		// ---- Review prompt ----
+		// Faithful per-platform shapes: iOS is StoreKit's centered system star sheet (titled with the
+		// app name); Android is the Play In-App Review bottom sheet. Both use Application.productName.
 
 		internal static VisualElement BuildReviewPrompt(SimulatedPlatform platform, Action dismissCallback)
+		{
+			return platform == SimulatedPlatform.iOS
+				? BuildIosReviewPrompt(dismissCallback)
+				: BuildAndroidReviewPrompt(dismissCallback);
+		}
+
+		private static VisualElement BuildIosReviewPrompt(Action dismissCallback)
 		{
 			var scrim = new VisualElement();
 			scrim.AddToClassList("mock-scrim");
@@ -173,10 +184,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			var card = new VisualElement();
 			card.AddToClassList("mock-card");
 			card.AddToClassList("mock-review-card");
+			card.AddToClassList("mock-review-card-ios");
 
-			var title = new Label(platform == SimulatedPlatform.iOS
-				? "Enjoying this app?"
-				: "Was this app helpful?");
+			var title = new Label(AppName());
 			title.AddToClassList("mock-card-title");
 			card.Add(title);
 
@@ -184,32 +194,110 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			subtitle.AddToClassList("mock-card-message");
 			card.Add(subtitle);
 
-			var stars = new VisualElement();
-			stars.AddToClassList("mock-review-stars");
-			for (var i = 0; i < 5; i++)
-			{
-				var star = new Label("\u2606");
-				star.AddToClassList("mock-review-star");
-				stars.Add(star);
-			}
-			card.Add(stars);
-
 			var buttons = new VisualElement();
 			buttons.AddToClassList("mock-card-button-row");
 			buttons.AddToClassList("mock-card-button-row-horizontal");
+
+			// Submit only appears once the user has picked a rating — matches the system sheet.
+			var submit = new Button(() => dismissCallback?.Invoke()) { text = "Submit" };
+			submit.AddToClassList("mock-card-button");
+			submit.style.display = DisplayStyle.None;
+
+			card.Add(BuildStarRow(_ => submit.style.display = DisplayStyle.Flex));
 
 			var cancel = new Button(() => dismissCallback?.Invoke()) { text = "Not Now" };
 			cancel.AddToClassList("mock-card-button");
 			cancel.AddToClassList("mock-card-button-cancel");
 			buttons.Add(cancel);
-
-			var submit = new Button(() => dismissCallback?.Invoke()) { text = "Submit" };
-			submit.AddToClassList("mock-card-button");
 			buttons.Add(submit);
 
 			card.Add(buttons);
 			scrim.Add(card);
 			return scrim;
+		}
+
+		private static VisualElement BuildAndroidReviewPrompt(Action dismissCallback)
+		{
+			// Play review is a bottom sheet with no explicit buttons; rating it (or tapping the scrim)
+			// dismisses. Edit-mode clicks are unreliable, so the panel's Dismiss button is the fallback.
+			var scrim = new VisualElement();
+			scrim.AddToClassList("mock-scrim");
+			scrim.AddToClassList("mock-review-scrim-android");
+			scrim.RegisterCallback<ClickEvent>(evt =>
+			{
+				if (evt.target == scrim)
+				{
+					dismissCallback?.Invoke();
+				}
+			});
+
+			var sheet = new VisualElement();
+			sheet.AddToClassList("mock-card");
+			sheet.AddToClassList("mock-review-card");
+			sheet.AddToClassList("mock-review-sheet-android");
+
+			var header = new VisualElement();
+			header.AddToClassList("mock-review-header-android");
+
+			var icon = new VisualElement();
+			icon.AddToClassList("mock-review-appicon");
+			icon.Add(new Label(AppName().Substring(0, 1).ToUpperInvariant()));
+			header.Add(icon);
+
+			var title = new Label("Rate this app");
+			title.AddToClassList("mock-card-title");
+			header.Add(title);
+			sheet.Add(header);
+
+			var subtitle = new Label("Tell others what you think");
+			subtitle.AddToClassList("mock-card-message");
+			sheet.Add(subtitle);
+
+			sheet.Add(BuildStarRow(_ => dismissCallback?.Invoke()));
+
+			scrim.Add(sheet);
+			return scrim;
+		}
+
+		// Five tappable stars; clicking the i-th fills 0..i and reports the 1-based rating.
+		private static VisualElement BuildStarRow(Action<int> onRated)
+		{
+			var row = new VisualElement();
+			row.AddToClassList("mock-review-stars");
+
+			var stars = new List<Label>();
+			for (var i = 0; i < 5; i++)
+			{
+				var star = new Label("\u2606");
+				star.AddToClassList("mock-review-star");
+				var index = i;
+				star.RegisterCallback<ClickEvent>(_ =>
+				{
+					for (var s = 0; s < stars.Count; s++)
+					{
+						var filled = s <= index;
+						stars[s].text = filled ? "\u2605" : "\u2606";
+						if (filled)
+						{
+							stars[s].AddToClassList("mock-review-star-filled");
+						}
+						else
+						{
+							stars[s].RemoveFromClassList("mock-review-star-filled");
+						}
+					}
+					onRated?.Invoke(index + 1);
+				});
+				stars.Add(star);
+				row.Add(star);
+			}
+			return row;
+		}
+
+		private static string AppName()
+		{
+			var name = Application.productName;
+			return string.IsNullOrEmpty(name) ? "Your App" : name;
 		}
 
 		// ---- Permission / ATT dialog ----

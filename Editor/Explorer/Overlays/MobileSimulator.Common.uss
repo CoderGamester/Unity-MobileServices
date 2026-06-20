@@ -183,13 +183,42 @@
 .mock-review-stars {
     flex-direction: row;
     justify-content: center;
+    margin-top: 4px;
     margin-bottom: 12px;
 }
 
 .mock-review-star {
+    color: rgba(120, 120, 135, 0.55);
+    font-size: 30px;
+    margin: 0 3px;
+}
+
+.mock-review-star-filled {
     color: rgb(255, 190, 50);
-    font-size: 28px;
-    margin: 0 2px;
+}
+
+/* Android Play bottom-sheet header: small circular app icon + title row. */
+.mock-review-header-android {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.mock-review-appicon {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background-color: rgb(33, 150, 83);
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.mock-review-appicon Label {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 16px;
 }
 
 .mock-permission-card {

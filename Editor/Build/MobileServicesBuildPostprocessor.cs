@@ -18,9 +18,12 @@ namespace GameLovers.MobileServices.Editor.Build
 	/// <summary>
 	/// Validates iOS usage descriptions and mutates the post-build Xcode project / Android
 	/// <c>mainTemplate.xml</c> with the keys + capabilities configured in
-	/// <see cref="MobileServicesSettings"/>. See <c>docs/build-pipeline.md</c> for details.
+	/// <see cref="MobileServicesConfig"/>. See <c>docs/build-pipeline.md</c> for details.
 	/// </summary>
 	public sealed class MobileServicesBuildPostprocessor : IPostprocessBuildWithReport
+#if UNITY_ANDROID
+		, UnityEditor.Android.IPostGenerateGradleAndroidProject
+#endif
 	{
 		public int callbackOrder => 0;
 
@@ -28,6 +31,12 @@ namespace GameLovers.MobileServices.Editor.Build
 		{
 			if (report == null)
 			{
+				return;
+			}
+
+			if (MobileServicesConfig.Instance.ManageNativeBuildManually)
+			{
+				Debug.Log("[GameLovers.MobileServices] 'Manage Native Build Manually' is enabled — skipping all plist / entitlements / manifest mutation.");
 				return;
 			}
 
@@ -46,7 +55,7 @@ namespace GameLovers.MobileServices.Editor.Build
 
 		private void PostprocessIos(BuildReport report)
 		{
-			var settings = MobileServicesSettings.instance;
+			var settings = MobileServicesConfig.Instance;
 			var scan = MobileServicesScanner.Scan();
 
 			var missing = settings.GetMissingUsageDescriptions(scan.ReferencedPermissions);
@@ -54,33 +63,20 @@ namespace GameLovers.MobileServices.Editor.Build
 
 			if (missing.Count > 0 || attMissing)
 			{
-				if (!settings.AllowPlaceholderUsageDescriptions)
-				{
-					var sb = new StringBuilder();
-					sb.AppendLine("[GameLovers.MobileServices] iOS build failed because the following Info.plist keys are required by referenced services but have empty usage descriptions:");
-					foreach (var p in missing)
-					{
-						sb.AppendLine($"  - {MobileServicesSettings.GetIosUsageKey(p)} (for AppPermission.{p})");
-					}
-					if (attMissing)
-					{
-						sb.AppendLine("  - NSUserTrackingUsageDescription (App Tracking Transparency capability is enabled)");
-					}
-					sb.AppendLine();
-					sb.AppendLine("Fix: open Edit > Project Settings > GameLovers > Mobile Services and fill in the missing usage descriptions.");
-					sb.AppendLine("Or enable 'Allow build with placeholder usage descriptions' for CI / preview builds (Apple will reject those placeholders).");
-					throw new BuildFailedException(sb.ToString());
-				}
-
-				Debug.LogWarning("[GameLovers.MobileServices] Injecting placeholder usage descriptions because 'Allow build with placeholder usage descriptions' is enabled. Apple WILL reject these on App Store submission.");
+				var sb = new StringBuilder();
+				sb.AppendLine("[GameLovers.MobileServices] iOS build failed because the following Info.plist keys are required by referenced services but have empty usage descriptions:");
 				foreach (var p in missing)
 				{
-					settings.SetUsageDescriptionEn(p, "[GameLovers placeholder — replace before App Store submission]");
+					sb.AppendLine($"  - {MobileServicesConfig.GetIosUsageKey(p)} (for AppPermission.{p})");
 				}
 				if (attMissing)
 				{
-					settings.SetAttUsageDescriptionEn("[GameLovers placeholder — replace before App Store submission]");
+					sb.AppendLine("  - NSUserTrackingUsageDescription (App Tracking Transparency capability is enabled)");
 				}
+				sb.AppendLine();
+				sb.AppendLine("Fix: open Tools > GameLovers > Mobile Services > Select Mobile Services Config and fill in the missing usage descriptions");
+				sb.AppendLine("(use the 'Fill missing English descriptions with suggested copy' button for a quick start), or enable 'Manage Native Build Manually' if you manage Info.plist yourself.");
+				throw new BuildFailedException(sb.ToString());
 			}
 
 #if UNITY_IOS
@@ -91,7 +87,7 @@ namespace GameLovers.MobileServices.Editor.Build
 		}
 
 #if UNITY_IOS
-		private static void InjectIosBuild(BuildReport report, MobileServicesSettings settings, ProjectScanResult scan)
+		private static void InjectIosBuild(BuildReport report, MobileServicesConfig settings, ProjectScanResult scan)
 		{
 			var buildPath = report.summary.outputPath;
 			if (string.IsNullOrEmpty(buildPath) || !Directory.Exists(buildPath))
@@ -110,7 +106,7 @@ namespace GameLovers.MobileServices.Editor.Build
 
 				foreach (var row in settings.PermissionDescriptions)
 				{
-					var key = MobileServicesSettings.GetIosUsageKey(row.Permission);
+					var key = MobileServicesConfig.GetIosUsageKey(row.Permission);
 					if (key == null) continue;
 					var en = settings.GetUsageDescriptionEn(row.Permission);
 					if (string.IsNullOrWhiteSpace(en)) continue;
@@ -126,14 +122,20 @@ namespace GameLovers.MobileServices.Editor.Build
 					}
 				}
 
-				if (settings.Capabilities.BackgroundAudio)
+				// Declare the supported localizations so iOS knows to consult the <locale>.lproj/
+				// InfoPlist.strings files emitted below (the base/en value above is the fallback).
+				var localesForPlist = settings.GetNonDefaultLocaleCodes();
+				if (localesForPlist.Count > 0)
 				{
-					var bg = rootDict.values.ContainsKey("UIBackgroundModes")
-						? rootDict["UIBackgroundModes"].AsArray()
-						: rootDict.CreateArray("UIBackgroundModes");
-					if (!ArrayContains(bg, "audio"))
+					if (!rootDict.values.ContainsKey("CFBundleDevelopmentRegion"))
 					{
-						bg.AddString("audio");
+						rootDict.SetString("CFBundleDevelopmentRegion", MobileServicesConfig.DefaultLocaleCode);
+					}
+					var localizations = rootDict.CreateArray("CFBundleLocalizations");
+					localizations.AddString(MobileServicesConfig.DefaultLocaleCode);
+					foreach (var locale in localesForPlist)
+					{
+						localizations.AddString(locale);
 					}
 				}
 
@@ -151,6 +153,11 @@ namespace GameLovers.MobileServices.Editor.Build
 			var frameworkTargetGuid = pbx.GetUnityFrameworkTargetGuid();
 			if (frameworkTargetGuid == null) frameworkTargetGuid = mainTargetGuid;
 
+			// Emit + register the localized usage descriptions BEFORE ProjectCapabilityManager re-reads
+			// the .pbxproj from disk (otherwise capability.WriteToFile() would overwrite these changes).
+			EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
+			pbx.WriteToFile(pbxPath);
+
 			var entitlementsRelativeName = "GameLoversMobileServices.entitlements";
 			var entitlementsAbs = Path.Combine(buildPath, entitlementsRelativeName);
 			var capability = new ProjectCapabilityManager(pbxPath, entitlementsRelativeName, null, mainTargetGuid);
@@ -158,10 +165,6 @@ namespace GameLovers.MobileServices.Editor.Build
 			if (settings.Capabilities.PushNotifications)
 			{
 				capability.AddPushNotifications(true);
-			}
-			if (settings.Capabilities.BackgroundAudio)
-			{
-				capability.AddBackgroundModes(BackgroundModesOptions.Audio);
 			}
 			if (settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0)
 			{
@@ -176,21 +179,68 @@ namespace GameLovers.MobileServices.Editor.Build
 			capability.WriteToFile();
 		}
 
-		private static bool ArrayContains(PlistElementArray array, string value)
+		// Writes + registers one <locale>.lproj/InfoPlist.strings per non-default locale (base/en stays in Info.plist root).
+		private static void EmitLocalizedInfoPlistStrings(string buildPath, MobileServicesConfig settings, PBXProject pbx, string mainTargetGuid)
 		{
-			foreach (var element in array.values)
+			var locales = settings.GetNonDefaultLocaleCodes();
+			if (locales.Count == 0)
 			{
-				if (element != null && element.AsString() == value) return true;
+				return;
 			}
-			return false;
+
+			foreach (var locale in locales)
+			{
+				var sb = new StringBuilder();
+				sb.AppendLine("/* Auto-generated by GameLovers.MobileServices — localized usage descriptions. Do not edit. */");
+
+				var wroteAny = false;
+				foreach (var row in settings.PermissionDescriptions)
+				{
+					var key = MobileServicesConfig.GetIosUsageKey(row.Permission);
+					if (key == null) continue;
+					var value = settings.GetUsageDescription(row.Permission, locale);
+					if (string.IsNullOrWhiteSpace(value)) continue;
+					sb.AppendLine($"\"{key}\" = \"{EscapeStringsValue(value)}\";");
+					wroteAny = true;
+				}
+
+				if (settings.Capabilities.AppTracking)
+				{
+					var att = settings.GetAttUsageDescription(locale);
+					if (!string.IsNullOrWhiteSpace(att))
+					{
+						sb.AppendLine($"\"NSUserTrackingUsageDescription\" = \"{EscapeStringsValue(att)}\";");
+						wroteAny = true;
+					}
+				}
+
+				if (!wroteAny)
+				{
+					continue;
+				}
+
+				var relDir = $"{locale}.lproj";
+				Directory.CreateDirectory(Path.Combine(buildPath, relDir));
+				var relFile = $"{relDir}/InfoPlist.strings";
+				File.WriteAllText(Path.Combine(buildPath, relFile), sb.ToString());
+
+				var fileGuid = pbx.AddFile(relFile, relFile, PBXSourceTree.Source);
+				pbx.AddFileToBuild(mainTargetGuid, fileGuid);
+			}
+
+			Debug.Log($"[GameLovers.MobileServices] Emitted localized InfoPlist.strings for {locales.Count} locale(s): {string.Join(", ", locales)}.");
 		}
+
+		// Escapes a value for the .strings format ("key" = "value";).
+		private static string EscapeStringsValue(string value) =>
+			value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
 #endif
 
 		// ---- Android ----
 
 		private void PostprocessAndroid()
 		{
-			var settings = MobileServicesSettings.instance;
+			var settings = MobileServicesConfig.Instance;
 			var a = settings.AndroidManifest;
 
 			var templatePath = Path.Combine(Application.dataPath, "Plugins", "Android", "mainTemplate.xml");
@@ -238,8 +288,6 @@ namespace GameLovers.MobileServices.Editor.Build
 				AssetDatabase.Refresh();
 				Debug.Log("[GameLovers.MobileServices] Patched Android mainTemplate.xml with configured permissions and queries.");
 			}
-
-			Debug.Log("[GameLovers.MobileServices] Android build: ensure 'com.google.android.play:review:2.0.1' is on the gradle classpath if you call NativeUiService.RequestReview().");
 		}
 
 		private static string InsertBeforeApplication(string xml, string snippet)
@@ -253,5 +301,130 @@ namespace GameLovers.MobileServices.Editor.Build
 			if (insertAt < 0) insertAt = applicationIndex;
 			return xml.Insert(insertAt, "\n" + snippet);
 		}
+
+#if UNITY_ANDROID
+		// ---- Android Gradle dependency injection ----
+
+		private const string PlayReviewArtifactKey = "com.google.android.play:review";
+
+		/// <summary>
+		/// Auto-injects the Play In-App Review dependency into the generated Gradle project so
+		/// <c>NativeUiService.RequestReview()</c> works with zero manual setup. Idempotent and
+		/// conflict-safe: skips entirely if the dependency is already declared by ANY gradle file in
+		/// the generated project (hand-written gradle, EDM4U, another SDK), so it never double-declares
+		/// or fights a consumer's version pin.
+		/// </summary>
+		public void OnPostGenerateGradleAndroidProject(string path)
+		{
+			var settings = MobileServicesConfig.Instance;
+			if (settings.ManageNativeBuildManually || !settings.IncludePlayReviewDependency)
+			{
+				return;
+			}
+
+			if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+			{
+				return;
+			}
+
+			string[] gradleFiles;
+			try
+			{
+				gradleFiles = Directory.GetFiles(path, "*.gradle", SearchOption.AllDirectories);
+			}
+			catch (System.Exception e)
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] Could not enumerate gradle files under '{path}': {e.Message}. Add '{settings.PlayReviewDependencyCoordinate}' manually if RequestReview() is needed.");
+				return;
+			}
+
+			// Conflict-safe skip: if any gradle file already declares the artifact (any version /
+			// source), leave the consumer's declaration untouched.
+			foreach (var file in gradleFiles)
+			{
+				if (ReadAllTextSafe(file).Contains(PlayReviewArtifactKey))
+				{
+					Debug.Log($"[GameLovers.MobileServices] '{PlayReviewArtifactKey}' is already declared in the Gradle project — skipping auto-injection.");
+					return;
+				}
+			}
+
+			var targetGradle = FindModuleBuildGradle(path, gradleFiles);
+			if (targetGradle == null)
+			{
+				Debug.LogWarning("[GameLovers.MobileServices] Could not find a module build.gradle with a dependencies block to inject the Play Review dependency. " +
+					$"Add 'implementation \"{settings.PlayReviewDependencyCoordinate}\"' manually if RequestReview() is needed, or disable 'Include Play Review dependency' in Project Settings.");
+				return;
+			}
+
+			var contents = ReadAllTextSafe(targetGradle);
+			var injected = InsertIntoDependenciesBlock(contents, $"implementation '{settings.PlayReviewDependencyCoordinate}'");
+			if (injected == null)
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] No 'dependencies {{ }}' block found in '{targetGradle}' — could not inject the Play Review dependency.");
+				return;
+			}
+
+			File.WriteAllText(targetGradle, injected);
+			Debug.Log($"[GameLovers.MobileServices] Injected '{settings.PlayReviewDependencyCoordinate}' into '{Path.GetFileName(targetGradle)}' for Play In-App Review.");
+		}
+
+		// Prefer the unityLibrary module (where Unity puts app dependencies); otherwise the first
+		// build.gradle that applies an Android plugin and has a dependencies block.
+		private static string FindModuleBuildGradle(string path, string[] gradleFiles)
+		{
+			var unityLibraryGradle = Path.Combine(path, "build.gradle");
+			if (File.Exists(unityLibraryGradle) && ReadAllTextSafe(unityLibraryGradle).Contains("dependencies"))
+			{
+				return unityLibraryGradle;
+			}
+
+			string firstWithDependencies = null;
+			foreach (var file in gradleFiles)
+			{
+				var dir = Path.GetFileName(Path.GetDirectoryName(file) ?? string.Empty);
+				var text = ReadAllTextSafe(file);
+				if (!text.Contains("dependencies"))
+				{
+					continue;
+				}
+				if (dir == "unityLibrary" && (text.Contains("com.android.library") || text.Contains("com.android.application")))
+				{
+					return file;
+				}
+				if (firstWithDependencies == null && (text.Contains("com.android.library") || text.Contains("com.android.application")))
+				{
+					firstWithDependencies = file;
+				}
+			}
+			return firstWithDependencies;
+		}
+
+		// Inserts a line at the top of the first top-level `dependencies { ... }` block. Returns null
+		// when no such block exists.
+		private static string InsertIntoDependenciesBlock(string gradle, string implementationLine)
+		{
+			const string marker = "dependencies {";
+			var index = gradle.IndexOf(marker, System.StringComparison.Ordinal);
+			if (index < 0)
+			{
+				return null;
+			}
+			var insertAt = index + marker.Length;
+			return gradle.Insert(insertAt, "\n    " + implementationLine);
+		}
+
+		private static string ReadAllTextSafe(string file)
+		{
+			try
+			{
+				return File.ReadAllText(file);
+			}
+			catch
+			{
+				return string.Empty;
+			}
+		}
+#endif
 	}
 }

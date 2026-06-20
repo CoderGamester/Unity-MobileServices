@@ -21,13 +21,13 @@ namespace GameLovers.MobileServices
 		/// <summary>Native UI (alerts, toasts, share, review).</summary>
 		INativeUiService NativeUi { get; }
 
-		/// <summary>Local + remote notifications.</summary>
+		/// <summary>Local notification scheduling.</summary>
 		INotificationService Notifications { get; }
 
 		/// <summary>Cross-platform haptic feedback.</summary>
 		IHapticsService Haptics { get; }
 
-		/// <summary>Device sub-services (safe area, battery, connectivity, permissions, ATT, deep link, …).</summary>
+		/// <summary>Device sub-services (safe area, screen wake, battery, audio session, permissions, ATT, deep link).</summary>
 		IDeviceService Device { get; }
 	}
 

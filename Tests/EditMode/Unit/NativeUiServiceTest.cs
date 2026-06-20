@@ -37,7 +37,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[Test]
 		public void RequestReview_InEditor_LogsAndDoesNotThrow()
 		{
-			LogAssert.Expect(LogType.Log, "Request Review is not available in the editor.");
+			LogAssert.Expect(LogType.Log, "[GameLovers.MobileServices] RequestReview() is a no-op in the editor unless the Mobile Services Device Simulator is enabled.");
 
 			Assert.DoesNotThrow(NativeUiService.RequestReview);
 		}

@@ -21,7 +21,7 @@ Building mobile-specific features in Unity often requires dealing with platform-
 | **iOS silent switch muting audio** | `device.AudioSession.ConfigureForPlayback()` overrides `AVAudioSession` category in one line |
 | **iOS App Tracking Transparency** | `device.Att.RequestAuthorizationAsync()` — direct `ATTrackingManager` bridge, no `com.unity.ads.ios-support` dependency |
 | **Cold-start deep link loss** | `device.DeepLink` queues the launch link for the first subscriber so you never miss it |
-| **Forgotten `Info.plist` keys → App Store rejection** | Project Settings panel + build postprocessor auto-inject `NS*UsageDescription` keys, `UIBackgroundModes`, entitlements, and Android manifest entries; fail-by-default validation lists every missing key |
+| **Forgotten `Info.plist` keys → App Store rejection** | Mobile Services Config asset + build postprocessor auto-inject `NS*UsageDescription` keys (localized per device language), entitlements, and Android manifest entries; fail-fast validation lists every missing key |
 | **Editor testing challenges** | A Device Simulator plugin panel paints platform-shaped mocks inside the simulated phone (edit + play) with live diagnostics; `EditorPlatformSimulator` drives state for unit tests |
 
 **Built for production:** Uses Unity's official packages (`com.unity.mobile.notifications`, `com.unity.inputsystem`). Tested in real mobile games.
@@ -77,7 +77,7 @@ NativeUiService.ShowAlertPopUp(
     new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, Callback = OnDeleteConfirmed });
 
 NativeUiService.ShowToastMessage("Item Collected!", isLongDuration: false);
-NativeUiService.RequestReview();
+NativeUiService.RequestReview(); // Android Play Review dependency is auto-injected at build time
 NativeUiService.Share(text: "Check out my high score!", url: "https://example.com/game");
 ```
 
@@ -169,10 +169,10 @@ For full per-subsystem API reference, see [`docs/`](docs/README.md).
 
 All Mobile Services editor tooling lives inside Unity's Device Simulator:
 
-- **`Window > General > Device Simulator`** — a **Mobile Services** panel appears automatically in the Control Panel. It bundles the controls (alerts / toasts / share / review / haptics / notifications / device state / permissions / ATT / deep links), live-state diagnostics, and a per-preset haptic envelope graph. Firing a mock paints it **inside the simulated phone screen** at the right scale and safe area, in **edit and play mode** — no second window, no platform toggle to keep in sync (the skin auto-syncs from the selected device profile).
+- **`Window > General > Device Simulator`** — a **Mobile Services** panel appears automatically in the Control Panel. It bundles the controls (alerts / toasts / share / haptics / notifications / gestures / permissions / ATT / app review), live-state diagnostics, and a per-preset haptic envelope graph. Firing a mock paints it **inside the simulated phone screen** at the right scale and safe area, in **edit and play mode** — no second window, no platform toggle to keep in sync (the skin auto-syncs from the selected device profile).
 - **`EditorPlatformSimulator`** — static API for driving device / permission / ATT / deep-link state from edit-mode tests and scripted automation.
 
-Plus a Project Settings panel at **`Edit > Project Settings > GameLovers > Mobile Services`** for per-permission usage descriptions, capability toggles, and the auto-injection build postprocessor.
+Plus a **Mobile Services Config** asset (open via **`Tools > GameLovers > Mobile Services > Select Mobile Services Config`**) for per-permission localized usage descriptions, capability toggles, and the auto-injection build postprocessor.
 
 See [`docs/explorer.md`](docs/explorer.md) and [`docs/build-pipeline.md`](docs/build-pipeline.md) for the full guide.
 

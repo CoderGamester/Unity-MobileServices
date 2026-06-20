@@ -1,4 +1,3 @@
-using GameLovers.MobileServices.Editor.Settings;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -14,10 +13,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 	/// <remarks>
 	/// <para>The overlay is alive whenever the Device Simulator plugin panel is open (edit OR play
 	/// mode) so a designer can fire a mock from the panel and see it inside the simulated phone
-	/// without entering play mode. It also still spawns on its own during play mode when the
-	/// opt-in <c>Project Settings &gt; GameLovers &gt; Mobile Services &gt; Enable runtime simulator
-	/// overlay</c> setting is on (so mocks render in a plain Game view even without the Device
-	/// Simulator window open). Both conditions feed a single idempotent <see cref="RefreshLifecycle"/>.</para>
+	/// without entering play mode. A single idempotent <see cref="RefreshLifecycle"/> drives spawn /
+	/// teardown.</para>
 	/// <para>The overlay renders inside Unity's runtime UIToolkit panel - <see cref="UIDocument"/>
 	/// is <c>[ExecuteAlways]</c>, so its panel paints into the Game / Device Simulator view in edit
 	/// mode too. Interaction inside the mock is unreliable in the edit-mode Game view, so dismissal
@@ -36,18 +33,18 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		private static GameObject _hostObject;
 		private static OverlayController _controller;
 		private static bool _pluginActive;
-		private static bool _inPlayMode;
 
 		static MobileSimulatorRuntimeOverlay()
 		{
-			_inPlayMode = EditorApplication.isPlaying;
-			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+			// Re-evaluate across play-mode transitions so the host's DontDestroyOnLoad / teardown is
+			// applied correctly when the panel is open while entering or exiting play mode.
+			EditorApplication.playModeStateChanged += _ => RefreshLifecycle();
 		}
 
 		/// <summary>
 		/// Called by <c>MobileServicesDeviceSimulatorPlugin</c> when its panel UI is created or
 		/// destroyed, so the overlay is alive (edit OR play mode) exactly while the Device Simulator
-		/// window is open - in addition to the opt-in play-mode lifecycle.
+		/// window is open.
 		/// </summary>
 		internal static void NotifyPluginActive(bool active)
 		{
@@ -55,23 +52,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			RefreshLifecycle();
 		}
 
-		private static void OnPlayModeStateChanged(PlayModeStateChange change)
-		{
-			switch (change)
-			{
-				case PlayModeStateChange.EnteredPlayMode:
-					_inPlayMode = true;
-					RefreshLifecycle();
-					break;
-				case PlayModeStateChange.ExitingPlayMode:
-					_inPlayMode = false;
-					RefreshLifecycle();
-					break;
-			}
-		}
-
-		private static bool ShouldBeAlive =>
-			_pluginActive || (_inPlayMode && MobileServicesSettings.instance.EnableRuntimeSimulatorOverlay);
+		private static bool ShouldBeAlive => _pluginActive;
 
 		private static void RefreshLifecycle()
 		{

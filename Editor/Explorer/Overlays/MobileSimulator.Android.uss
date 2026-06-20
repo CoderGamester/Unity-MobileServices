@@ -75,6 +75,27 @@
     border-radius: 16px;
 }
 
+/* Play In-App Review is a bottom sheet: scrim aligns its child to the bottom edge. */
+.simulator-root.platform-android .mock-review-scrim-android {
+    justify-content: flex-end;
+    align-items: stretch;
+}
+
+.simulator-root.platform-android .mock-review-sheet-android {
+    width: 100%;
+    max-width: none;
+    background-color: rgb(252, 252, 255);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 20px 20px 28px 20px;
+}
+
+.simulator-root.platform-android .mock-review-sheet-android .mock-review-stars {
+    justify-content: flex-start;
+}
+
 .simulator-root.platform-android .mock-notif-top-android {
     position: absolute;
     top: 8px;

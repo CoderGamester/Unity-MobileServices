@@ -48,7 +48,14 @@ The `AlertButton.Callback` action fires when the user taps that button. Callback
 `RequestReview()`:
 
 - **iOS**: `SKStoreReviewController`. Modern `requestReviewInScene:` on iOS 14+, fallback to `requestReview` on iOS 10.3–13. The OS throttles the prompt frequency — calling this every launch is safe.
-- **Android**: Play Core `ReviewManagerFactory` + `launchReviewFlow`. Requires `com.google.android.play:review:2.0.1` (or newer) on the consumer's `mainTemplate.gradle`. Without that dependency the call logs an error and returns — it does NOT throw.
+- **Android**: Play Core `ReviewManagerFactory` + `launchReviewFlow`. The `com.google.android.play:review` dependency is **auto-injected at build time** (default ON — see [build pipeline](build-pipeline.md)), so no manual `mainTemplate.gradle` editing is needed. It never throws.
+
+**Fire-and-forget — no store-page fallback.** Neither platform exposes a "was actually shown" signal: the OS may silently suppress the prompt under its own throttling quota, and that is normal, not an error. Because there is no success callback, the package **logs when the prompt is requested**:
+
+- **iOS** — a `Debug.Log` when `RequestReview()` is called (StoreKit gives no callback at all).
+- **Android** — a `Debug.Log` when the Play review flow is launched. When the Play flow genuinely cannot run (Play Core missing, the request flow returns an unsuccessful task, or launch throws), it is logged as a **warning / error** instead.
+
+The prompt never appears in TestFlight builds, and the OS quota means it will often not appear even in production — do not gate game logic on it having been shown.
 
 ## Share sheet
 

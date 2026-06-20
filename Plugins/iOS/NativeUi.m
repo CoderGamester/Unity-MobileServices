@@ -9,7 +9,7 @@ NSString *ToNSString(char* string) {
 
 typedef void (*AlertButtonCallback)(const char * str);
 
-void AlertMessage (bool isSheet, char* title, char* message, char* buttonsText[], int buttonsStyle[], int buttonsLength, AlertButtonCallback buttonCallback)
+void _GameLoversAlertMessage (bool isSheet, char* title, char* message, char* buttonsText[], int buttonsStyle[], int buttonsLength, AlertButtonCallback buttonCallback)
 {
     UIAlertControllerStyle style = isSheet ? UIAlertControllerStyleActionSheet : UIAlertControllerStyleAlert;
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:ToNSString(title) message:ToNSString(message) preferredStyle:style];
@@ -30,7 +30,7 @@ void AlertMessage (bool isSheet, char* title, char* message, char* buttonsText[]
     });
 }
 
-void ToastMessage (char* message, BOOL isLongDuration)
+void _GameLoversToastMessage (char* message, BOOL isLongDuration)
 {
     float duration = isLongDuration ? 3.5 : 2;
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:ToNSString(message) preferredStyle:UIAlertControllerStyleAlert];
