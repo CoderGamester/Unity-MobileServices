@@ -5,17 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2026-07-04
-
-### Fixed
-- `SerializableNotification` now persists nullable fields (`Id`, `BadgeNumber`, `DeliveryTime`) via explicit has-value flags so background-rescheduled notifications no longer lose their delivery time.
-- `GameNotificationsMonoBehaviour` foreground reschedule reads delivery times through `GetDeliveryTime()`.
-
-### Changed
-- `SafeAreaContainer` migrates to Unity 6 `[UxmlElement]` codegen (replaces hand-rolled `UxmlFactory`).
-- Device Simulator gesture diagnostics uses `FindAnyObjectByType` (Unity 6 API).
-
-## [1.0.0] - 2026-06-21
+## [1.0.0] - 2026-07-04
 
 ### Added
 - Initial release of consolidated **Mobile Services** package.
