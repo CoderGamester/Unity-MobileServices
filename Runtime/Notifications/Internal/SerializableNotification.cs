@@ -10,13 +10,19 @@ namespace GameLovers.MobileServices.Notifications
 	[Serializable]
 	internal struct SerializableNotification
 	{
-		public int? Id;
+		public bool HasId;
+		public int Id;
 		public string Title;
 		public string Body;
 		public string Subtitle;
 		public string Channel;
-		public int? BadgeNumber;
-		public DateTime? DeliveryTime;
+		public bool HasBadgeNumber;
+		public int BadgeNumber;
+		public bool HasDeliveryTime;
+		public long DeliveryTimeBinary;
+
+		internal DateTime? GetDeliveryTime() =>
+			HasDeliveryTime ? DateTime.FromBinary(DeliveryTimeBinary) : (DateTime?)null;
 	}
 
 	/// <summary>
@@ -24,35 +30,49 @@ namespace GameLovers.MobileServices.Notifications
 	/// </summary>
 	internal static class SerializableNotificationConverter
 	{
-		public static IGameNotification AsGameNotification(this SerializableNotification serializableNotification, 
+		public static IGameNotification AsGameNotification(this SerializableNotification serializableNotification,
 			IGameNotificationsPlatform platform)
 		{
 			var notification = platform.CreateNotification();
 
-			notification.Id = serializableNotification.Id;
+			notification.Id = ReadNullableInt(serializableNotification.HasId, serializableNotification.Id);
 			notification.Title = serializableNotification.Title;
 			notification.Body = serializableNotification.Body;
 			notification.Subtitle = serializableNotification.Subtitle;
 			notification.Channel = serializableNotification.Channel;
-			notification.BadgeNumber = serializableNotification.BadgeNumber;
-			notification.DeliveryTime = serializableNotification.DeliveryTime;
+			notification.BadgeNumber = ReadNullableInt(
+				serializableNotification.HasBadgeNumber,
+				serializableNotification.BadgeNumber);
+			notification.DeliveryTime = ReadNullableDateTime(
+				serializableNotification.HasDeliveryTime,
+				serializableNotification.DeliveryTimeBinary);
 
 			return notification;
 		}
-        
+
 		public static SerializableNotification AsSerializableNotification(this PendingNotification pendingNotification)
 		{
+			var source = pendingNotification.Notification;
+			var deliveryTime = source.DeliveryTime;
+
 			return new SerializableNotification
 			{
-				Id = pendingNotification.Notification.Id,
-				Title = pendingNotification.Notification.Title,
-				Body = pendingNotification.Notification.Body,
-				Subtitle = pendingNotification.Notification.Subtitle,
-				Channel = pendingNotification.Notification.Channel,
-				BadgeNumber = pendingNotification.Notification.BadgeNumber,
-				DeliveryTime = pendingNotification.Notification.DeliveryTime,
+				HasId = source.Id.HasValue,
+				Id = source.Id ?? 0,
+				Title = source.Title,
+				Body = source.Body,
+				Subtitle = source.Subtitle,
+				Channel = source.Channel,
+				HasBadgeNumber = source.BadgeNumber.HasValue,
+				BadgeNumber = source.BadgeNumber ?? 0,
+				HasDeliveryTime = deliveryTime.HasValue,
+				DeliveryTimeBinary = deliveryTime?.ToBinary() ?? 0L,
 			};
 		}
-	}
 
+		private static int? ReadNullableInt(bool hasValue, int value) => hasValue ? value : (int?)null;
+
+		private static DateTime? ReadNullableDateTime(bool hasValue, long binary) =>
+			hasValue ? DateTime.FromBinary(binary) : (DateTime?)null;
+	}
 }

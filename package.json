@@ -2,7 +2,7 @@
   "name": "com.gamelovers.mobileservices",
   "displayName": "Mobile Services",
   "author": "Miguel Tomas",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "unity": "6000.0",
   "license": "MIT",
   "description": "Mobile platform services for Unity: native UI (alerts/toasts), push notifications, and gesture detection (swipe/drag).",

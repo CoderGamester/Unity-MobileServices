@@ -9,12 +9,10 @@ namespace GameLovers.MobileServices.Device
 	/// Subscribe via the constructor that accepts an <see cref="ISafeAreaService"/>; the container
 	/// updates its own padding whenever the safe area changes.
 	/// </summary>
-	public sealed class SafeAreaContainer : VisualElement
+	[UxmlElement]
+	public sealed partial class SafeAreaContainer : VisualElement
 	{
 		private ISafeAreaService _safeAreaService;
-
-		/// <summary>UXML factory for use in UXML documents (uses a runtime-provided service via panel data).</summary>
-		public new class UxmlFactory : UxmlFactory<SafeAreaContainer> { }
 
 		/// <summary>Default constructor for UXML usage. Set the service via <see cref="SetSafeAreaService"/>.</summary>
 		public SafeAreaContainer()

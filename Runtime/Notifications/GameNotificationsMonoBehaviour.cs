@@ -507,7 +507,8 @@ namespace GameLovers.MobileServices.Notifications
                 // Reschedule notifications from deserialization
                 foreach (var savedNotification in notifications)
                 {
-                    if (savedNotification.DeliveryTime > DateTime.Now)
+                    var deliveryTime = savedNotification.GetDeliveryTime();
+                    if (deliveryTime.HasValue && deliveryTime.Value > DateTime.Now)
                     {
                         var pendingNotification = ScheduleNotification(savedNotification.AsGameNotification(_platform));
                         
@@ -526,7 +527,8 @@ namespace GameLovers.MobileServices.Notifications
 
                 foreach (var savedNotification in notifications)
                 {
-                    if (savedNotification.DeliveryTime > DateTime.Now)
+                    var deliveryTime = savedNotification.GetDeliveryTime();
+                    if (deliveryTime.HasValue && deliveryTime.Value > DateTime.Now)
                     {
                         PendingNotifications.Add(new PendingNotification(savedNotification.AsGameNotification(_platform)));
                     }

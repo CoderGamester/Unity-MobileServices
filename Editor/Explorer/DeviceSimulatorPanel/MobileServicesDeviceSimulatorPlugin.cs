@@ -794,7 +794,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			{
 				// Prefer a GestureController the user already has in the scene; otherwise spawn our own
 				// so the read-out works with zero setup.
-				controller = UnityEngine.Object.FindFirstObjectByType<GestureController>();
+				controller = UnityEngine.Object.FindAnyObjectByType<GestureController>();
 				if (controller == null)
 				{
 					controller = EnsureSpawnedGestureController();
