@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed legacy tap detection — use Unity Input System's `TapInteraction`.
 - Removed gamepad input management — out of scope for mobile services; configure it via the Input System directly.
 
+### Fixed
+- `Runtime/GameLovers.MobileServices.asmdef` was the only asmdef in the repo missing the `noEngineReferences` key — added (`false`, matching every other asmdef in the package family).
+
 ### Migration
 This package consolidates three previously separate packages:
 - `com.gamelovers.nativeui` (v0.2.5) -> `GameLovers.MobileServices.NativeUi`
