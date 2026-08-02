@@ -221,6 +221,16 @@ None — this package has no performance fixtures (no `Performance/` directory a
 
 ## 13. Coverage Register
 
+**Baseline — runtime assembly: 59.6% (846/1419), measured 2026-08-02.**
+Editor assembly: **0.0% (0/1923)** — near-zero by policy; the ACCEPTED (iii) rows below are why.
+
+Regenerate with `Tools/coverage.sh`, which prints the runtime/Editor split.
+Steer by the **runtime** figure: Editor code is ~48% of the repo's coverable
+lines and is accepted-untestable, so the combined number (41.0%) can never
+meaningfully move. Do not compare against any figure recorded before this date —
+earlier reports were produced without `-debugCodeOptimization` (Release mode
+shrinks the denominator ~40%) or with test/sample assemblies leaking into scope.
+
 Every untested symbol worth naming is either ACCEPTED (justified — do not
 re-report) or OPEN (a real gap, owed a test). An untested symbol in neither state
 is an audit finding.
