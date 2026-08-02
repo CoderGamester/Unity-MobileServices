@@ -22,6 +22,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder's ctor could call INotificationService.CreateNotification more than once per Schedule(), allocating orphan notifications.
+		// RCR: NotificationBuilder.cs NotificationBuilder(INotificationService) — add a second `service.CreateNotification()` call → RED (expected 1 call to CreateNotification, got 2).
 		public void Schedule_ReturnsNewBuilder()
 		{
 			var builder = _service.Schedule();
@@ -30,6 +32,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.Body could return `this` without writing the value onto the notification.
+		// RCR: NotificationBuilder.cs Body — drop `_notification.Body = body` → RED (Body expected 'B' was null).
 		public void Builder_TitleBodyChannel_AssignsAllFields()
 		{
 			_service.Schedule().Title("T").Body("B").Channel("c").Send();
@@ -39,6 +43,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.SmallIcon could return `this` without writing the value onto the notification.
+		// RCR: NotificationBuilder.cs SmallIcon — drop `_notification.SmallIcon = smallIcon` → RED (SmallIcon expected 'sm' was null).
 		public void Builder_SubtitleIdSmallIconLargeIcon_AssignsAllFields()
 		{
 			_service.Schedule().Subtitle("S").Id(42).SmallIcon("sm").LargeIcon("lg").Send();
@@ -49,6 +55,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.In could compute a delivery time in the past instead of now+delay.
+		// RCR: NotificationBuilder.cs In — `DateTime.Now + delay` → `DateTime.Now - delay` → RED (DeliveryTime is not >= now+1h).
 		public void In_AssignsDeliveryTimeRelativeToNow()
 		{
 			var before = DateTime.Now;
@@ -60,6 +68,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.At could shift the caller's absolute delivery time.
+		// RCR: NotificationBuilder.cs At — `= deliveryTime` → `= deliveryTime.AddDays(1)` → RED (DeliveryTime expected 2030-01-01 12:00).
 		public void At_AssignsExactDeliveryTime()
 		{
 			var target = new DateTime(2030, 1, 1, 12, 0, 0);
@@ -68,6 +78,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.BadgeIncrement could leave a previously set BadgeNumber in place, suppressing the host's auto-increment path.
+		// RCR: NotificationBuilder.cs BadgeIncrement — drop `_notification.BadgeNumber = null` → RED (BadgeNumber expected no value, was 7).
 		public void BadgeIncrement_ClearsBadgeNumber()
 		{
 			_service.Schedule().BadgeNumber(7).BadgeIncrement().Send();
@@ -75,6 +87,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.AutoCancel's parameter default could flip, so `.AutoCancel()` disables auto-cancel.
+		// RCR: NotificationBuilder.cs AutoCancel — default `shouldAutoCancel = true` → `= false` → RED (ShouldAutoCancel expected True was False).
 		public void AutoCancel_DefaultTrue_AssignsTrue()
 		{
 			_service.Schedule().AutoCancel().Send();
@@ -82,6 +96,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.Send could fabricate a PendingNotification without ever scheduling it with the service.
+		// RCR: NotificationBuilder.cs Send — `return _service.ScheduleNotification(_notification)` → `return new PendingNotification(_notification)` → RED (expected 1 call to ScheduleNotification, got 0).
 		public void Send_CallsScheduleAndReturnsPending()
 		{
 			var pending = _service.Schedule().Title("X").Send();

@@ -26,6 +26,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: ScreenWakeService.KeepAwake = true could fail to set SleepTimeout.NeverSleep, letting the screen dim mid-session.
+		// RCR: ScreenWakeService.cs KeepAwake.set — true branch `SleepTimeout.NeverSleep` → `SleepTimeout.SystemSetting` → RED (expected NeverSleep was SystemSetting).
 		public void KeepAwake_True_SetsScreenSleepTimeoutNeverSleep()
 		{
 			_service.KeepAwake = true;
@@ -34,6 +36,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: ScreenWakeService.KeepAwake = false could fail to restore SleepTimeout.SystemSetting, keeping the screen awake forever.
+		// RCR: ScreenWakeService.cs KeepAwake.set — false branch `SleepTimeout.SystemSetting` → `SleepTimeout.NeverSleep` → RED (expected SystemSetting was NeverSleep).
 		public void KeepAwake_False_RestoresSystemSetting()
 		{
 			_service.KeepAwake = true;
@@ -43,6 +47,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: ScreenWakeService.KeepAwake's getter could invert its comparison against Screen.sleepTimeout.
+		// RCR: ScreenWakeService.cs KeepAwake.get — `==` → `!=` → RED (expected True was False for NeverSleep).
 		public void KeepAwake_Get_ReflectsScreenSleepTimeout()
 		{
 			Screen.sleepTimeout = SleepTimeout.NeverSleep;

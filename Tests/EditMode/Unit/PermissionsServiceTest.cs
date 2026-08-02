@@ -18,6 +18,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: PermissionsService.Check could return a non-Granted default in a bare Editor, blocking every permission-gated feature.
+		// RCR: PermissionsService.cs Check — editor fallback `: PermissionStatus.Granted` → `: PermissionStatus.Denied` → RED (expected Granted was Denied).
 		[TestCase(AppPermission.Camera)]
 		[TestCase(AppPermission.Microphone)]
 		[TestCase(AppPermission.LocationWhenInUse)]
@@ -31,6 +33,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: PermissionsService.RequestAsync could return a non-Granted completed Task in a bare Editor.
+		// RCR: PermissionsService.cs RequestAsync — editor fallback `: PermissionStatus.Granted` → `: PermissionStatus.Denied` → RED (expected Granted was Denied).
 		[TestCase(AppPermission.Camera)]
 		[TestCase(AppPermission.Microphone)]
 		[TestCase(AppPermission.LocationWhenInUse)]

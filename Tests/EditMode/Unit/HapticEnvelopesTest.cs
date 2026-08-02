@@ -13,6 +13,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class HapticEnvelopesTest
 	{
 		[Test]
+		// ADMIT: HapticEnvelopes' default case could return a non-zero envelope for HapticPreset.None, making the envelope graph draw a phantom pulse.
+		// RCR: HapticEnvelopes.cs GetFloatEnvelopeFor — default `new[] { 0.0f }` timings → `new[] { 1.0f }` → RED (timings[0] expected 0 was 1).
 		public void GetFloatEnvelope_None_ReturnsSingleZeroPair()
 		{
 			var (timings, amps) = HapticEnvelopes.GetFloatEnvelopeFor(HapticPreset.None);
@@ -23,6 +25,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticEnvelopes could drift the Selection amplitude away from the Android waveform table it is the single source of truth for.
+		// RCR: HapticEnvelopes.cs GetFloatEnvelopeFor — Selection amp `0.471f` → `0.472f` → RED (amps[0] expected 0.471).
 		public void GetFloatEnvelope_Selection_MatchesAndroidBackendTable()
 		{
 			var (timings, amps) = HapticEnvelopes.GetFloatEnvelopeFor(HapticPreset.Selection);
@@ -32,6 +36,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticEnvelopes could shorten the Error preset's 7-step envelope, flattening its multi-tap character.
+		// RCR: HapticEnvelopes.cs GetFloatEnvelopeFor — drop the last (0.04f, 0.157f) pair from the Error case → RED (timings.Length expected 7 was 6).
 		public void GetFloatEnvelope_Error_HasSevenSamples()
 		{
 			var (timings, amps) = HapticEnvelopes.GetFloatEnvelopeFor(HapticPreset.Error);
@@ -40,6 +46,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticEnvelopes.GetEnvelopeFor could use the wrong seconds→milliseconds scale for VibrationEffect.createWaveform.
+		// RCR: HapticEnvelopes.cs GetEnvelopeFor — `timesSec[i] * 1000f` → `* 100f` → RED (timingsMs[0] expected 40 was 4).
 		public void GetEnvelope_ConvertsToMillisecondsAnd0to255Amplitudes()
 		{
 			var (timingsMs, amplitudes) = HapticEnvelopes.GetEnvelopeFor(HapticPreset.Selection);
@@ -49,6 +57,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticEnvelopes.GetNaturalDurationSeconds could report only the last step instead of the total, truncating HapticsService's CurrentDurationSeconds.
+		// RCR: HapticEnvelopes.cs GetNaturalDurationSeconds — `total += timesSec[i]` → `total =` → RED (Success expected 0.24 was 0.16).
 		public void GetNaturalDurationSeconds_SumsEveryStep()
 		{
 			Assert.AreEqual(0.04f, HapticEnvelopes.GetNaturalDurationSeconds(HapticPreset.Selection), 1e-6f);
@@ -57,6 +67,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[TestCase(HapticPreset.Selection)]
+		// ADMIT: HapticEnvelopes could ship a preset whose timings and amplitudes arrays differ in length, which AndroidHapticsBackend would index out of range.
+		// RCR: HapticEnvelopes.cs GetFloatEnvelopeFor — append a 4th timing to the Warning case → RED (Warning: timings/amps length mismatch, 4 vs 3).
 		[TestCase(HapticPreset.Success)]
 		[TestCase(HapticPreset.Warning)]
 		[TestCase(HapticPreset.Error)]
@@ -72,6 +84,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[TestCase(HapticPreset.Selection)]
+		// ADMIT: HapticEnvelopes could ship an out-of-range amplitude that GetEnvelopeFor would clamp, silently flattening the preset.
+		// RCR: HapticEnvelopes.cs GetFloatEnvelopeFor — ImpactHeavy amp `1.000f` → `1.500f` → RED (ImpactHeavy: amplitude 1.5 outside [0, 1]).
 		[TestCase(HapticPreset.Success)]
 		[TestCase(HapticPreset.Warning)]
 		[TestCase(HapticPreset.Error)]

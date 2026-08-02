@@ -10,6 +10,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class NoOpHapticsBackendTest
 	{
 		[Test]
+		// ADMIT: NoOpHapticsBackend could claim haptic support on a platform where every call is a no-op.
+		// RCR: NoOpHapticsBackend.cs IsSupported — `=> false` → `=> true` → RED (expected False was True).
 		public void AllMembers_DoNotThrow_AndIsSupportedFalse()
 		{
 			var backend = new NoOpHapticsBackend();

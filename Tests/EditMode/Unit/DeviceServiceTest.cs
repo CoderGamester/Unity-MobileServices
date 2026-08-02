@@ -39,6 +39,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: DeviceService's injection ctor could store something other than the supplied instance on a child property.
+		// RCR: DeviceService.cs DeviceService(7-arg) — `Att = att` → `Att = new AttService()` → RED (AreSame fails on Att).
 		public void InjectionCtor_StoresEachChildOnMatchingProperty()
 		{
 			var service = new DeviceService(
@@ -60,6 +62,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: DeviceService.Dispose could skip a disposable child, leaking that child's host registrations.
+		// RCR: DeviceService.cs Dispose — drop `(Battery as IDisposable)?.Dispose()` → RED (Battery expected 1 call to Dispose, got 0).
 		public void Dispose_DisposesDisposableChildren_OnlyOnce()
 		{
 			var service = new DeviceService(
@@ -79,6 +83,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: DeviceService.Dispose could hard-cast children to IDisposable and throw for a non-disposable implementation.
+		// RCR: DeviceService.cs Dispose — `(SafeArea as IDisposable)?.Dispose()` → `((IDisposable) SafeArea).Dispose()` → RED (InvalidCastException where none expected).
 		public void Dispose_NonDisposableChildren_NoThrow()
 		{
 			var nonDisposableSafeArea = Substitute.For<ISafeAreaService>();

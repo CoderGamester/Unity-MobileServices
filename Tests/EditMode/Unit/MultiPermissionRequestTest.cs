@@ -9,6 +9,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class MultiPermissionRequestTest
 	{
 		[Test]
+		// ADMIT: IPermissionsService.RequestAsync(params) could key every result under one permission, collapsing the aggregate.
+		// RCR: IPermissionsService.cs RequestAsync(params AppPermission[]) — `result[p]` → `result[AppPermission.Camera]` → RED (Count expected 3 was 1).
 		public async Task RequestAsync_MultiplePermissions_AggregatesIntoDictionary()
 		{
 			IPermissionsService service = new PermissionsService();
@@ -29,6 +31,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: IPermissionsService.RequestAsync(params) could return a populated dictionary for a null argument.
+		// RCR: IPermissionsService.cs RequestAsync(params AppPermission[]) — seed one entry in the `permissions == null` early return → RED (Count expected 0 was 1).
 		public async Task RequestAsync_Null_ReturnsEmptyDictionary()
 		{
 			IPermissionsService service = new PermissionsService();
@@ -37,6 +41,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: IPermissionsService.RequestAsync(params) could use Dictionary.Add and throw when the caller repeats a permission.
+		// RCR: IPermissionsService.cs RequestAsync(params AppPermission[]) — `result[p] = ...` → `result.Add(p, ...)` → RED (ArgumentException: an item with the same key has already been added).
 		public async Task RequestAsync_DuplicatePermission_LastValueWins()
 		{
 			IPermissionsService service = new PermissionsService();

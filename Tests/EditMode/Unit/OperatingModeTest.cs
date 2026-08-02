@@ -9,6 +9,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class OperatingModeTest
 	{
 		[Test]
+		// ADMIT: OperatingMode.QueueAndClear could lose its ClearOnForegrounding bit, so foregrounding no longer clears the queue.
+		// RCR: GameNotificationsMonoBehaviour.cs OperatingMode.QueueAndClear — `Queue | ClearOnForegrounding` → `Queue` → RED (ClearOnForegrounding bit expected set).
 		public void QueueAndClear_HasQueueAndClearOnForegroundingFlags()
 		{
 			var mode = OperatingMode.QueueAndClear;
@@ -19,6 +21,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: OperatingMode.QueueClearAndReschedule could lose its RescheduleAfterClearing bit, so cleared notifications are never re-queued.
+		// RCR: GameNotificationsMonoBehaviour.cs OperatingMode.QueueClearAndReschedule — drop `| RescheduleAfterClearing` → RED (RescheduleAfterClearing bit expected set).
 		public void QueueClearAndReschedule_HasAllThreeFlags()
 		{
 			var mode = OperatingMode.QueueClearAndReschedule;

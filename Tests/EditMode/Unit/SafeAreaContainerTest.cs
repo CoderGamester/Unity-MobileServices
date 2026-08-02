@@ -11,6 +11,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class SafeAreaContainerTest
 	{
 		[Test]
+		// ADMIT: SafeAreaContainer.SetSafeAreaService could subscribe without applying the current safe area, leaving the container unpadded until the next change.
+		// RCR: SafeAreaContainer.cs SetSafeAreaService — drop the trailing `Apply()` → RED (paddingLeft expected 10 was 0).
 		public void SetSafeAreaService_AppliesPaddingFromCurrentSafeArea()
 		{
 			var fake = new FakeSafeAreaService(new Rect(10f, 20f, Screen.width - 30f, Screen.height - 50f));
@@ -22,6 +24,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: SafeAreaContainer could stop re-applying padding when the service raises OnSafeAreaChanged, so rotation leaves stale insets.
+		// RCR: SafeAreaContainer.cs OnSafeAreaChanged — empty the handler body (drop `Apply()`) → RED (paddingLeft expected 15 was 0).
 		public void SetSafeAreaService_OnSafeAreaChanged_UpdatesPadding()
 		{
 			var fake = new FakeSafeAreaService(new Rect(0f, 0f, Screen.width, Screen.height));
@@ -34,6 +38,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: SafeAreaContainer.SetSafeAreaService could leave the previous service subscribed, double-applying padding after a swap.
+		// RCR: SafeAreaContainer.cs SetSafeAreaService — drop `_safeAreaService.OnSafeAreaChanged -= OnSafeAreaChanged` → RED (first.HandlerCount expected 0 was 1).
 		public void SetSafeAreaService_Replace_UnsubscribesPreviousService()
 		{
 			var first = new FakeSafeAreaService(new Rect(0f, 0f, Screen.width, Screen.height));

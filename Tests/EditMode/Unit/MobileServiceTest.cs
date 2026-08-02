@@ -12,6 +12,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class MobileServiceTest
 	{
 		[Test]
+		// ADMIT: MobileService's injection ctor could store something other than the supplied child instance.
+		// RCR: IMobileService.cs MobileService(4-arg) — `Haptics = haptics` → `= new HapticsService()` → RED (AreSame fails on Haptics).
 		public void InjectionCtor_StoresEachChild()
 		{
 			var nativeUi = Substitute.For<INativeUiService>();
@@ -28,6 +30,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: MobileService.Dispose could hard-cast Device to IDisposable and throw for a non-disposable implementation.
+		// RCR: IMobileService.cs MobileService.Dispose — `(Device as System.IDisposable)?.Dispose()` → `((System.IDisposable) Device).Dispose()` → RED (InvalidCastException where none expected).
 		public void Dispose_DoesNotThrow_WhenDeviceIsNotDisposable()
 		{
 			var mobile = new MobileService(

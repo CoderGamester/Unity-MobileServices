@@ -10,6 +10,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class TapInputTest
 	{
 		[Test]
+		// ADMIT: TapInput's ctor could compute TapDuration with the wrong operator, breaking GestureController's max-tap-duration gate.
+		// RCR: TapInput.cs TapInput(ActiveGesture) — `EndTime - StartTime` → `EndTime + StartTime` → RED (TapDuration expected 0.1 was 10.1).
 		public void Ctor_FromGesture_CapturesPositionsDurationDriftAndTimestamp()
 		{
 			var start = new Vector2(10f, 20f);

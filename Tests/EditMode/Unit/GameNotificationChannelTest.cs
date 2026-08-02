@@ -9,6 +9,8 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class GameNotificationChannelTest
 	{
 		[Test]
+		// ADMIT: GameNotificationChannel's 3-arg ctor could pick a different default NotificationStyle, silently downgrading Android importance.
+		// RCR: GameNotificationChannel.cs GameNotificationChannel(string,string,string) — `Style = NotificationStyle.Popup` → `Default` → RED (expected Popup was Default).
 		public void Ctor_ThreeArg_AppliesDefaults()
 		{
 			var channel = new GameNotificationChannel("id", "name", "description");
@@ -26,6 +28,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: GameNotificationChannel's full ctor could drop a caller-supplied flag on the floor.
+		// RCR: GameNotificationChannel.cs GameNotificationChannel(10-arg) — `HighPriority = highPriority` → `= false` → RED (expected True was False).
 		public void Ctor_FullArg_StoresAllFields()
 		{
 			var pattern = new long[] { 100L, 200L, 300L };
@@ -54,6 +58,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: GameNotificationChannel's long[]→int[] vibration-pattern projection could corrupt the timings it forwards to Android.
+		// RCR: GameNotificationChannel.cs GameNotificationChannel(10-arg) — `Select(v => (int)v)` → `(int)v + 1` → RED (VibrationPattern[0] expected 100 was 101).
 		public void Ctor_FullArg_VibrationPattern_IntCastFromLongArray()
 		{
 			var pattern = new long[] { 100L, 200L, 300L };
@@ -73,6 +79,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: GameNotificationChannel could substitute an empty array for a null vibration pattern, overriding the OS default pattern.
+		// RCR: GameNotificationChannel.cs GameNotificationChannel(10-arg) — else-branch `VibrationPattern = null` → `new int[0]` → RED (expected null was int[0]).
 		public void Ctor_FullArg_NullVibrationPattern_PropertyIsNull()
 		{
 			var channel = new GameNotificationChannel(
