@@ -110,18 +110,29 @@ The reason must be falsifiable and must record that a mutation was actually trie
 and observed green. "Couldn't find one" is not a reason — that is an unfinished RCR,
 not an exemption.
 
-**Verdicts for a test that resists mutation.** Work out which of three it is; they
+**Verdicts for a test that resists mutation.** Work out which of four it is; they
 have different answers:
 
 | Finding | Test | Action |
 |---|---|---|
+| **A3 reject** — no line in `Runtime/` or `Editor/` participates; the assertion is C#- or Unity-guaranteed | pins nothing, ever | **Delete** |
 | **A5 duplicate** — the only mutation that reddens it already belongs to a sibling | pins nothing new | **Delete**, naming the surviving sibling in the commit body |
 | **D2 overclaim** — the name promises behaviour the body cannot detect | name is a lie | **Strengthen the assertion**, or rename to what it actually checks |
 | **UNFALSIFIABLE** — real behaviour, but double-guarded or otherwise unbreakable one line at a time | valid | **Keep**, with the exemption comment above |
 
+**A3 is checked first, and it is the commonest way the exemption gets abused.**
+UNFALSIFIABLE is for behaviour this package genuinely owns but cannot be broken one
+line at a time. It is *never* for behaviour the package does not own. The tell is in
+the reason itself: if you find yourself writing "no line in Runtime/ participates",
+"the only edit is a compile error", or "these are C#'s zero-init values", you have
+found an A3 reject and the verdict is **delete** — a field-only struct's assignment
+and default values are the language's guarantees, not yours. Writing that sentence
+under an UNFALSIFIABLE heading launders a test §1 would never have admitted.
+
 Prove the class before acting. An A5 duplicate is confirmed when the sibling's
 mutation is observed reddening both; a D2 overclaim is confirmed when the mutation
-the name implies leaves the test green.
+the name implies leaves the test green; an A3 reject is confirmed when no production
+symbol appears anywhere in the causal chain behind the assertion.
 
 **Two consequences, stated so RCR does not become theatre:**
 
