@@ -18,6 +18,31 @@ as comments on the test itself.
 | **A3 PACKAGE** | Does every assertion read a value this package computed? Reject assertions on `new X() != new X()`, `!= null` on a freshly constructed object, default struct/enum values, or anything the C# spec or the Unity engine already guarantees. |
 | **A4 CHEAPEST** | Is this the cheapest tier that covers the defect? EditMode beats PlayMode; a `[TestCase]` row on an existing fixture beats a new `[Test]`; a new `[Test]` beats a new fixture. Grep before writing. |
 | **A5 UNIQUE** | Does no existing test already fail on the A2 edit? Grep the symbol under test across `Tests/` first. |
+| **A6 ENVIRONMENT** | Would this assertion's outcome change if project configuration changed — a renderer feature installed or removed, an Addressables catalog built, a sample imported, a quality tier switched? If yes, the test must **read** that state, not assume one value of it. |
+
+**A6 in practice.** A6 is not A3. A3 asks whether the package computed the value; A6
+asks whether the test assumed which value it would be. A test can satisfy A3 and still
+fail A6 — reading a package-computed flag is fine, hard-coding the expectation that the
+flag is `false` is not.
+
+The concrete instance: `UiBackdropBlurPresenterFeatureTests` unconditionally expected
+the "no renderer feature installed" error. Production only logs it when
+`UiBackdropBlurRendererFeature.IsInstalled` is false. Batchmode never instantiates the
+URP renderer, so the flag was false and all five tests passed; in the Editor the feature
+registers from the project's renderer asset, the flag is true, production correctly stays
+silent, and all five failed. The fixture was really asserting *"this project has no blur
+renderer feature"* — a fact about the repo, not about the code under test.
+
+The fix shape is always the same: branch the expectation on the state instead of assuming
+it, and leave the assertions that are actually the subject untouched.
+
+```csharp
+if (UiBackdropBlurRendererFeature.IsInstalled) return;   // production logs nothing
+LogAssert.Expect(LogType.Error, ...);
+```
+
+If a test genuinely needs one specific value of ambient state, it must establish that
+state itself in `[SetUp]` and restore it in `[TearDown]` — never inherit it.
 
 **A5-bis — inherited-type coverage.** Before proposing a fixture for a type that
 derives from or wraps another tested type, grep `Tests/` for the derived type's
