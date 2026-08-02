@@ -95,10 +95,38 @@ dead end, and it cannot be recovered from the code.
 Also add one line per new test to the commit body: `RCR: <TestName> ← <file> <symbol> <mutation>`.
 That makes `git log --grep=RCR` the audit surface.
 
+**UNFALSIFIABLE — the one honest exemption.** Some correct tests provably have no
+one-line mutation. The commonest case is **double-guarded validation**: an
+unconfigured object trips two independent guards, so disabling either leaves the
+other throwing. Deleting such a test would lose real coverage, so it is exempt —
+but only on the same terms as §13, never as a shrug:
+
+```csharp
+// RCR: none exists — <input> trips both <guard A> and <guard B>; disabling either
+// leaves the other throwing (verified). Double-covered, not single-line falsifiable.
+```
+
+The reason must be falsifiable and must record that a mutation was actually tried
+and observed green. "Couldn't find one" is not a reason — that is an unfinished RCR,
+not an exemption.
+
+**Verdicts for a test that resists mutation.** Work out which of three it is; they
+have different answers:
+
+| Finding | Test | Action |
+|---|---|---|
+| **A5 duplicate** — the only mutation that reddens it already belongs to a sibling | pins nothing new | **Delete**, naming the surviving sibling in the commit body |
+| **D2 overclaim** — the name promises behaviour the body cannot detect | name is a lie | **Strengthen the assertion**, or rename to what it actually checks |
+| **UNFALSIFIABLE** — real behaviour, but double-guarded or otherwise unbreakable one line at a time | valid | **Keep**, with the exemption comment above |
+
+Prove the class before acting. An A5 duplicate is confirmed when the sibling's
+mutation is observed reddening both; a D2 overclaim is confirmed when the mutation
+the name implies leaves the test green.
+
 **Two consequences, stated so RCR does not become theatre:**
 
-- A test with no `// RCR:` line is not trusted coverage. In an audit it is a
-  suspect by default.
+- A test with no `// RCR:` line — and no UNFALSIFIABLE exemption — is not trusted
+  coverage. In an audit it is a suspect by default.
 - **Benchmarks are included, inverted:** a performance test must be observed
   *changing its number* when the measured operation is removed from the measured
   body. A benchmark whose measured region does not contain the workload is a
