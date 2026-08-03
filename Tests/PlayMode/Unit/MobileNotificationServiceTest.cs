@@ -1,4 +1,6 @@
+using System;
 using System.Collections;
+using System.Linq;
 using GameLovers.MobileServices.Notifications;
 using NUnit.Framework;
 using UnityEngine;
@@ -25,7 +27,7 @@ namespace GameLoversEditor.MobileServices.Tests
 			var go = GameObject.Find("NotificationService");
 			if (go != null)
 			{
-				Object.Destroy(go);
+				UnityEngine.Object.Destroy(go);
 			}
 		}
 
@@ -144,6 +146,70 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			Assert.AreEqual(0, fireCount,
 				"Foreground-expiry is platform-driven (manual-only per Tests/AGENTS.md §9); scheduling in the Editor must not synchronously fire the expired event.");
+		}
+
+		[UnityTest]
+		// ADMIT: MobileNotificationService's ctor snapshots the still-null OnLocalNotificationDeliveredEvent into the
+		// host's plain OnLocalNotificationDelivered field, so a consumer subscribing later is never reached.
+		// RCR: PENDING — MobileNotificationService.cs ctor: drop the forwarding lambda, restore
+		// `= OnLocalNotificationDeliveredEvent` → expect RED (received expected the scheduled instance, was null).
+		// Raised through the host field directly because GameNotificationsMonoBehaviour.OnNotificationReceived is
+		// platform-driven and has no IGameNotificationsPlatform in the Editor.
+		public IEnumerator OnLocalNotificationDeliveredEvent_SubscribedAfterCtor_ReachesSubscriber()
+		{
+			var host = ResolveHost();
+			PendingNotification received = null;
+
+			_service.OnLocalNotificationDeliveredEvent += notification => received = notification;
+
+			yield return null;
+
+			var delivered = new PendingNotification(_service.CreateNotification());
+
+			host.OnLocalNotificationDelivered?.Invoke(delivered);
+
+			Assert.AreSame(delivered, received,
+				"A handler subscribed after construction must reach the host's delivered raise path");
+		}
+
+		[UnityTest]
+		// ADMIT: MobileNotificationService's ctor snapshots the still-null OnLocalNotificationExpiredEvent into the
+		// host's plain OnLocalNotificationExpired field, so GameNotificationsMonoBehaviour.Update's queue-expiry
+		// raise reaches no consumer.
+		// RCR: PENDING — MobileNotificationService.cs ctor: drop the forwarding lambda, restore
+		// `= OnLocalNotificationExpiredEvent` → expect RED (received expected the scheduled instance, was null).
+		public IEnumerator OnLocalNotificationExpiredEvent_SubscribedAfterCtor_ReachesSubscriber()
+		{
+			var host = ResolveHost();
+			PendingNotification received = null;
+
+			_service.OnLocalNotificationExpiredEvent += notification => received = notification;
+			_service.Mode = OperatingMode.Queue;
+
+			var notification = _service.CreateNotification();
+			notification.DeliveryTime = DateTime.Now.AddSeconds(-1);
+
+			var expired = host.ScheduleNotification(notification);
+
+			yield return null;
+			yield return null;
+
+			Assert.AreSame(expired, received,
+				"A handler subscribed after construction must reach the host's Update expiry raise path");
+		}
+
+		// Attribution guard: a previous test's host can outlive its deferred Destroy, so the host is matched by the
+		// pending list instance this service exposes rather than by GameObject name.
+		private GameNotificationsMonoBehaviour ResolveHost()
+		{
+			var matches = UnityEngine.Object
+				.FindObjectsByType<GameNotificationsMonoBehaviour>(FindObjectsSortMode.None)
+				.Where(host => ReferenceEquals(host.PendingNotifications, _service.PendingNotifications))
+				.ToArray();
+
+			Assert.AreEqual(1, matches.Length, "Expected exactly one host backing the service under test");
+
+			return matches[0];
 		}
 	}
 }

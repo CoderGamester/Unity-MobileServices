@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `Runtime/GameLovers.MobileServices.asmdef` was the only asmdef in the repo missing the `noEngineReferences` key — added (`false`, matching every other asmdef in the package family).
+- `MobileNotificationService.OnLocalNotificationDeliveredEvent` / `OnLocalNotificationExpiredEvent` never fired for consumers. The constructor assigned the events' backing fields — still `null` at that point — into `GameNotificationsMonoBehaviour`'s plain `Action` fields, so every later `+=` mutated the service's own field while the host kept invoking the `null` snapshot. Both are now forwarded through a lambda, so subscribers attached after construction are reached.
 
 ### Migration
 This package consolidates three previously separate packages:

@@ -105,8 +105,10 @@ namespace GameLovers.MobileServices.Notifications
 		{
 			_channels = channels ?? Array.Empty<GameNotificationChannel>();
 			_monoBehaviour = new GameObject("NotificationService").AddComponent<GameNotificationsMonoBehaviour>();
-			_monoBehaviour.OnLocalNotificationDelivered = OnLocalNotificationDeliveredEvent;
-			_monoBehaviour.OnLocalNotificationExpired = OnLocalNotificationExpiredEvent;
+			// Forwarded through a lambda, not assigned directly: the host's fields are plain delegates, so
+			// assigning the event's backing field here would snapshot it while still null and never see a subscriber.
+			_monoBehaviour.OnLocalNotificationDelivered = notification => OnLocalNotificationDeliveredEvent?.Invoke(notification);
+			_monoBehaviour.OnLocalNotificationExpired = notification => OnLocalNotificationExpiredEvent?.Invoke(notification);
 
 			_monoBehaviour.Initialize(channels);
 			UnityEngine.Object.DontDestroyOnLoad(_monoBehaviour);
