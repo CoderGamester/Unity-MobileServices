@@ -24,6 +24,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: DeviceService.BuildDefaults could leave a child service unconstructed, NREing the first consumer that touches it.
+		// RCR: DeviceService.cs BuildDefaults — `new IosAudioSessionService()` → `null` → RED (AudioSession expected not null).
 		public void DefaultCtor_WiresAllSubServices_NonNull()
 		{
 			Assert.IsNotNull(_service.SafeArea);

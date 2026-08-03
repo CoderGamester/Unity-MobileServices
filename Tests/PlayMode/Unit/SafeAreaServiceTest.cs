@@ -27,6 +27,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: SafeAreaService could report a safe area other than the one it captured at construction.
+		// RCR: SafeAreaService.cs SafeArea — offset the returned rect's x by 1 → RED (SafeArea != Screen.safeArea). Also reddens DefaultCtor_UsesSharedHost_CapturesInitialSafeArea.
 		public void Ctor_CapturesInitialSafeArea()
 		{
 			Assert.AreEqual(Screen.safeArea, _service.SafeArea);
@@ -43,6 +45,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: SafeAreaService.Tick could fire OnSafeAreaChanged every LateUpdate instead of only on a real diff.
+		// RCR: SafeAreaService.cs Tick — diff guard `current == _lastSafeArea` → `current != _lastSafeArea` → RED (fireCount expected 0, fired every frame).
 		public IEnumerator Tick_ScreenSafeAreaUnchanged_DoesNotFireEvent()
 		{
 			var fireCount = 0;
@@ -56,6 +60,10 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: SafeAreaService.Dispose must detach Tick from DeviceServicesHost's LateUpdate fan-out.
+		// RCR: none exists — with the safe area unchanged, no event fires whether or not the handler is still registered:
+		// Dispose's UnregisterLateUpdate and Tick's `current == _lastSafeArea` diff guard each suppress it alone (verified).
+		// Double-covered, not single-line falsifiable.
 		public IEnumerator Dispose_UnregistersFromHost()
 		{
 			var fireCountAfterDispose = 0;

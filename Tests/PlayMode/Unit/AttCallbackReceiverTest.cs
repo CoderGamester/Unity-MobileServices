@@ -23,6 +23,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: AttCallbackReceiver.OnAttResult could slice the status off the '<id>:<status>' bridge payload and never resolve the pending TCS.
+		// RCR: AttService.cs AttCallbackReceiver.OnAttResult — `payload.Substring(sep + 1)` → `sep + 2` → RED (tcs.Task.IsCompleted expected True was False).
 		public IEnumerator OnAttResult_ValidPayload_ResolvesPendingTcs()
 		{
 			var receiver = AttCallbackReceiver.Instance;
@@ -38,6 +40,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: AttCallbackReceiver.OnAttResult could resolve a TCS from an unparseable status, handing callers a bogus AttStatus.
+		// RCR: AttService.cs AttCallbackReceiver.OnAttResult — int.TryParse guard `||` → `&&` → RED ('1:not-int' resolves the TCS; expected IsCompleted False).
 		public IEnumerator OnAttResult_MalformedPayload_DoesNotThrow()
 		{
 			var receiver = AttCallbackReceiver.Instance;

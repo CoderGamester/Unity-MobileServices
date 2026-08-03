@@ -36,6 +36,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: HapticsService.PlayPresetDuration could skip scheduling the auto-stop for a positive duration, looping forever.
+		// RCR: HapticsService.cs PlayPresetDuration — `if (duration > 0f)` → `> 0.15f` → RED (IsPlaying still True after 0.25s); narrowed so the 0.2s/0.5s siblings stay green.
 		public IEnumerator PlayPresetDuration_Positive_AutoStopsAfterDuration()
 		{
 			_haptics.PlayPresetDuration(HapticPreset.Selection, 0.1f);
@@ -49,6 +51,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: HapticsService.PlayCustom could schedule its auto-stop in milliseconds instead of seconds, stretching the stop 1000x.
+		// RCR: HapticsService.cs PlayCustom — `ScheduleStop(durationMs / 1000f, ...)` → `ScheduleStop(durationMs, ...)` → RED (IsPlaying still True after 0.25s).
 		public IEnumerator PlayCustom_AutoStopsAfterDurationMs()
 		{
 			_haptics.PlayCustom(0.7f, 100f);
@@ -62,6 +66,10 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: An explicit StopCurrentHaptic must not be followed by a second backend Stop from the pending auto-stop coroutine.
+		// RCR: none exists — the second Stop is blocked by both HapticsService.CancelPendingAutoStop/HapticsHost.Cancel and
+		// OnAutoStop's `if (!_isPlaying) return` guard; disabling either leaves the other suppressing it (verified).
+		// Double-covered, not single-line falsifiable.
 		public IEnumerator StopCurrentHaptic_CancelsPendingAutoStop()
 		{
 			_haptics.PlayPresetDuration(HapticPreset.Warning, 0.2f);
@@ -76,6 +84,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticsService.PlayCustom could pass an out-of-range intensity straight to the backend.
+		// RCR: HapticsService.cs PlayCustom — `Mathf.Clamp01(intensity01)` → `Mathf.Abs(intensity01)` → RED (LastIntensity expected 1 was 2.5).
 		public void PlayCustom_ClampsIntensity01()
 		{
 			_haptics.PlayCustom(2.5f, 100f);

@@ -23,6 +23,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: PermissionsCallbackReceiver.OnPermissionResult could slice the status off the '<id>:<status>' bridge payload and never resolve the pending TCS.
+		// RCR: PermissionsCallbackReceiver.cs OnPermissionResult — `payload.Substring(sep + 1)` → `sep + 2` → RED (tcs.Task.IsCompleted expected True was False).
 		public IEnumerator OnPermissionResult_ValidPayload_ResolvesPendingTcs()
 		{
 			var receiver = PermissionsCallbackReceiver.Instance;
@@ -38,6 +40,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: PermissionsCallbackReceiver.OnPermissionResult could resolve a TCS from an unparseable status, handing callers a bogus PermissionStatus.
+		// RCR: PermissionsCallbackReceiver.cs OnPermissionResult — int.TryParse guard `||` → `&&` → RED ('<id>:not-an-int' resolves the TCS; expected IsCompleted False).
 		public IEnumerator OnPermissionResult_MalformedPayload_DoesNotThrow()
 		{
 			var receiver = PermissionsCallbackReceiver.Instance;

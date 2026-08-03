@@ -32,6 +32,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: MobileService's default ctor could leave a child facade unconstructed, NREing the first consumer that touches it.
+		// RCR: IMobileService.cs MobileService() — `new HapticsService()` → `null` → RED (Haptics expected not null).
 		public void DefaultCtor_WiresAllChildren_NonNull()
 		{
 			Assert.IsNotNull(_mobile.NativeUi);

@@ -25,6 +25,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: BatteryService.QueryLowPowerMode could report low-power mode on a bare Editor where no override is engaged.
+		// RCR: BatteryService.cs QueryLowPowerMode — editor branch `return EditorLowPowerModeOverride` → `return !EditorLowPowerModeOverride` → RED (IsLowPowerMode expected False). Also reddens DefaultCtor_UsesSharedHost_CapturesInitialState.
 		public void Ctor_CapturesInitialLevelStatusAndLowPowerMode()
 		{
 			Assert.AreEqual(SystemInfo.batteryLevel, _service.Level);

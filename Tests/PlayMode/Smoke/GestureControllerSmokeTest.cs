@@ -37,6 +37,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: GestureController.OnEnable could stop enabling EnhancedTouchSupport, so no finger events ever arrive.
+		// RCR: GestureController.cs OnEnable — drop `EnhancedTouchSupport.Enable()` → RED (EnhancedTouchSupport.enabled expected True was False).
 		public IEnumerator OnEnable_EnablesEnhancedTouchSupport_AndOnDisableDisables()
 		{
 			yield return null;

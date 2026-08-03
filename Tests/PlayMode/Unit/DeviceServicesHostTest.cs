@@ -17,6 +17,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: DeviceServicesHost.Instance could spawn its host outside DontDestroyOnLoad, killing every device poll on the first scene load.
+		// RCR: DeviceServicesHost.cs Instance — drop `DontDestroyOnLoad(go)` → RED (go.scene.name expected 'DontDestroyOnLoad').
 		public IEnumerator Instance_LazilySpawnsGameObject_DontDestroyOnLoad()
 		{
 			Assert.IsNull(GameObject.Find("DeviceServicesHost"), "Pre-condition: no host before access");
@@ -31,6 +33,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: DeviceServicesHost.LateUpdate could stop fanning out to its per-frame subscribers, freezing SafeAreaService.
+		// RCR: DeviceServicesHost.cs LateUpdate — drop `_onLateUpdate?.Invoke()` → RED (callCount 0, expected >= 2).
 		public IEnumerator RegisterLateUpdate_FiresEachLateUpdateFrame()
 		{
 			var host = DeviceServicesHost.Instance;
@@ -44,6 +48,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: DeviceServicesHost could stop crossing its one-second accumulator threshold, so BatteryService never polls.
+		// RCR: DeviceServicesHost.cs LateUpdate — `_secondAccumulator >= 1f` → `>= 100f` → RED (callCount 0, expected >= 1).
 		public IEnumerator RegisterSecondTick_FiresApproximatelyOncePerSecond()
 		{
 			var host = DeviceServicesHost.Instance;
@@ -57,6 +63,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: DeviceServicesHost.OnApplicationFocus could forward the wrong focus value to its subscribers.
+		// RCR: DeviceServicesHost.cs OnApplicationFocus — `Invoke(focused)` → `Invoke(!focused)` → RED (lastFocus expected True was False).
 		public IEnumerator RegisterFocusChanged_FiresOnApplicationFocus()
 		{
 			var host = DeviceServicesHost.Instance;
@@ -80,6 +88,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: DeviceServicesHost.OnIosLowPowerModeChanged (the UnitySendMessage entry point) could stop fanning out to subscribers.
+		// RCR: DeviceServicesHost.cs OnIosLowPowerModeChanged — drop `_onIosLowPowerModeChanged?.Invoke()` → RED (callCount expected 2 was 0).
 		public void OnIosLowPowerModeChanged_PublicMethod_FanOutsToSubscribers()
 		{
 			var host = DeviceServicesHost.Instance;
@@ -94,6 +104,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: DeviceServicesHost.ResetForTests could clear the static without destroying the GameObject, leaking a host per fixture.
+		// RCR: DeviceServicesHost.cs ResetForTests — replace `Destroy(go)` with a no-op → RED (Find('DeviceServicesHost') expected null). Cascades: also reddens Instance_LazilySpawnsGameObject's no-host precondition.
 		public IEnumerator ResetForTests_DestroysSingleton()
 		{
 			_ = DeviceServicesHost.Instance;
