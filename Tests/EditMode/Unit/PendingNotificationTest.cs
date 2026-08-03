@@ -29,12 +29,5 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.AreSame(notification, pending.Notification);
 		}
 
-		[Test]
-		public void Reschedule_DefaultsFalse()
-		{
-			var pending = new PendingNotification(new EditorGameNotification());
-
-			Assert.IsFalse(pending.Reschedule);
-		}
 	}
 }

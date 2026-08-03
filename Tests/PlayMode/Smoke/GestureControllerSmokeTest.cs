@@ -54,6 +54,9 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// Smoke exemption (Tests/AGENTS.md 1): fixtures under Smoke/ are exempt from A1 and A2. Defect class
+		// is 'GestureController's bootstrap regressed or the assembly no longer loads', not a pinned branch.
+		// RCR: none owed - reddens only alongside OnEnable_EnablesEnhancedTouchSupport (radius 2, verified).
 		public IEnumerator Ctor_EmitsNoEventsBeforeFingerInteraction()
 		{
 			var pressed = 0;

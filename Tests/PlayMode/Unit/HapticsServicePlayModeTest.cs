@@ -99,6 +99,11 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: destroying HapticsHost mid-countdown must not fire the auto-stop callback into a service
+		// whose host is gone.
+		// RCR: none exists - the callback is suppressed by both HapticsHost.OnDestroy's Cancel() and Unity's
+		// own termination of the coroutine when the GameObject dies; removing Cancel() leaves the engine
+		// teardown suppressing it (verified). Double-covered, not single-line falsifiable.
 		public IEnumerator HapticsHost_OnDestroy_CancelsPendingAutoStop()
 		{
 			_haptics.PlayPresetDuration(HapticPreset.ImpactHeavy, 0.5f);

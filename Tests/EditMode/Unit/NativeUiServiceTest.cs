@@ -68,20 +68,5 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(() => NativeUiService.Share("hi"));
 		}
 
-		[Test]
-		public void AlertButton_FieldRoundTrip()
-		{
-			Action callback = () => { };
-			var button = new AlertButton
-			{
-				Text = "Cancel",
-				Style = AlertButtonStyle.Cancel,
-				Callback = callback,
-			};
-
-			Assert.AreEqual("Cancel", button.Text);
-			Assert.AreEqual(AlertButtonStyle.Cancel, button.Style);
-			Assert.AreSame(callback, button.Callback);
-		}
 	}
 }

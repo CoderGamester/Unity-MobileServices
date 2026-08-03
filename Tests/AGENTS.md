@@ -144,6 +144,29 @@ have different answers:
 | **A5 duplicate** — the only mutation that reddens it already belongs to a sibling | pins nothing new | **Delete**, naming the surviving sibling in the commit body |
 | **D2 overclaim** — the name promises behaviour the body cannot detect | name is a lie | **Strengthen the assertion**, or rename to what it actually checks |
 | **UNFALSIFIABLE** — real behaviour, but double-guarded or otherwise unbreakable one line at a time | valid | **Keep**, with the exemption comment above |
+| **SHARED-PATH** — no unique one-line pin, but the test was *observed* reddening under a broader mutation | valid | **Keep**, recording the covering mutation and its blast radius |
+
+**SHARED-PATH exists because blast radius measures specificity, not value.** A test that
+only reddens under a broad mutation still catches that regression — an integration test
+that dies when `UiService.CloseUi` is gutted is doing its job, even though no single line
+is *its* line. Without this row the table offers only delete-or-strengthen, and such tests
+get deleted for the crime of being integration tests.
+
+```csharp
+// ADMIT: exercises <Production.Symbol>'s <path>; no unique one-line pin.
+// RCR: no isolated mutation — reddens under <SiblingTest>'s mutation (radius N, verified).
+// Shared-path coverage, not a duplicate.
+```
+
+The radius must be a **recorded observation**, not an estimate. This is also the row most
+easily abused: "some mutation somewhere reddened it" is not the standard. Distinguish it
+from A5 by asking what the covering mutation actually broke — if it broke the one narrow
+guard the sibling owns, this is a duplicate; if it broke a path both tests legitimately
+traverse, this is shared-path coverage.
+
+A cluster of tests that all die to the same broad mutation is **over-provisioned, not
+individually worthless**. Thinning it is a deliberate editorial decision made by a human
+looking at what each assertion adds — never an automatic consequence of the verdict pass.
 
 **A3 is checked first, and it is the commonest way the exemption gets abused.**
 UNFALSIFIABLE is for behaviour this package genuinely owns but cannot be broken one

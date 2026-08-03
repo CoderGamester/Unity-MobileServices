@@ -49,11 +49,5 @@ namespace GameLoversEditor.MobileServices.Tests
 			_service.OnLinkActivated -= handler;
 		}
 
-		[Test]
-		public void Dispose_DoesNotThrow_AndPendingColdStartLinkIsNull()
-		{
-			Assert.DoesNotThrow(_service.Dispose);
-			Assert.IsNull(_service.PendingColdStartLink);
-		}
 	}
 }

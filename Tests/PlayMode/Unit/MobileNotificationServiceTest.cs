@@ -125,6 +125,10 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: MobileNotificationService.ScheduleNotification must not synthesise a delivery - delivery is
+		// platform-driven, and a synchronous fire would double-count every scheduled notification.
+		// RCR: MobileNotificationService.cs ScheduleNotification - invoke OnLocalNotificationDeliveredEvent on
+		// the editor branch's returned PendingNotification -> RED (fireCount expected 0, was 1).
 		public void OnLocalNotificationDeliveredEvent_EditorSchedule_DoesNotFire()
 		{
 			var fireCount = 0;
@@ -137,6 +141,10 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: MobileNotificationService.ScheduleNotification must not synthesise a foreground expiry -
+		// expiry is platform-driven and only GameNotificationsMonoBehaviour may raise it.
+		// RCR: MobileNotificationService.cs ScheduleNotification - invoke OnLocalNotificationExpiredEvent on
+		// the editor branch's returned PendingNotification -> RED (fireCount expected 0, was 1).
 		public void OnLocalNotificationExpiredEvent_EditorSchedule_DoesNotFire()
 		{
 			var fireCount = 0;

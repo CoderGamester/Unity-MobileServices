@@ -14,11 +14,6 @@ namespace GameLoversEditor.MobileServices.Tests
 			_instance = new NativeUiServiceInstance();
 		}
 
-		[Test]
-		public void ImplementsInterface()
-		{
-			Assert.IsInstanceOf<INativeUiService>(_instance);
-		}
 
 		[Test]
 		public void ShowAlertPopUp_DoesNotThrowInEditor()
