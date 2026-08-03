@@ -269,15 +269,16 @@ None — this package has no performance fixtures (no `Performance/` directory a
 
 ## 13. Coverage Register
 
-**Baseline — runtime assembly: 59.6% (846/1419), measured 2026-08-02.**
+**Baseline — runtime assembly: 60.6% (860/1419), measured 2026-08-04.**
 Editor assembly: **0.0% (0/1923)** — near-zero by policy; the ACCEPTED (iii) rows below are why.
+Repo-wide runtime coverage is **74.1% (6609/8922)** across all 11 assemblies.
 
-Regenerate with `Tools/coverage.sh`, which prints the runtime/Editor split.
-Steer by the **runtime** figure: Editor code is ~48% of the repo's coverable
-lines and is accepted-untestable, so the combined number (41.0%) can never
-meaningfully move. Do not compare against any figure recorded before this date —
-earlier reports were produced without `-debugCodeOptimization` (Release mode
-shrinks the denominator ~40%) or with test/sample assemblies leaking into scope.
+Regenerate with `Tools/coverage.sh`, which prints the runtime/Editor split. Steer by
+the **runtime** figure: Editor code is ~48% of coverable lines and accepted-untestable,
+so the combined number (41.1%) can never meaningfully move. Sanity-check any rerun by
+confirming `MathfloatP` reports ~1002 coverable lines — a smaller figure means
+`-debugCodeOptimization` was missing and the denominator silently shrank ~40%.
+
 
 Every untested symbol worth naming is either ACCEPTED (justified — do not
 re-report) or OPEN (a real gap, owed a test). An untested symbol in neither state
@@ -314,6 +315,8 @@ The count of OPEN rows is the honest coverage-debt number.
 | `GameNotificationsMonoBehaviour` (`Runtime/Notifications/GameNotificationsMonoBehaviour.cs:67`) | OPEN | **Owed.** 539 lines with no fixture at all. This is the real queue/clear/reschedule state machine, the `OnApplicationFocus` handler, and the `PlayerPrefs` persistence — none of it reachable from the existing `OperatingMode` enum-level tests. The ACCEPTED `MobileNotificationService` row above covers the *platform* flows, not this host type itself, so this is a genuine gap rather than a justified omission. Owed: a PlayMode fixture that drives `Mode` / `OnApplicationFocus(false→true)` against a fake `IGameNotificationsPlatform` and asserts the queue, clear, and reschedule transitions. | 2026-07-31 |
 | `SerializableNotification` / `SerializableNotificationConverter` PlayerPrefs JSON round-trip (`Runtime/Notifications/Internal/SerializableNotification.cs:11`, `:31`; consumed at `Runtime/Notifications/GameNotificationsMonoBehaviour.cs:493`) | OPEN | **Owed — suspected defect.** `JsonUtility.FromJson<List<SerializableNotification>>(PlayerPrefs.GetString("notifications"))` at `GameNotificationsMonoBehaviour.cs:493` is a known-broken Unity pattern: `JsonUtility` cannot deserialize a bare `List<T>` at the JSON root (it requires an object with a serialized field), so the persisted-notification restore may be silently returning null/empty on every foreground. Zero coverage today, so nothing would notice. Owed: a round-trip test (serialize → `PlayerPrefs` string → deserialize) that either proves the pattern works or turns this row into a bug fix (wrap in a serializable container type). | 2026-07-31 |
 | `PermissionsService.EditorCheckOverride` (`Runtime/Device/Permissions/PermissionsService.cs:31`) / `AttService.EditorCurrentStatusOverride` (`Runtime/Device/Tracking/AttService.cs:27`) test-side leak | OPEN | **Owed.** Both are process-wide statics and no test resets them, so `PermissionsServiceTest` / `AttServiceTest` / `MultiPermissionRequestTest` assert the bare-editor `Granted` / `Authorized` short-circuit only while nothing has engaged the simulator — results depend on whether the Device Simulator panel was opened earlier in the same editor session (the panel `Engage()`s the overrides and only `Disengage()`s on close). The mechanism is documented in the package root `AGENTS.md` ("Editor Permission/ATT default depends on whether the simulator is engaged"); the test-side leak is documented nowhere. Owed: a `[SetUp]`/`[TearDown]` that nulls both statics (plus the `EditorRequest*Override` siblings) in the three affected fixtures. | 2026-07-31 |
+
+| Process-wide editor-static leakage across fixtures (`Runtime/Device/**`) | OPEN | Owed: `BatteryService.EditorLowPowerModeOverride` and `NativeUiService.EditorRequestReviewOverride` join the already-recorded `PermissionsService.EditorCheckOverride` / `AttService` leak. Five tests assert the bare-editor default and pass only while nothing has engaged the Device Simulator; all four statics need `[SetUp]`/`[TearDown]` reset. | 2026-08-04 |
 
 ## 14. Update Policy
 Update this file when:
