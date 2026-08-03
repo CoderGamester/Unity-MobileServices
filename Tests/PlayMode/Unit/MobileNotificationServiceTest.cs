@@ -159,8 +159,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		[UnityTest]
 		// ADMIT: MobileNotificationService's ctor snapshots the still-null OnLocalNotificationDeliveredEvent into the
 		// host's plain OnLocalNotificationDelivered field, so a consumer subscribing later is never reached.
-		// RCR: PENDING — MobileNotificationService.cs ctor: drop the forwarding lambda, restore
-		// `= OnLocalNotificationDeliveredEvent` → expect RED (received expected the scheduled instance, was null).
+		// RCR: MobileNotificationService.cs ctor — restore `= OnLocalNotificationDeliveredEvent` → RED
+		// (Expected: same as PendingNotification, But was: null); the expired sibling stays green. 2026-08-03
 		// Raised through the host field directly because GameNotificationsMonoBehaviour.OnNotificationReceived is
 		// platform-driven and has no IGameNotificationsPlatform in the Editor.
 		public IEnumerator OnLocalNotificationDeliveredEvent_SubscribedAfterCtor_ReachesSubscriber()
@@ -184,8 +184,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		// ADMIT: MobileNotificationService's ctor snapshots the still-null OnLocalNotificationExpiredEvent into the
 		// host's plain OnLocalNotificationExpired field, so GameNotificationsMonoBehaviour.Update's queue-expiry
 		// raise reaches no consumer.
-		// RCR: PENDING — MobileNotificationService.cs ctor: drop the forwarding lambda, restore
-		// `= OnLocalNotificationExpiredEvent` → expect RED (received expected the scheduled instance, was null).
+		// RCR: MobileNotificationService.cs ctor — restore `= OnLocalNotificationExpiredEvent` → RED
+		// (Expected: same as PendingNotification, But was: null); the delivered sibling stays green. 2026-08-03
 		public IEnumerator OnLocalNotificationExpiredEvent_SubscribedAfterCtor_ReachesSubscriber()
 		{
 			var host = ResolveHost();
