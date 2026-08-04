@@ -58,14 +58,23 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
+		// ADMIT: PermissionsCallbackReceiver.OnPermissionResult must key the pending lookup on the payload's
+		// id, or a stray native callback resolves an unrelated caller's TaskCompletionSource.
+		// RCR: PermissionsCallbackReceiver.cs OnPermissionResult - `_pending.TryGetValue(id, out var tcs)` ->
+		// `_pending.TryGetValue(_nextId - 1, out var tcs)` -> RED (tcs.Task.IsCompleted expected False, was
+		// True). The sibling valid-payload test stays green because there id == _nextId - 1. 2026-08-04
 		public IEnumerator OnPermissionResult_UnknownId_NoOp()
 		{
 			var receiver = PermissionsCallbackReceiver.Instance;
+			var tcs = new TaskCompletionSource<PermissionStatus>();
+			var id = receiver.Register(tcs);
 
-			receiver.OnPermissionResult($"99999:{(int) PermissionStatus.Denied}");
+			receiver.OnPermissionResult($"{id + 99999}:{(int) PermissionStatus.Denied}");
 			yield return null;
 
-			Assert.Pass();
+			Assert.IsFalse(tcs.Task.IsCompleted,
+				"A result addressed to an unregistered id must not resolve somebody else's pending request.");
+			LogAssert.NoUnexpectedReceived();
 		}
 	}
 }
