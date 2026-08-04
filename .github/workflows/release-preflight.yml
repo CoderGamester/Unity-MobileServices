@@ -1,0 +1,69 @@
+# Release preflight — required status check for develop -> master PRs.
+#
+# Installed into each package repo by:
+#   release.py install-preflight <package>
+#
+# WHY THIS EXISTS
+# These are solo repos: GitHub refuses to let a PR author review their own PR
+# (HTTP 422 "Review cannot be requested from pull request author"), so a human
+# review gate is unavailable. This gives a real blocking gate instead — the same
+# package-local gates the release driver enforces, run before the merge rather
+# than after it.
+#
+# WHY IT IS SAFE TO SHIP IN A PACKAGE REPO
+# Verified against upm 9.31.1 with a positive control: `.github/` is excluded
+# from the packed tarball automatically, even when it is not gitignored, while a
+# non-ignored control file at the package root IS packed. (Older packers did not
+# exclude it — the published googlesheetimporter 0.7.2 asset still contains
+# `package/.github/workflows/openai.yml`.) So no `.npmignore` is required. If
+# that ever regresses, `G24` will surface it as an unexpected added file.
+#
+# WHAT IT DOES NOT CHECK
+# Only gates decidable from the package directory plus the base ref, so the check
+# needs no token, no submodules and no network: G7 (bare SemVer), G8/G9 (CHANGELOG
+# heading matches package.json and is newest+highest), G10 (date sane), G11
+# (version advances past master), G15 (the PR touches both files). Remote-state
+# gates (G0-G6, G12-G14) and the whole tarball chain (G20-G27) run locally in
+# `release.py preflight` / `pack` before the PR is opened.
+
+name: release-preflight
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-preflight-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the package
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out the release tooling
+        uses: actions/checkout@v4
+        with:
+          repository: CoderGamester/Frameworks
+          path: .release-tooling
+          sparse-checkout: .claude/skills/unity-package-release/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Preflight
+        run: |
+          python3 .release-tooling/.claude/skills/unity-package-release/scripts/release.py \
+            preflight-pr --path . --base "origin/${{ github.base_ref }}"
