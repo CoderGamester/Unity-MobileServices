@@ -5,53 +5,38 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-07-04
+## [1.0.0] - 2026-08-04
 
-**Docs**:
-- Completed this package against the host `AGENTS.md` §6.6 (`Tools/style-audit.py` reports 0 items). Documented the `NotificationBuilder` fluent setters, recording which are iOS-only and that setting an explicit badge number opts the notification out of auto-increment; the `MobileSimulatorState` payload types, events and push entry points; the `MockBuilders` factories; the `DeviceServicesHost` unregister pairs; the `SerializableNotification` round-trip, including that nullable fields are flattened into value+flag pairs; and `TapInput`, `AlertButton` / `AlertButtonStyle`, `ProjectScanResult.ReferencedPermissions` and the two callback-receiver singletons. The `UnitySendMessage` entry points (`OnIosLowPowerModeChanged`, `OnPermissionResult`, `OnAttResult`) now say in their summaries that they must stay public and keep their names, since Unity dispatches them by string from the iOS bridges.
+**New**:
+- Added native UI services for iOS and Android alerts, action sheets, toasts, review requests, and share sheets.
+- Added local notification scheduling and management with channels, queueing, and a fluent scheduling builder.
+- Added Enhanced Touch swipe and tap gesture support.
+- Added cross-platform haptics with presets, custom intensity, and time-bounded looping.
+- Added the `Device` service facade for safe area, screen wake, battery and low-power mode, iOS audio session, permissions, App Tracking Transparency, and deep links.
+- Added unified iOS and Android runtime permission requests, including multi-permission async requests and an iOS 14.5+ App Tracking Transparency bridge.
+- Added deep-link activation and route-pattern handling with cold-start link replay.
+- Added an embedded Unity Device Simulator plugin with native UI mocks, live diagnostics, and haptic envelope visualization.
+- Added the Mobile Services Config asset and build postprocessor for localized iOS usage descriptions, entitlements, Android manifest entries, and Play In-App Review setup.
+- Added `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, and `DeepLinkRouter` samples, along with subsystem and editor-tooling documentation.
 
-**Docs**:
-- Aligned XML doc comments with the host repo's `AGENTS.md` §6.6. Converted 23 enum members (`HapticPreset`, `NotificationStyle`, `PrivacyMode`, `OperatingMode`) from `/// <summary>` blocks to inline `//` comments; `OperatingMode`'s longer caveats (badge auto-increment, `RescheduleAfterClearing` requiring `ClearOnForegrounding`) moved to a `<remarks>` on the enum rather than becoming 250-character lines. Removed the doc comments from 21 constructors and from the private `ActiveGesture.accumulatedNormalized` field, and converted 7 private-member doc blocks to `//` comments so their rationale survives. Dropped the `<param>`/`<returns>`/`<exception>` tags from the internal `IGameNotificationsPlatform` and `ActiveGesture.SubmitPoint`, folding the throwing behaviour of `ScheduleNotification` into its `<summary>` so it is not lost. Added `/// <inheritdoc />` to the three `MobileServicesDeviceSimulatorPlugin` overrides. Moved the internal editor/test seams above their types' private blocks per §6.6 (`SafeAreaService.SimulateSafeAreaChanged`, `DeepLinkService.SimulateLinkActivated`, `BatteryService.SimulateLowPowerModeChanged`, and the three `MockBuilders` builders).
+**Changed**:
+- Consolidated the package under the `com.gamelovers.mobileservices` package name, `GameLovers.MobileServices.*` namespaces, and `GameLovers.MobileServices` assembly.
+- Updated the package baseline to Unity 6 (6000.0+) and added the Unity Mobile Notifications and Input System dependencies.
 
-### Added
-- Initial release of consolidated **Mobile Services** package.
-- **Native UI**: Alerts, action sheets, and toasts for iOS/Android, plus OS review request and a share sheet (text / URL / image).
-- **Notifications**: Local notification scheduling and management (channels, queueing, fluent `Schedule().In(...).Title(...).Body(...).Channel(...).Send()` builder).
-- **Gestures**: Advanced swipe detection with velocity and consistency tracking.
-- **iOS Audio Session**: Override the iOS silent switch so audio keeps playing.
-- **Haptics**: Zero-dependency cross-platform haptic feedback with 9 presets, custom intensity, and time-bounded looping.
-- **Device**: Umbrella facade over `SafeArea`, `ScreenWake`, `Battery` (with LPM awareness), `AudioSession`, `Permissions`, `Att`, and `DeepLink` sub-services.
-- **Permissions**: Unified iOS+Android runtime permissions (Camera, Microphone, Location, Photo Library, Notifications) with `Task`-based async and a multi-permission `RequestAsync(params AppPermission[])` overload.
-- **App Tracking Transparency**: iOS 14.5+ `ATTrackingManager` bridge with zero dependency on `com.unity.ads.ios-support`.
-- **Deep Links**: `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
-- **Deep Link Router**: Path-pattern routing over `IDeepLinkService` with captured params (`/promo/:id`).
-- **Mobile Service umbrella**: `IMobileService` — single DI registration aggregating `NativeUi` / `Notifications` / `Haptics` / `Device`.
-- **Native UI instance interface**: `INativeUiService` + `NativeUiServiceInstance` forwarder for mockable consumer code.
-- **Device Simulator Plugin**: A `DeviceSimulatorPlugin` embedded in Unity's Device Simulator window that drives platform-shaped native-UI mocks into the simulated phone screen (edit + play), with live diagnostics and a per-preset haptic envelope graph.
-- **Mobile Services Config asset**: Editor `ScriptableObject` (open via `Tools > GameLovers > Mobile Services > Select Mobile Services Config`) for per-permission **localized** usage descriptions, capability toggles, Android manifest opt-ins, and the Play In-App Review Gradle auto-injection.
-- **Build Postprocessor**: Auto-injects iOS `Info.plist` usage descriptions (+ per-locale `<locale>.lproj/InfoPlist.strings` for device-language localization), entitlements, Android manifest entries, and the Play In-App Review Gradle dependency; fail-fast validation lists every missing key.
-- **Samples**: Four code-only samples — `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, `DeepLinkRouter`.
-- **Docs**: Per-subsystem deep-dive references under `docs/` plus editor-tooling guides for the Device Simulator panel and build pipeline.
+**Fixed**:
+- Fixed persisted notifications so nullable IDs, badge numbers, and delivery times survive background/foreground rescheduling.
+- Fixed local notification delivered and expired events so subscribers added after service construction receive callbacks.
 
-### Changed
-- Refactored all namespaces to `GameLovers.MobileServices.*`.
-- Updated assembly definition to `GameLovers.MobileServices`.
-- Updated dependencies to target Unity 6 (6000.0+).
+**Removed**:
+- Removed legacy tap detection; use the Unity Input System's `TapInteraction` instead.
+- Removed gamepad input management; configure gamepad input through the Unity Input System.
 
-### Removed
-- Removed legacy tap detection — use Unity Input System's `TapInteraction`.
-- Removed gamepad input management — out of scope for mobile services; configure it via the Input System directly.
-
-### Fixed
-- `Runtime/GameLovers.MobileServices.asmdef` was the only asmdef in the repo missing the `noEngineReferences` key — added (`false`, matching every other asmdef in the package family).
-- `MobileNotificationService.OnLocalNotificationDeliveredEvent` / `OnLocalNotificationExpiredEvent` never fired for consumers. The constructor assigned the events' backing fields — still `null` at that point — into `GameNotificationsMonoBehaviour`'s plain `Action` fields, so every later `+=` mutated the service's own field while the host kept invoking the `null` snapshot. Both are now forwarded through a lambda, so subscribers attached after construction are reached.
-
-### Migration
+**Migration**:
 This package consolidates three previously separate packages:
-- `com.gamelovers.nativeui` (v0.2.5) -> `GameLovers.MobileServices.NativeUi`
-- `com.gamelovers.notificationservice` (v0.1.7) -> `GameLovers.MobileServices.Notifications`
-- `com.gamelovers.inputextensions` (v0.1.0-preview.4, swipe detection only) -> `GameLovers.MobileServices.Gestures`
-- `AlertButtonStyle.Positive` -> `AlertButtonStyle.Destructive`; `AlertButtonStyle.Negative` -> `AlertButtonStyle.Cancel`. Underlying iOS/Android platform mapping is unchanged; pure rename for iOS-native vocabulary.
+- `com.gamelovers.nativeui` (v0.2.5) → `GameLovers.MobileServices.NativeUi`
+- `com.gamelovers.notificationservice` (v0.1.7) → `GameLovers.MobileServices.Notifications`
+- `com.gamelovers.inputextensions` (v0.1.0-preview.4, swipe detection only) → `GameLovers.MobileServices.Gestures`
+- `AlertButtonStyle.Positive` → `AlertButtonStyle.Destructive`; `AlertButtonStyle.Negative` → `AlertButtonStyle.Cancel`.
 
 ## [0.2.5] - 2021-01-15
 
@@ -106,4 +91,3 @@ This package consolidates three previously separate packages:
 ## [0.1.0] - 2020-07-30
 
 - Initial submission for package distribution
-
