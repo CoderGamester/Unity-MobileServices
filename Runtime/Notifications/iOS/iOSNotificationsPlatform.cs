@@ -14,9 +14,6 @@ namespace GameLovers.MobileServices.Notifications
         /// <inheritdoc />
         public event Action<IGameNotification> NotificationReceived;
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="iOSNotificationsPlatform"/>.
-        /// </summary>
         public iOSNotificationsPlatform()
         {
             iOSNotificationCenter.OnNotificationReceived += OnLocalNotificationReceived;

@@ -54,9 +54,6 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         public readonly float SwipeSameness;
 
-        /// <summary>
-        /// Construct a new swipe input from a given gesture.
-        /// </summary>
         internal SwipeInput(ActiveGesture gesture) : this()
         {
             InputId = gesture.InputId;

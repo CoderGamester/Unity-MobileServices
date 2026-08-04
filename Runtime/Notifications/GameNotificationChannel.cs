@@ -20,22 +20,10 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public enum NotificationStyle
         {
-            /// <summary>
-            /// Notification does not appear in the status bar.
-            /// </summary>
-            None = 0,
-            /// <summary>
-            /// Notification makes no sound.
-            /// </summary>
-            NoSound = 2,
-            /// <summary>
-            /// Notification plays sound.
-            /// </summary>
-            Default = 3,
-            /// <summary>
-            /// Notification also displays a heads-up popup.
-            /// </summary>
-            Popup = 4
+            None = 0, // Notification does not appear in the status bar.
+            NoSound = 2, // Notification makes no sound.
+            Default = 3, // Notification plays sound.
+            Popup = 4 // Notification also displays a heads-up popup.
         }
 
         /// <summary>
@@ -43,18 +31,9 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public enum PrivacyMode
         {
-            /// <summary>
-            /// Notifications aren't shown on secure lock screens.
-            /// </summary>
-            Secret = -1,
-            /// <summary>
-            /// Notifications display an icon, but content is concealed on secure lock screens.
-            /// </summary>
-            Private = 0,
-            /// <summary>
-            /// Notifications display on all lock screens.
-            /// </summary>
-            Public
+            Secret = -1, // Notifications aren't shown on secure lock screens.
+            Private = 0, // Notifications display an icon, but content is concealed on secure lock screens.
+            Public // Notifications display on all lock screens.
         }
 
         /// <summary>
@@ -107,10 +86,6 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public readonly int[] VibrationPattern;
 
-        /// <summary>
-        /// Initialize a new instance of <see cref="GameNotificationChannel"/> with
-        /// optional fields set to their default values.
-        /// </summary>
         public GameNotificationChannel(string id, string name, string description) : this()
         {
             Id = id;
@@ -126,10 +101,6 @@ namespace GameLovers.MobileServices.Notifications
             VibrationPattern = null;
         }
 
-        /// <summary>
-        /// Initialize a new instance of <see cref="GameNotificationChannel"/>, providing the notification style
-        /// and optionally all other settings.
-        /// </summary>
         public GameNotificationChannel(string id, string name, string description, NotificationStyle style, bool showsBadge = true, bool showLights = false, bool vibrates = true, bool highPriority = false, PrivacyMode privacy = PrivacyMode.Public, long[] vibrationPattern = null)
         {
             Id = id;

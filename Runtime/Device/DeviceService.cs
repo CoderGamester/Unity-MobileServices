@@ -22,17 +22,8 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public IDeepLinkService DeepLink { get; }
 
-		/// <summary>
-		/// Constructs the umbrella with the default child implementations for the current platform.
-		/// The host-dependent children (SafeArea, Battery) share a single
-		/// <see cref="DeviceServicesHost"/> spawned by this constructor — no extra GameObjects.
-		/// </summary>
 		public DeviceService() : this(BuildDefaults()) { }
 
-		/// <summary>
-		/// Constructs the umbrella with injected children. Used by tests to supply mocks.
-		/// Children that implement <see cref="IDisposable"/> will be disposed by <see cref="Dispose"/>.
-		/// </summary>
 		public DeviceService(
 			ISafeAreaService safeArea,
 			IScreenWakeService screenWake,

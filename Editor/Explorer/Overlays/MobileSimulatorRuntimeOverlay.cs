@@ -155,11 +155,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}
 		}
 
-		/// <summary>
-		/// Owns the visual tree + the <see cref="MobileSimulatorState"/> subscriptions for the
-		/// overlay. Same renderer surface the standalone window used to provide; the broker payload
-		/// paints the mocks here.
-		/// </summary>
+		// Owns the visual tree + the MobileSimulatorState subscriptions for the overlay. Same renderer surface the
+		// standalone window used to provide; the broker payload paints the mocks here.
 		private sealed class OverlayController
 		{
 			private readonly VisualElement _root;

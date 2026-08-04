@@ -10,54 +10,27 @@ namespace GameLovers.MobileServices.Notifications
     /// <summary>
     /// The operating modes for the notifications manager
     /// </summary>
+    /// <remarks>
+    /// Under <see cref="Queue"/> nothing reaches the OS until the application is backgrounded, and badge
+    /// numbers are auto-incremented only when NO pending notification ever sets one explicitly.
+    /// <see cref="RescheduleAfterClearing"/> is only meaningful alongside <see cref="ClearOnForegrounding"/>,
+    /// and only re-queues notifications marked <c>PendingNotification.Reschedule</c>.
+    /// <see cref="QueueClearAndReschedule"/> is the combination that guarantees a notification is never
+    /// displayed while the application is in the foreground.
+    /// </remarks>
     [Flags]
     public enum OperatingMode
     {
-        /// <summary>
-        /// Do not perform any queueing at all. All notifications are scheduled with the operating system
-        /// immediately.
-        /// </summary>
-        NoQueue = 0x00,
+        NoQueue = 0x00, // No queueing; every notification is scheduled with the OS immediately.
 
-        /// <summary>
-        /// <para>
-        /// Queue messages that are scheduled with this manager.
-        /// No messages will be sent to the operating system until the application is backgrounded.
-        /// </para>
-        /// <para>
-        /// If badge numbers are not set, will automatically increment them. This will only happen if NO badge numbers
-        /// for pending notifications are ever set.
-        /// </para>
-        /// </summary>
-        Queue = 0x01,
+        Queue = 0x01, // Hold scheduled notifications until the application is backgrounded.
 
-        /// <summary>
-        /// When the application is foregrounded, clear all pending notifications.
-        /// </summary>
-        ClearOnForegrounding = 0x02,
+        ClearOnForegrounding = 0x02, // On foregrounding, clear all pending notifications.
 
-        /// <summary>
-        /// After clearing events, will put future ones back into the queue if they are marked with <see cref="PendingNotification.Reschedule"/>.
-        /// </summary>
-        /// <remarks>
-        /// Only valid if <see cref="ClearOnForegrounding"/> is also set.
-        /// </remarks>
-        RescheduleAfterClearing = 0x04,
+        RescheduleAfterClearing = 0x04, // After clearing, re-queue the future ones marked to reschedule.
 
-        /// <summary>
-        /// Combines the behaviour of <see cref="Queue"/> and <see cref="ClearOnForegrounding"/>.
-        /// </summary>
         QueueAndClear = Queue | ClearOnForegrounding,
 
-        /// <summary>
-        /// <para>
-        /// Combines the behaviour of <see cref="Queue"/>, <see cref="ClearOnForegrounding"/> and
-        /// <see cref="RescheduleAfterClearing"/>.
-        /// </para>
-        /// <para>
-        /// Ensures that messages will never be displayed while the application is in the foreground.
-        /// </para>
-        /// </summary>
         QueueClearAndReschedule = Queue | ClearOnForegrounding | RescheduleAfterClearing,
     }
         
@@ -107,9 +80,7 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public bool Initialized { get; private set; }
 
-        /// <summary>
-        /// Clean up platform object if necessary
-        /// </summary>
+        // Clean up platform object if necessary
         private void OnDestroy()
         {
             if (_platform == null)
@@ -126,9 +97,7 @@ namespace GameLovers.MobileServices.Notifications
             _inForeground = false;
         }
 
-        /// <summary>
-        /// Check pending list for expired notifications, when in queue mode.
-        /// </summary>
+        // Check pending list for expired notifications, when in queue mode.
         private void Update()
         {
             if ((Mode & OperatingMode.Queue) != OperatingMode.Queue)
@@ -149,9 +118,7 @@ namespace GameLovers.MobileServices.Notifications
             }
         }
 
-        /// <summary>
-        /// Respond to application foreground/background events.
-        /// </summary>
+        // Respond to application foreground/background events.
         private void OnApplicationFocus(bool hasFocus)
         {
             if (_platform == null || !Initialized)
@@ -461,9 +428,7 @@ namespace GameLovers.MobileServices.Notifications
             _platform?.DismissAllDisplayedNotifications();
         }
 
-        /// <summary>
-        /// Event fired by <see cref="_platform"/> when a notification is received.
-        /// </summary>
+        // Event fired by _platform when a notification is received.
         private void OnNotificationReceived(IGameNotification deliveredNotification)
         {
             // Ignore for background messages (this happens on Android sometimes)

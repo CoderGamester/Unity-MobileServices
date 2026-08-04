@@ -39,14 +39,8 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public event Action OnLowPowerModeChanged;
 
-		/// <summary>Default ctor uses the package-wide singleton host (<see cref="DeviceServicesHost.Instance"/>).</summary>
 		public BatteryService() : this(DeviceServicesHost.Instance) { }
 
-		/// <summary>
-		/// Test/DI overload that accepts an explicit host. Used by <see cref="DeviceService"/> to
-		/// share a single host instance across the umbrella's children, and by tests that want
-		/// deterministic host lifetime.
-		/// </summary>
 		internal BatteryService(DeviceServicesHost host)
 		{
 			_host = host;
@@ -74,6 +68,19 @@ namespace GameLovers.MobileServices.Device
 			_GameLoversBatteryStopObservingLowPowerMode();
 #endif
 		}
+
+#if UNITY_EDITOR
+		/// <summary>
+		/// Editor-only test/simulator hook. Runs the LPM refresh path that would normally be
+		/// driven by the iOS bridge (<c>UnitySendMessage("DeviceServicesHost", "OnIosLowPowerModeChanged", "")</c>),
+		/// re-reading <see cref="EditorLowPowerModeOverride"/> and firing
+		/// <see cref="OnLowPowerModeChanged"/> on transition.
+		/// </summary>
+		internal void SimulateLowPowerModeChanged()
+		{
+			RefreshLowPowerMode();
+		}
+#endif
 
 		private void OnSecondTick()
 		{
@@ -153,17 +160,6 @@ namespace GameLovers.MobileServices.Device
 		// SimulateLowPowerModeChanged() to fan the change through to subscribers, mirroring
 		// what NSProcessInfoPowerStateDidChangeNotification would do on iOS.
 		internal static bool EditorLowPowerModeOverride;
-
-		/// <summary>
-		/// Editor-only test/simulator hook. Runs the LPM refresh path that would normally be
-		/// driven by the iOS bridge (<c>UnitySendMessage("DeviceServicesHost", "OnIosLowPowerModeChanged", "")</c>),
-		/// re-reading <see cref="EditorLowPowerModeOverride"/> and firing
-		/// <see cref="OnLowPowerModeChanged"/> on transition.
-		/// </summary>
-		internal void SimulateLowPowerModeChanged()
-		{
-			RefreshLowPowerMode();
-		}
 #endif
 	}
 }

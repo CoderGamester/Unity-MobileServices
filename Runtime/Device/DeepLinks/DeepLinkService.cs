@@ -49,19 +49,6 @@ namespace GameLovers.MobileServices.Device
 			_pendingColdStartLink = null;
 		}
 
-		private void OnDeepLinkActivated(string url)
-		{
-			var parsed = TryParse(url);
-			if (parsed == null)
-			{
-				return;
-			}
-
-			// Runtime delivery supersedes / consumes the pending cold-start link.
-			_pendingColdStartLink = null;
-			_onLinkActivated?.Invoke(parsed);
-		}
-
 #if UNITY_EDITOR
 		/// <summary>
 		/// Editor-only simulator hook. Mimics what <c>Application.deepLinkActivated</c> would do
@@ -78,6 +65,19 @@ namespace GameLovers.MobileServices.Device
 			_onLinkActivated?.Invoke(uri);
 		}
 #endif
+
+		private void OnDeepLinkActivated(string url)
+		{
+			var parsed = TryParse(url);
+			if (parsed == null)
+			{
+				return;
+			}
+
+			// Runtime delivery supersedes / consumes the pending cold-start link.
+			_pendingColdStartLink = null;
+			_onLinkActivated?.Invoke(parsed);
+		}
 
 		private static Uri TryParse(string url)
 		{

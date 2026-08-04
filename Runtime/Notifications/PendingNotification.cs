@@ -29,10 +29,6 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public readonly IGameNotification Notification;
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="PendingNotification"/> from a <see cref="IGameNotification"/>.
-        /// </summary>
-        /// <param name="notification">The notification to create from.</param>
         public PendingNotification(IGameNotification notification)
         {
             Notification = notification ?? throw new ArgumentNullException(nameof(notification));

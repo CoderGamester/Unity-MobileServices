@@ -99,9 +99,7 @@ namespace GameLovers.MobileServices.Gestures
             OnReleased(finger.index, touch.screenPosition, touch.time);
         }
 
-        /// <summary>
-        /// Checks whether a given active gesture will be a valid swipe.
-        /// </summary>
+        // Checks whether a given active gesture will be a valid swipe.
         private bool IsValidSwipe(ref ActiveGesture gesture)
         {
             return gesture.TravelDistance >= _minSwipeDistance &&
@@ -109,9 +107,7 @@ namespace GameLovers.MobileServices.Gestures
                 gesture.SwipeDirectionSameness >= _swipeDirectionSamenessThreshold;
         }
 
-        /// <summary>
-        /// Checks whether a given active gesture will be a valid tap.
-        /// </summary>
+        // Checks whether a given active gesture will be a valid tap.
         private bool IsValidTap(ref ActiveGesture gesture)
         {
             return gesture.TravelDistance <= _maxTapDrift &&

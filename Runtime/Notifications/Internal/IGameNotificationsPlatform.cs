@@ -17,27 +17,22 @@ namespace GameLovers.MobileServices.Notifications
         /// <summary>
         /// Create a new instance of a <see cref="IGameNotification"/> for this platform.
         /// </summary>
-        /// <returns>A new platform-appropriate notification object.</returns>
         IGameNotification CreateNotification();
 
         /// <summary>
-        /// Schedules a notification to be delivered.
+        /// Schedules a notification to be delivered. Throws if <paramref name="gameNotification"/> is null,
+        /// or is not the concrete notification type this platform implementation expects.
         /// </summary>
-        /// <param name="gameNotification">The notification to deliver.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="gameNotification"/> is null.</exception>
-        /// <exception cref="InvalidOperationException"><paramref name="gameNotification"/> isn't of the correct type.</exception>
         void ScheduleNotification(IGameNotification gameNotification);
 
         /// <summary>
         /// Cancels a scheduled notification.
         /// </summary>
-        /// <param name="notificationId">The ID of a previously scheduled notification.</param>
         void CancelNotification(int notificationId);
 
         /// <summary>
         /// Dismiss a displayed notification.
         /// </summary>
-        /// <param name="notificationId">The ID of a previously scheduled notification that is being displayed to the user.</param>
         void DismissNotification(int notificationId);
 
         /// <summary>
@@ -65,21 +60,17 @@ namespace GameLovers.MobileServices.Notifications
     /// Any type that handles notifications for a specific game platform.
     /// </summary>
     /// <remarks>Has a concrete notification type</remarks>
-    /// <typeparam name="TNotificationType">The type of notification returned by this platform.</typeparam>
     internal interface IGameNotificationsPlatform<TNotificationType> : IGameNotificationsPlatform
         where TNotificationType : IGameNotification
     {
         /// <summary>
         /// Create an instance of <typeparamref name="TNotificationType"/>.
         /// </summary>
-        /// <returns>A new platform-appropriate notification object.</returns>
         new TNotificationType CreateNotification();
 
         /// <summary>
-        /// Schedule a notification to be delivered.
+        /// Schedule a notification to be delivered. Throws if <paramref name="notification"/> is null.
         /// </summary>
-        /// <param name="notification">The notification to deliver.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="notification"/> is null.</exception>
         void ScheduleNotification(TNotificationType notification);
     }
 }

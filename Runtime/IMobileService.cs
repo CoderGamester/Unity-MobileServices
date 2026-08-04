@@ -47,11 +47,6 @@ namespace GameLovers.MobileServices
 		/// <inheritdoc />
 		public IDeviceService Device { get; }
 
-		/// <summary>
-		/// Default constructor. Constructs <c>NativeUiServiceInstance</c>, <c>HapticsService</c>,
-		/// <c>DeviceService</c>, and a <c>MobileNotificationService</c> with a single channel named
-		/// <c>"default"</c>. For multi-channel setups, use the injection constructor instead.
-		/// </summary>
 		public MobileService() : this(
 			new NativeUiServiceInstance(),
 			new MobileNotificationService(new GameNotificationChannel("default", "Default", "Default notifications")),
@@ -60,7 +55,6 @@ namespace GameLovers.MobileServices
 		{
 		}
 
-		/// <summary>Injection constructor — tests pass mocks via this overload.</summary>
 		public MobileService(
 			INativeUiService nativeUi,
 			INotificationService notifications,

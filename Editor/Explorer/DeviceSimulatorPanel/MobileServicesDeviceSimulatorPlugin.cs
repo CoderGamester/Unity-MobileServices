@@ -104,12 +104,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private EnumField _attStateField;
 		private VisualElement _attPendingRow;
 
+		/// <inheritdoc />
 		public override void OnCreate()
 		{
 			SyncPlatformFromHost();
 			MobileSimulatorRuntimeOverlay.NotifyPluginActive(true);
 		}
 
+		/// <inheritdoc />
 		public override void OnDestroy()
 		{
 			MobileSimulatorRuntimeOverlay.NotifyPluginActive(false);
@@ -118,6 +120,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			CleanupSpawnedGestures();
 		}
 
+		/// <inheritdoc />
 		public override VisualElement OnCreateUI()
 		{
 			var root = new VisualElement { name = "mobile-services-plugin-root" };

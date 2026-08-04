@@ -144,6 +144,112 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			return scrim;
 		}
 
+		internal static VisualElement BuildReviewPrompt(SimulatedPlatform platform, Action dismissCallback)
+		{
+			return platform == SimulatedPlatform.iOS
+				? BuildIosReviewPrompt(dismissCallback)
+				: BuildAndroidReviewPrompt(dismissCallback);
+		}
+
+		internal static VisualElement BuildPermissionDialog(SimulatedPlatform platform, SimulatedPermissionDialogSpec spec, Action<bool> dismissCallback)
+		{
+			var scrim = new VisualElement();
+			scrim.AddToClassList("mock-scrim");
+
+			var card = new VisualElement();
+			card.AddToClassList("mock-card");
+			card.AddToClassList("mock-permission-card");
+
+			var title = new Label(BuildPermissionTitle(spec));
+			title.AddToClassList("mock-card-title");
+			card.Add(title);
+
+			var message = new Label(string.IsNullOrEmpty(spec.UsageDescription)
+				? "(no usage description configured — set one in Project Settings > GameLovers > Mobile Services)"
+				: spec.UsageDescription);
+			message.AddToClassList("mock-card-message");
+			if (string.IsNullOrEmpty(spec.UsageDescription))
+			{
+				message.AddToClassList("mock-card-message-warning");
+			}
+			card.Add(message);
+
+			var buttons = new VisualElement();
+			buttons.AddToClassList("mock-card-button-row");
+			buttons.AddToClassList("mock-card-button-row-horizontal");
+
+			var denyText = spec.IsAtt ? "Ask App Not to Track" : "Don't Allow";
+			var allowText = spec.IsAtt ? "Allow" : (platform == SimulatedPlatform.iOS ? "OK" : "Allow");
+
+			if (platform == SimulatedPlatform.iOS)
+			{
+				buttons.Add(MakeBtn(denyText, false, dismissCallback, "mock-card-button-cancel"));
+				buttons.Add(MakeBtn(allowText, true, dismissCallback, null));
+			}
+			else
+			{
+				buttons.Add(MakeBtn(denyText, false, dismissCallback, "mock-card-button-cancel"));
+				buttons.Add(MakeBtn(allowText, true, dismissCallback, null));
+			}
+
+			card.Add(buttons);
+			scrim.Add(card);
+			return scrim;
+		}
+
+		internal static VisualElement BuildNotificationBanner(SimulatedPlatform platform, SimulatedNotificationBannerSpec spec)
+		{
+			var wrapper = new VisualElement();
+			wrapper.AddToClassList(platform == SimulatedPlatform.iOS ? "mock-notif-top-ios" : "mock-notif-top-android");
+			wrapper.pickingMode = PickingMode.Ignore;
+
+			// Real heads-up shape: [ app icon ] [ APP NAME ........ now / title / body ].
+			var card = new VisualElement();
+			card.AddToClassList("mock-notif-card");
+
+			var appName = string.IsNullOrEmpty(spec.ChannelName) ? "Your App" : spec.ChannelName;
+
+			var icon = new VisualElement();
+			icon.AddToClassList("mock-notif-icon");
+			icon.Add(new Label(appName.Substring(0, 1).ToUpperInvariant()));
+			card.Add(icon);
+
+			var content = new VisualElement();
+			content.AddToClassList("mock-notif-content");
+
+			var header = new VisualElement();
+			header.AddToClassList("mock-notif-header");
+			var name = new Label(appName.ToUpperInvariant());
+			name.AddToClassList("mock-notif-appname");
+			header.Add(name);
+			var spacer = new VisualElement();
+			spacer.style.flexGrow = 1;
+			header.Add(spacer);
+			var time = new Label("now");
+			time.AddToClassList("mock-notif-time");
+			header.Add(time);
+			content.Add(header);
+
+			var title = new Label(spec.Title ?? string.Empty);
+			title.AddToClassList("mock-notif-title");
+			content.Add(title);
+
+			if (!string.IsNullOrEmpty(spec.SubTitle))
+			{
+				var subtitle = new Label(spec.SubTitle);
+				subtitle.AddToClassList("mock-notif-subtitle");
+				content.Add(subtitle);
+			}
+
+			var body = new Label(spec.Body ?? string.Empty);
+			body.AddToClassList("mock-notif-body");
+			content.Add(body);
+
+			card.Add(content);
+			wrapper.Add(card);
+			return wrapper;
+		}
+
 		private static string BuildShareSummary(SimulatedShareSpec spec)
 		{
 			var parts = new System.Text.StringBuilder();
@@ -168,13 +274,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		// ---- Review prompt ----
 		// Faithful per-platform shapes: iOS is StoreKit's centered system star sheet (titled with the
 		// app name); Android is the Play In-App Review bottom sheet. Both use Application.productName.
-
-		internal static VisualElement BuildReviewPrompt(SimulatedPlatform platform, Action dismissCallback)
-		{
-			return platform == SimulatedPlatform.iOS
-				? BuildIosReviewPrompt(dismissCallback)
-				: BuildAndroidReviewPrompt(dismissCallback);
-		}
 
 		private static VisualElement BuildIosReviewPrompt(Action dismissCallback)
 		{
@@ -302,52 +401,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Permission / ATT dialog ----
 
-		internal static VisualElement BuildPermissionDialog(SimulatedPlatform platform, SimulatedPermissionDialogSpec spec, Action<bool> dismissCallback)
-		{
-			var scrim = new VisualElement();
-			scrim.AddToClassList("mock-scrim");
-
-			var card = new VisualElement();
-			card.AddToClassList("mock-card");
-			card.AddToClassList("mock-permission-card");
-
-			var title = new Label(BuildPermissionTitle(spec));
-			title.AddToClassList("mock-card-title");
-			card.Add(title);
-
-			var message = new Label(string.IsNullOrEmpty(spec.UsageDescription)
-				? "(no usage description configured — set one in Project Settings > GameLovers > Mobile Services)"
-				: spec.UsageDescription);
-			message.AddToClassList("mock-card-message");
-			if (string.IsNullOrEmpty(spec.UsageDescription))
-			{
-				message.AddToClassList("mock-card-message-warning");
-			}
-			card.Add(message);
-
-			var buttons = new VisualElement();
-			buttons.AddToClassList("mock-card-button-row");
-			buttons.AddToClassList("mock-card-button-row-horizontal");
-
-			var denyText = spec.IsAtt ? "Ask App Not to Track" : "Don't Allow";
-			var allowText = spec.IsAtt ? "Allow" : (platform == SimulatedPlatform.iOS ? "OK" : "Allow");
-
-			if (platform == SimulatedPlatform.iOS)
-			{
-				buttons.Add(MakeBtn(denyText, false, dismissCallback, "mock-card-button-cancel"));
-				buttons.Add(MakeBtn(allowText, true, dismissCallback, null));
-			}
-			else
-			{
-				buttons.Add(MakeBtn(denyText, false, dismissCallback, "mock-card-button-cancel"));
-				buttons.Add(MakeBtn(allowText, true, dismissCallback, null));
-			}
-
-			card.Add(buttons);
-			scrim.Add(card);
-			return scrim;
-		}
-
 		private static Button MakeBtn(string text, bool result, Action<bool> dismissCallback, string extraClass)
 		{
 			var btn = new Button(() => dismissCallback?.Invoke(result)) { text = text };
@@ -370,57 +423,5 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Heads-up notification banner ----
 
-		internal static VisualElement BuildNotificationBanner(SimulatedPlatform platform, SimulatedNotificationBannerSpec spec)
-		{
-			var wrapper = new VisualElement();
-			wrapper.AddToClassList(platform == SimulatedPlatform.iOS ? "mock-notif-top-ios" : "mock-notif-top-android");
-			wrapper.pickingMode = PickingMode.Ignore;
-
-			// Real heads-up shape: [ app icon ] [ APP NAME ........ now / title / body ].
-			var card = new VisualElement();
-			card.AddToClassList("mock-notif-card");
-
-			var appName = string.IsNullOrEmpty(spec.ChannelName) ? "Your App" : spec.ChannelName;
-
-			var icon = new VisualElement();
-			icon.AddToClassList("mock-notif-icon");
-			icon.Add(new Label(appName.Substring(0, 1).ToUpperInvariant()));
-			card.Add(icon);
-
-			var content = new VisualElement();
-			content.AddToClassList("mock-notif-content");
-
-			var header = new VisualElement();
-			header.AddToClassList("mock-notif-header");
-			var name = new Label(appName.ToUpperInvariant());
-			name.AddToClassList("mock-notif-appname");
-			header.Add(name);
-			var spacer = new VisualElement();
-			spacer.style.flexGrow = 1;
-			header.Add(spacer);
-			var time = new Label("now");
-			time.AddToClassList("mock-notif-time");
-			header.Add(time);
-			content.Add(header);
-
-			var title = new Label(spec.Title ?? string.Empty);
-			title.AddToClassList("mock-notif-title");
-			content.Add(title);
-
-			if (!string.IsNullOrEmpty(spec.SubTitle))
-			{
-				var subtitle = new Label(spec.SubTitle);
-				subtitle.AddToClassList("mock-notif-subtitle");
-				content.Add(subtitle);
-			}
-
-			var body = new Label(spec.Body ?? string.Empty);
-			body.AddToClassList("mock-notif-body");
-			content.Add(body);
-
-			card.Add(content);
-			wrapper.Add(card);
-			return wrapper;
-		}
 	}
 }

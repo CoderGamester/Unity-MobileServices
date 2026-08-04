@@ -25,14 +25,8 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public event Action<Rect> OnSafeAreaChanged;
 
-		/// <summary>Default ctor uses the package-wide singleton host (<see cref="DeviceServicesHost.Instance"/>).</summary>
 		public SafeAreaService() : this(DeviceServicesHost.Instance) { }
 
-		/// <summary>
-		/// Test/DI overload that accepts an explicit host. Used by <see cref="DeviceService"/> to
-		/// share a single host instance across the umbrella's children, and by tests that want
-		/// deterministic host lifetime.
-		/// </summary>
 		internal SafeAreaService(DeviceServicesHost host)
 		{
 			_host = host;
@@ -45,6 +39,18 @@ namespace GameLovers.MobileServices.Device
 		{
 			_host.UnregisterLateUpdate(Tick);
 		}
+
+#if UNITY_EDITOR
+		/// <summary>
+		/// Editor-only simulator hook. Forces an immediate diff against
+		/// <see cref="EditorSafeAreaOverride"/> so the Device Simulator panel's notch-inset affordance
+		/// surfaces the change without waiting for the next LateUpdate tick.
+		/// </summary>
+		internal void SimulateSafeAreaChanged()
+		{
+			Tick();
+		}
+#endif
 
 		private void Tick()
 		{
@@ -64,17 +70,5 @@ namespace GameLovers.MobileServices.Device
 			_lastResolution = resolution;
 			OnSafeAreaChanged?.Invoke(current);
 		}
-
-#if UNITY_EDITOR
-		/// <summary>
-		/// Editor-only simulator hook. Forces an immediate diff against
-		/// <see cref="EditorSafeAreaOverride"/> so the Device Simulator panel's notch-inset affordance
-		/// surfaces the change without waiting for the next LateUpdate tick.
-		/// </summary>
-		internal void SimulateSafeAreaChanged()
-		{
-			Tick();
-		}
-#endif
 	}
 }

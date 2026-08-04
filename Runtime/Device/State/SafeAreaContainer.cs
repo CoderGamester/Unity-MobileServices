@@ -14,13 +14,11 @@ namespace GameLovers.MobileServices.Device
 	{
 		private ISafeAreaService _safeAreaService;
 
-		/// <summary>Default constructor for UXML usage. Set the service via <see cref="SetSafeAreaService"/>.</summary>
 		public SafeAreaContainer()
 		{
 			RegisterCallback<GeometryChangedEvent>(_ => Apply());
 		}
 
-		/// <summary>Code-construction with the service injected.</summary>
 		public SafeAreaContainer(ISafeAreaService safeAreaService) : this()
 		{
 			SetSafeAreaService(safeAreaService);

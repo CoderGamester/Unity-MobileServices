@@ -22,9 +22,6 @@ namespace GameLovers.MobileServices.Notifications
         /// <value>The default channel ID for new notifications, or null.</value>
         public string DefaultChannelId { get; set; }
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="AndroidNotificationsPlatform"/>.
-        /// </summary>
         public AndroidNotificationsPlatform()
         {
             AndroidNotificationCenter.OnNotificationReceived += OnLocalNotificationReceived;

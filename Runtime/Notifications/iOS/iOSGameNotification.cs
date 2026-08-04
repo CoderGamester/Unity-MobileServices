@@ -149,9 +149,6 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public string LargeIcon { get => null; set {} }
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="iOSGameNotification"/>.
-        /// </summary>
         public iOSGameNotification()
         {
             internalNotification = new iOSNotification
@@ -160,10 +157,6 @@ namespace GameLovers.MobileServices.Notifications
             };
         }
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="iOSGameNotification"/> from a delivered notification.
-        /// </summary>
-        /// <param name="internalNotification">The delivered notification.</param>
         internal iOSGameNotification(iOSNotification internalNotification)
         {
             this.internalNotification = internalNotification;

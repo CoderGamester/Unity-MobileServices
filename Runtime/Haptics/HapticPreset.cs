@@ -7,34 +7,24 @@ namespace GameLovers.MobileServices.Haptics
 	/// </summary>
 	public enum HapticPreset
 	{
-		/// <summary>No haptic. Calls are short-circuited.</summary>
-		None = 0,
+		None = 0, // No haptic. Calls are short-circuited.
 
-		/// <summary>Crisp tick suitable for picker / discrete value changes.</summary>
-		Selection = 1,
+		Selection = 1, // Crisp tick suitable for picker / discrete value changes.
 
-		/// <summary>Two-tap success notification (ascending).</summary>
-		Success = 2,
+		Success = 2, // Two-tap success notification (ascending).
 
-		/// <summary>Single warning notification.</summary>
-		Warning = 3,
+		Warning = 3, // Single warning notification.
 
-		/// <summary>Multi-tap error notification.</summary>
-		Error = 4,
+		Error = 4, // Multi-tap error notification.
 
-		/// <summary>Soft, low-amplitude impact.</summary>
-		ImpactLight = 5,
+		ImpactLight = 5, // Soft, low-amplitude impact.
 
-		/// <summary>Default impact strength.</summary>
-		ImpactMedium = 6,
+		ImpactMedium = 6, // Default impact strength.
 
-		/// <summary>Strong impact for major hits.</summary>
-		ImpactHeavy = 7,
+		ImpactHeavy = 7, // Strong impact for major hits.
 
-		/// <summary>Sharp, short impact (snappy).</summary>
-		ImpactRigid = 8,
+		ImpactRigid = 8, // Sharp, short impact (snappy).
 
-		/// <summary>Gentle, longer impact (cushioned).</summary>
-		ImpactSoft = 9,
+		ImpactSoft = 9, // Gentle, longer impact (cushioned).
 	}
 }

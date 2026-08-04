@@ -79,20 +79,11 @@ namespace GameLovers.MobileServices.Notifications
         /// <inheritdoc />
         public string LargeIcon { get => InternalNotification.LargeIcon; set => internalNotification.LargeIcon = value; }
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="AndroidGameNotification"/>.
-        /// </summary>
         public AndroidGameNotification()
         {
             internalNotification = new AndroidNotification();
         }
 
-        /// <summary>
-        /// Instantiate a new instance of <see cref="AndroidGameNotification"/> from a delivered notification
-        /// </summary>
-        /// <param name="deliveredNotification">The notification that has been delivered.</param>
-        /// <param name="deliveredId">The ID of the delivered notification.</param>
-        /// <param name="deliveredChannel">The channel the notification was delivered to.</param>
         internal AndroidGameNotification(AndroidNotification deliveredNotification, int deliveredId,
                                          string deliveredChannel)
         {

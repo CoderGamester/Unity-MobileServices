@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-07-04
 
+**Docs**:
+- Aligned XML doc comments with the host repo's `AGENTS.md` §6.6. Converted 23 enum members (`HapticPreset`, `NotificationStyle`, `PrivacyMode`, `OperatingMode`) from `/// <summary>` blocks to inline `//` comments; `OperatingMode`'s longer caveats (badge auto-increment, `RescheduleAfterClearing` requiring `ClearOnForegrounding`) moved to a `<remarks>` on the enum rather than becoming 250-character lines. Removed the doc comments from 21 constructors and from the private `ActiveGesture.accumulatedNormalized` field, and converted 7 private-member doc blocks to `//` comments so their rationale survives. Dropped the `<param>`/`<returns>`/`<exception>` tags from the internal `IGameNotificationsPlatform` and `ActiveGesture.SubmitPoint`, folding the throwing behaviour of `ScheduleNotification` into its `<summary>` so it is not lost. Added `/// <inheritdoc />` to the three `MobileServicesDeviceSimulatorPlugin` overrides. Moved the internal editor/test seams above their types' private blocks per §6.6 (`SafeAreaService.SimulateSafeAreaChanged`, `DeepLinkService.SimulateLinkActivated`, `BatteryService.SimulateLowPowerModeChanged`, and the three `MockBuilders` builders).
+
 ### Added
 - Initial release of consolidated **Mobile Services** package.
 - **Native UI**: Alerts, action sheets, and toasts for iOS/Android, plus OS review request and a share sheet (text / URL / image).

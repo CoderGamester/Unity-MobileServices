@@ -58,17 +58,9 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         public float TravelDistance;
 
-        /// <summary>
-        /// Accumulated sum of all normalized movement vectors.
-        /// </summary>
+        // Accumulated sum of all normalized movement vectors.
         private Vector2 accumulatedNormalized;
 
-        /// <summary>
-        /// Instantiate a new potential gesture.
-        /// </summary>
-        /// <param name="inputId">The input id for this gesture.</param>
-        /// <param name="startPosition">The gesture's start position.</param>
-        /// <param name="startTime">The time the gesture has started.</param>
         public ActiveGesture(int inputId, Vector2 startPosition, double startTime)
         {
             InputId = inputId;
@@ -82,8 +74,6 @@ namespace GameLovers.MobileServices.Gestures
         /// <summary>
         /// Submit a new position to this gesture.
         /// </summary>
-        /// <param name="position">The position of the new sample.</param>
-        /// <param name="time">The time of the new sample.</param>
         public void SubmitPoint(Vector2 position, double time)
         {
             Vector2 toNewPosition = position - EndPosition;
