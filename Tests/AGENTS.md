@@ -185,7 +185,17 @@ symbol appears anywhere in the causal chain behind the assertion.
 **Two consequences, stated so RCR does not become theatre:**
 
 - A test with no `// RCR:` line — and no UNFALSIFIABLE exemption — is not trusted
-  coverage. In an audit it is a suspect by default.
+  coverage. In an audit it is a suspect by default. **`Smoke/` is exempt here too**, on the
+  same directory basis as §1: its defect class is "the assembly no longer loads", which has
+  no one-line mutation, so demanding an RCR line there flags those fixtures forever. The
+  exemption is the directory, not the assertion shape.
+- **"Unannotated" is three states, not one, and they need different actions.** A test with no
+  `// RCR:` line may have been (a) observed RED with the write-back lost, (b) seen reddening
+  only as collateral inside another test's blast radius, or (c) never probed. Only (c) needs a
+  probe; (a) needs the recorded observation written back; (b) is SHARED-PATH evidence, not a
+  unique pin. Check `.test-all/rcr/` before probing, and never write prepared annotation text
+  without a matching `RED-OK` for that test — prepared text also exists for tests that were
+  never probed, and writing it fabricates a verified claim.
 - **Benchmarks are included, inverted:** a performance test must be observed
   *changing its number* when the measured operation is removed from the measured
   body. A benchmark whose measured region does not contain the workload is a
@@ -331,6 +341,7 @@ The count of OPEN rows is the honest coverage-debt number.
 | `SerializableNotification` / `SerializableNotificationConverter` PlayerPrefs JSON round-trip (`Runtime/Notifications/Internal/SerializableNotification.cs:11`, `:31`; consumed at `Runtime/Notifications/GameNotificationsMonoBehaviour.cs:493`) | OPEN | **Owed — suspected defect.** `JsonUtility.FromJson<List<SerializableNotification>>(PlayerPrefs.GetString("notifications"))` at `GameNotificationsMonoBehaviour.cs:493` is a known-broken Unity pattern: `JsonUtility` cannot deserialize a bare `List<T>` at the JSON root (it requires an object with a serialized field), so the persisted-notification restore may be silently returning null/empty on every foreground. Zero coverage today, so nothing would notice. Owed: a round-trip test (serialize → `PlayerPrefs` string → deserialize) that either proves the pattern works or turns this row into a bug fix (wrap in a serializable container type). | 2026-07-31 |
 | `PermissionsService.EditorCheckOverride` (`Runtime/Device/Permissions/PermissionsService.cs:31`) / `AttService.EditorCurrentStatusOverride` (`Runtime/Device/Tracking/AttService.cs:27`) test-side leak | OPEN | **Owed.** Both are process-wide statics and no test resets them, so `PermissionsServiceTest` / `AttServiceTest` / `MultiPermissionRequestTest` assert the bare-editor `Granted` / `Authorized` short-circuit only while nothing has engaged the simulator — results depend on whether the Device Simulator panel was opened earlier in the same editor session (the panel `Engage()`s the overrides and only `Disengage()`s on close). The mechanism is documented in the package root `AGENTS.md` ("Editor Permission/ATT default depends on whether the simulator is engaged"); the test-side leak is documented nowhere. Owed: a `[SetUp]`/`[TearDown]` that nulls both statics (plus the `EditorRequest*Override` siblings) in the three affected fixtures. | 2026-07-31 |
 | Process-wide editor-static leakage across fixtures (`Runtime/Device/**`) | CLOSED | Closed 2026-08-04: `NativeUiServiceInstanceTest` nulls `NativeUiService.EditorRequestReviewOverride` in `[SetUp]` (`9b870e3`); `BatteryServiceTest` pins `BatteryService.EditorLowPowerModeOverride = false` in `[SetUp]` and `[TearDown]`, and the two tests that drive it restore in `finally`. The `PermissionsService` / `AttService` half stays OPEN in the row above. | 2026-08-04 |
+| 1 production edit reddening only collaterally (`Runtime/Haptics/HapticsService.cs`) | OPEN | Measured 2026-08-04 from `.test-all/rcr/unowned-edits.json`: a single edit produced RED but never an `isolated` verdict. Recorded so the number is not rediscovered as a finding; no action proposed. | 2026-08-04 |
 
 ## 14. Update Policy
 Update this file when:
