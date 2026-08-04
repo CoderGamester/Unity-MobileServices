@@ -10,13 +10,17 @@
 # package-local gates the release driver enforces, run before the merge rather
 # than after it.
 #
-# WHY IT IS SAFE TO SHIP IN A PACKAGE REPO
-# Verified against upm 9.31.1 with a positive control: `.github/` is excluded
-# from the packed tarball automatically, even when it is not gitignored, while a
-# non-ignored control file at the package root IS packed. (Older packers did not
-# exclude it — the published googlesheetimporter 0.7.2 asset still contains
-# `package/.github/workflows/openai.yml`.) So no `.npmignore` is required. If
-# that ever regresses, `G24` will surface it as an unexpected added file.
+# THIS FILE MUST STAY OUT OF THE PUBLISHED TARBALL
+# `.github/` IS packed by default — the published googlesheetimporter 0.7.2 asset
+# still contains `package/.github/workflows/openai.yml`. Each package therefore
+# lists `.github/` in its `.gitignore`, which Unity's packer uses as its
+# pack-ignore list; git keeps tracking the file regardless, since .gitignore does
+# not untrack existing paths. Measured on a real clone: 434 -> 433 entries,
+# `.github` 1 -> 0, `Runtime` unchanged.
+#
+# Do NOT verify this on a copy with `.git` removed: the packer behaves differently
+# without a repo and reports `.github` as excluded when it is not. `G24` also
+# surfaces it as an unexpected added file if the ignore line is ever dropped.
 #
 # WHAT IT DOES NOT CHECK
 # Only gates decidable from the package directory plus the base ref, so the check
@@ -43,10 +47,16 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     steps:
+      # `lfs: true` is load-bearing, not a nicety. The default (false) leaves every
+      # LFS-tracked file as a ~130-byte pointer stub, which would make G28 fail on
+      # every PR. With it on, G28 becomes a genuine check that the LFS objects are
+      # FETCHABLE from the remote — the exact failure that hit uiservice, where the
+      # working tree held stubs while the published 1.2.1 had real content.
       - name: Check out the package
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          lfs: true
           persist-credentials: false
 
       # The gate logic is shared rather than vendored into six repos, so there is
