@@ -14,6 +14,11 @@ namespace GameLoversEditor.MobileServices.Tests
 		[SetUp]
 		public void Init()
 		{
+#if UNITY_EDITOR
+			// Process-wide static the Device Simulator engages and only clears on close; the ctor
+			// snapshots it, so an inherited `true` would flip the bare-editor low-power assertions.
+			BatteryService.EditorLowPowerModeOverride = false;
+#endif
 			_service = new BatteryService(DeviceServicesHost.Instance);
 		}
 
@@ -22,6 +27,9 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			_service.Dispose();
 			DeviceServicesHost.ResetForTests();
+#if UNITY_EDITOR
+			BatteryService.EditorLowPowerModeOverride = false;
+#endif
 		}
 
 		[Test]
