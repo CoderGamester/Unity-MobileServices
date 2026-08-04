@@ -49,13 +49,18 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The gate logic is shared rather than vendored into six repos, so there is
+      # one source of truth. `ref` is explicit: actions/checkout defaults to the
+      # target repo's DEFAULT branch (master), where the tooling does not exist
+      # yet — omitting it fails with "No such file or directory". Retarget this to
+      # master once the skill is merged there.
       - name: Check out the release tooling
         uses: actions/checkout@v4
         with:
           repository: CoderGamester/Frameworks
+          ref: develop
           path: .release-tooling
           sparse-checkout: .claude/skills/unity-package-release/scripts
-          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Set up Python
