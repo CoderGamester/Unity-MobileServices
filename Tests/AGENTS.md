@@ -280,9 +280,24 @@ confirming `MathfloatP` reports ~1002 coverable lines — a smaller figure means
 `-debugCodeOptimization` was missing and the denominator silently shrank ~40%.
 
 
-Every untested symbol worth naming is either ACCEPTED (justified — do not
-re-report) or OPEN (a real gap, owed a test). An untested symbol in neither state
-is an audit finding.
+Every untested symbol worth naming is ACCEPTED (justified — do not re-report),
+OPEN (a real gap, owed a test), or CLOSED (the gap was filled). An untested symbol
+in none of the three is an audit finding.
+
+**A CLOSED row must name the commit AND the observation that closed it, including the
+environment the observation came from.** A row closed on "the fix landed" is still OPEN:
+the fix is the edit, the closure is the evidence. This is what kept the uiservice A6 row
+open until the Editor half ran — the edit was in and batchmode was green, and neither of
+those was the thing in doubt.
+
+**Closing a row means re-deriving its claim against current source, never reading the
+commit that claimed to fix it.** Re-check every symbol and fixture the row names. A partial
+fix and a complete one produce the same green suite and the same confident commit message,
+so the commit cannot be the evidence for its own completeness. Recorded instance: the
+mobileservices editor-static row nearly closed on a commit that genuinely did stop fixtures
+inheriting statics — for two of the three fixtures the row named. The third was found by
+grepping which fixtures touch each static, and it was passing only because its siblings
+happened to restore the static in their `finally` blocks.
 
 An ACCEPTED row needs one of exactly three falsifiable reasons:
 - **(i) no branching** — zero conditionals, so there is no behaviour to pin.
