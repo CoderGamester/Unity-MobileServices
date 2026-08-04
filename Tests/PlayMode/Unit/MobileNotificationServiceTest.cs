@@ -211,7 +211,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		private GameNotificationsMonoBehaviour ResolveHost()
 		{
 			var matches = UnityEngine.Object
-				.FindObjectsByType<GameNotificationsMonoBehaviour>(FindObjectsSortMode.None)
+				.FindObjectsByType<GameNotificationsMonoBehaviour>()
 				.Where(host => ReferenceEquals(host.PendingNotifications, _service.PendingNotifications))
 				.ToArray();
 
