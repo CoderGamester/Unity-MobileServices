@@ -8,16 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-08-04
 
 **New**:
-- Added native UI services for iOS and Android alerts, action sheets, toasts, review requests, and share sheets.
-- Added local notification scheduling and management with channels, queueing, and a fluent scheduling builder.
-- Added Enhanced Touch swipe and tap gesture support.
-- Added cross-platform haptics with presets, custom intensity, and time-bounded looping.
-- Added the `Device` service facade for safe area, screen wake, battery and low-power mode, iOS audio session, permissions, App Tracking Transparency, and deep links.
-- Added unified iOS and Android runtime permission requests, including multi-permission async requests and an iOS 14.5+ App Tracking Transparency bridge.
-- Added deep-link activation and route-pattern handling with cold-start link replay.
-- Added an embedded Unity Device Simulator plugin with native UI mocks, live diagnostics, and haptic envelope visualization.
-- Added the Mobile Services Config asset and build postprocessor for localized iOS usage descriptions, entitlements, Android manifest entries, and Play In-App Review setup.
-- Added `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, and `DeepLinkRouter` samples, along with subsystem and editor-tooling documentation.
+- Initial release of the consolidated **Mobile Services** package.
+- **Native UI**: Alerts, action sheets, and toasts for iOS and Android, plus OS review requests and share sheets for text, URLs, and images.
+- **Notifications**: Local notification scheduling and management with channels, queueing, and the fluent `Schedule().In(...).Title(...).Body(...).Channel(...).Send()` builder.
+- **Gestures**: Enhanced Touch swipe and tap detection with velocity and consistency tracking.
+- **iOS Audio Session**: Override the iOS silent switch so audio can keep playing.
+- **Haptics**: Zero-dependency cross-platform haptic feedback with nine presets, custom intensity, and time-bounded looping.
+- **Device**: The `Device` umbrella service exposes safe area, screen wake, battery and low-power mode, iOS audio session, permissions, App Tracking Transparency, and deep links.
+- **Permissions**: Unified iOS and Android runtime permissions for Camera, Microphone, Location, Photo Library, Notifications, and multi-permission async requests.
+- **App Tracking Transparency**: An iOS 14.5+ `ATTrackingManager` bridge with no dependency on `com.unity.ads.ios-support`.
+- **Deep Links**: An `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
+- **Deep Link Router**: Route patterns over `IDeepLinkService` with captured parameters such as `/promo/:id`.
+- **Mobile Service umbrella**: `IMobileService` provides one DI registration for Native UI, Notifications, Haptics, and Device services.
+- **Native UI instance interface**: `INativeUiService` and `NativeUiServiceInstance` support mockable consumer code.
+- **Device Simulator Plugin**: An embedded Unity Device Simulator panel provides platform-shaped native UI mocks, live diagnostics, and a per-preset haptic envelope graph.
+- **Mobile Services Config asset**: Configure localized permission descriptions, capability toggles, Android manifest opt-ins, and Play In-App Review Gradle setup from `Tools > GameLovers > Mobile Services > Select Mobile Services Config`.
+- **Build Postprocessor**: Automatically inject iOS usage descriptions and entitlements, Android manifest entries, and the Play In-App Review Gradle dependency, with validation for missing configuration.
+- **Samples**: Added `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, and `DeepLinkRouter`.
+- **Documentation**: Added subsystem references and editor-tooling guides for the Device Simulator and build pipeline.
 
 **Changed**:
 - Consolidated the package under the `com.gamelovers.mobileservices` package name, `GameLovers.MobileServices.*` namespaces, and `GameLovers.MobileServices` assembly.
