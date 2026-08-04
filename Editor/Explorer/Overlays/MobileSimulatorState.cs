@@ -51,12 +51,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		public List<SimulatedAlertButton> Buttons = new List<SimulatedAlertButton>();
 	}
 
+	/// <summary>Payload for a simulated toast.</summary>
 	public sealed class SimulatedToastSpec
 	{
 		public string Message;
 		public bool IsLongDuration;
 	}
 
+	/// <summary>Payload for a simulated share sheet.</summary>
 	public sealed class SimulatedShareSpec
 	{
 		public string Text;
@@ -65,6 +67,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		public string Title;
 	}
 
+	/// <summary>Payload for a simulated heads-up notification banner.</summary>
 	public sealed class SimulatedNotificationBannerSpec
 	{
 		public string ChannelName;
@@ -73,6 +76,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		public string SubTitle;
 	}
 
+	/// <summary>Payload for a simulated permission or ATT prompt, including the callback that resolves it.</summary>
 	public sealed class SimulatedPermissionDialogSpec
 	{
 		public string TypeName;          // e.g. "Camera" / "Photo Library"
@@ -164,24 +168,38 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Overlay payload streams ----
 
+		/// <summary>Raised when an alert mock should be painted.</summary>
 		public static event Action<SimulatedAlertSpec> AlertRequested;
+		/// <summary>Raised when a toast mock should be painted.</summary>
 		public static event Action<SimulatedToastSpec> ToastRequested;
+		/// <summary>Raised when a share-sheet mock should be painted.</summary>
 		public static event Action<SimulatedShareSpec> ShareRequested;
+		/// <summary>Raised when the store review mock should be painted.</summary>
 		public static event Action ReviewRequested;
+		/// <summary>Raised when a notification-banner mock should be painted.</summary>
 		public static event Action<SimulatedNotificationBannerSpec> NotificationBannerRequested;
+		/// <summary>Raised when a permission or ATT prompt mock should be painted.</summary>
 		public static event Action<SimulatedPermissionDialogSpec> PermissionDialogRequested;
+		/// <summary>Raised when every visible mock should be cleared.</summary>
 		public static event Action DismissAllRequested;
 
 		// ---- Push entry points ----
 
+		/// <summary>Broadcasts an alert mock to the overlay.</summary>
 		public static void PushAlert(SimulatedAlertSpec spec) => AlertRequested?.Invoke(spec);
+		/// <summary>Broadcasts a toast mock to the overlay.</summary>
 		public static void PushToast(SimulatedToastSpec spec) => ToastRequested?.Invoke(spec);
+		/// <summary>Broadcasts a share-sheet mock to the overlay.</summary>
 		public static void PushShare(SimulatedShareSpec spec) => ShareRequested?.Invoke(spec);
+		/// <summary>Broadcasts the store review mock to the overlay.</summary>
 		public static void PushReview() => ReviewRequested?.Invoke();
+		/// <summary>Broadcasts a notification-banner mock to the overlay.</summary>
 		public static void PushNotificationBanner(SimulatedNotificationBannerSpec spec) =>
 			NotificationBannerRequested?.Invoke(spec);
+		/// <summary>Broadcasts a permission or ATT prompt mock to the overlay.</summary>
 		public static void PushPermissionDialog(SimulatedPermissionDialogSpec spec) =>
 			PermissionDialogRequested?.Invoke(spec);
+		/// <summary>Clears every visible mock.</summary>
 		public static void PushDismissAll() => DismissAllRequested?.Invoke();
 
 		private static void EnsureInitialized()

@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace GameLovers.MobileServices.NativeUi
 {
+	/// <summary>
+	/// The OS button styles an alert can use, in iOS's vocabulary.
+	/// </summary>
 	public enum AlertButtonStyle
 	{
 		Default,
@@ -12,6 +15,9 @@ namespace GameLovers.MobileServices.NativeUi
 		Cancel
 	}
 
+	/// <summary>
+	/// One alert button: its label, its OS style, and the callback fired when the user picks it.
+	/// </summary>
 	public struct AlertButton
 	{
 		public string Text;
@@ -267,6 +273,7 @@ namespace GameLovers.MobileServices.NativeUi
 #endif
 
 #if UNITY_IOS
+		/// <summary>Native iOS callback signature; the button is identified by its text.</summary>
 		internal delegate void AlertButtonDelegate(string buttonText);
 
 		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversAlertMessage")]

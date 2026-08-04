@@ -76,6 +76,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			_onLateUpdate += callback;
 		}
 
+		/// <summary>Unsubscribes from the LateUpdate poll tick.</summary>
 		internal void UnregisterLateUpdate(Action callback)
 		{
 			_onLateUpdate -= callback;
@@ -87,6 +88,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			_onSecondTick += callback;
 		}
 
+		/// <summary>Unsubscribes from the once-per-second tick.</summary>
 		internal void UnregisterSecondTick(Action callback)
 		{
 			_onSecondTick -= callback;
@@ -98,6 +100,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			_onApplicationFocusChanged += callback;
 		}
 
+		/// <summary>Unsubscribes from the application-focus signal.</summary>
 		internal void UnregisterFocusChanged(Action<bool> callback)
 		{
 			_onApplicationFocusChanged -= callback;
@@ -109,6 +112,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			_onIosLowPowerModeChanged += callback;
 		}
 
+		/// <summary>Unsubscribes from the iOS low-power-mode signal.</summary>
 		internal void UnregisterIosLowPowerModeChanged(Action callback)
 		{
 			_onIosLowPowerModeChanged -= callback;
@@ -119,6 +123,10 @@ namespace GameLovers.MobileServices.Device.Internal
 		// Renaming this method or its enclosing GameObject requires updating the iOS .m file.
 		// ReSharper disable once UnusedMember.Global
 		// ReSharper disable once InconsistentNaming
+		/// <summary>
+		/// Fans the iOS low-power-mode change out to subscribers. Must stay public and keep this name:
+		/// the native bridge dispatches it by string through Unity.
+		/// </summary>
 		public void OnIosLowPowerModeChanged(string _)
 		{
 			_onIosLowPowerModeChanged?.Invoke();

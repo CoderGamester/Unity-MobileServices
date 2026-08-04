@@ -67,6 +67,7 @@ namespace GameLovers.MobileServices
 			Device = device;
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			(Device as System.IDisposable)?.Dispose();

@@ -9,6 +9,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 	/// <summary>Outcome of <see cref="MobileServicesScanner.Scan"/>.</summary>
 	public sealed class ProjectScanResult
 	{
+		/// <summary>Permissions the scanned assemblies reference, so the build can request exactly those.</summary>
 		public HashSet<AppPermission> ReferencedPermissions { get; } = new HashSet<AppPermission>();
 		public bool UsesAtt;
 		public bool UsesNotifications;
@@ -23,6 +24,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 	/// </summary>
 	internal static class MobileServicesScanner
 	{
+		/// <summary>
+		/// Reflects over the project's user assemblies to find which mobile services are actually
+		/// referenced, so the build only requests the entitlements and permissions in use.
+		/// </summary>
 		public static ProjectScanResult Scan()
 		{
 			var result = new ProjectScanResult();

@@ -29,7 +29,9 @@ namespace GameLovers.MobileServices.Device
 		/// </summary>
 		void MapRoute(string pathPattern, Action<Uri, IReadOnlyDictionary<string, string>> handler);
 
-		/// <summary>Removes the route previously registered with <paramref name="pathPattern"/>. No-op if absent.</summary>
+		/// <summary>
+		/// Removes the route previously registered with <paramref name="pathPattern"/>. No-op if absent.
+		/// </summary>
 		void RemoveRoute(string pathPattern);
 
 		/// <summary>

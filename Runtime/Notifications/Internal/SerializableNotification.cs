@@ -21,6 +21,7 @@ namespace GameLovers.MobileServices.Notifications
 		public bool HasDeliveryTime;
 		public long DeliveryTimeBinary;
 
+		/// <summary>The stored delivery time, or null when none was set.</summary>
 		internal DateTime? GetDeliveryTime() =>
 			HasDeliveryTime ? DateTime.FromBinary(DeliveryTimeBinary) : (DateTime?)null;
 	}
@@ -30,6 +31,10 @@ namespace GameLovers.MobileServices.Notifications
 	/// </summary>
 	internal static class SerializableNotificationConverter
 	{
+		/// <summary>
+		/// Rebuilds a platform notification from its persisted form, restoring the nullable fields that
+		/// were flattened into value+flag pairs for serialization.
+		/// </summary>
 		public static IGameNotification AsGameNotification(this SerializableNotification serializableNotification,
 			IGameNotificationsPlatform platform)
 		{
@@ -50,6 +55,10 @@ namespace GameLovers.MobileServices.Notifications
 			return notification;
 		}
 
+		/// <summary>
+		/// Flattens a pending notification for PlayerPrefs storage, splitting each nullable field into a
+		/// value plus a has-value flag.
+		/// </summary>
 		public static SerializableNotification AsSerializableNotification(this PendingNotification pendingNotification)
 		{
 			var source = pendingNotification.Notification;

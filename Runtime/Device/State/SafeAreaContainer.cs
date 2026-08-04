@@ -24,7 +24,9 @@ namespace GameLovers.MobileServices.Device
 			SetSafeAreaService(safeAreaService);
 		}
 
-		/// <summary>Wires the container to the supplied service and applies the current safe area immediately.</summary>
+		/// <summary>
+		/// Wires the container to the supplied service and applies the current safe area immediately.
+		/// </summary>
 		public void SetSafeAreaService(ISafeAreaService safeAreaService)
 		{
 			if (_safeAreaService != null)

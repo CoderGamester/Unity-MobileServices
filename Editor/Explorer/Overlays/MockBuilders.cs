@@ -14,6 +14,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 	{
 		// ---- Alerts / action sheets ----
 
+		/// <summary>Builds the modal-alert or action-sheet mock for the given platform skin.</summary>
 		internal static VisualElement BuildAlert(SimulatedPlatform platform, SimulatedAlertSpec spec, Action dismissCallback)
 		{
 			var scrim = new VisualElement();
@@ -82,6 +83,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Toasts ----
 
+		/// <summary>Builds the toast mock for the given platform skin.</summary>
 		internal static VisualElement BuildToast(SimulatedPlatform platform, SimulatedToastSpec spec)
 		{
 			var wrapper = new VisualElement();
@@ -97,6 +99,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		// ---- Share sheet ----
 
+		/// <summary>Builds the share-sheet mock for the given platform skin.</summary>
 		internal static VisualElement BuildShareSheet(SimulatedPlatform platform, SimulatedShareSpec spec, Action dismissCallback)
 		{
 			var scrim = new VisualElement();
@@ -144,6 +147,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			return scrim;
 		}
 
+		/// <summary>Builds the store-review mock: a StoreKit sheet on iOS, a Play bottom sheet on Android.</summary>
 		internal static VisualElement BuildReviewPrompt(SimulatedPlatform platform, Action dismissCallback)
 		{
 			return platform == SimulatedPlatform.iOS
@@ -151,6 +155,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				: BuildAndroidReviewPrompt(dismissCallback);
 		}
 
+		/// <summary>Builds the permission or ATT prompt mock, wiring both buttons to the resolve callback.</summary>
 		internal static VisualElement BuildPermissionDialog(SimulatedPlatform platform, SimulatedPermissionDialogSpec spec, Action<bool> dismissCallback)
 		{
 			var scrim = new VisualElement();
@@ -197,6 +202,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			return scrim;
 		}
 
+		/// <summary>Builds the heads-up notification banner mock for the given platform skin.</summary>
 		internal static VisualElement BuildNotificationBanner(SimulatedPlatform platform, SimulatedNotificationBannerSpec spec)
 		{
 			var wrapper = new VisualElement();

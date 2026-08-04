@@ -35,6 +35,7 @@ namespace GameLovers.MobileServices.Device
 			_host.RegisterLateUpdate(Tick);
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			_host.UnregisterLateUpdate(Tick);

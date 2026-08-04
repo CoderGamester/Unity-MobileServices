@@ -16,6 +16,7 @@ namespace GameLovers.MobileServices.Device
 			_deepLink.OnLinkActivated += OnLinkActivated;
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			_deepLink.OnLinkActivated -= OnLinkActivated;

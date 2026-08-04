@@ -66,6 +66,7 @@ namespace GameLovers.MobileServices.Device
 				new DeepLinkService());
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			(SafeArea as IDisposable)?.Dispose();

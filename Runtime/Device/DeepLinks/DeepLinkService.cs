@@ -42,6 +42,7 @@ namespace GameLovers.MobileServices.Device
 			}
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			Application.deepLinkActivated -= OnDeepLinkActivated;

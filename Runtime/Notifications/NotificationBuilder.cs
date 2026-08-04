@@ -29,16 +29,49 @@ namespace GameLovers.MobileServices.Notifications
 			_notification = service.CreateNotification();
 		}
 
+		/// <summary>
+		/// Sets the notification title.
+		/// </summary>
 		public NotificationBuilder Title(string title) { _notification.Title = title; return this; }
+		/// <summary>
+		/// Sets the notification body.
+		/// </summary>
 		public NotificationBuilder Body(string body) { _notification.Body = body; return this; }
+		/// <summary>
+		/// Sets the subtitle (iOS only; ignored on Android).
+		/// </summary>
 		public NotificationBuilder Subtitle(string subtitle) { _notification.Subtitle = subtitle; return this; }
+		/// <summary>
+		/// Sets the Android channel id; ignored on iOS.
+		/// </summary>
 		public NotificationBuilder Channel(string channelId) { _notification.Channel = channelId; return this; }
+		/// <summary>
+		/// Sets an explicit id, so the notification can later be cancelled or dismissed.
+		/// </summary>
 		public NotificationBuilder Id(int id) { _notification.Id = id; return this; }
+		/// <summary>
+		/// Sets an explicit badge number, which opts this notification out of auto-increment.
+		/// </summary>
 		public NotificationBuilder BadgeNumber(int? badge) { _notification.BadgeNumber = badge; return this; }
+		/// <summary>
+		/// Sets the Android small-icon key; ignored on iOS.
+		/// </summary>
 		public NotificationBuilder SmallIcon(string smallIcon) { _notification.SmallIcon = smallIcon; return this; }
+		/// <summary>
+		/// Sets the Android large-icon key; ignored on iOS.
+		/// </summary>
 		public NotificationBuilder LargeIcon(string largeIcon) { _notification.LargeIcon = largeIcon; return this; }
+		/// <summary>
+		/// Whether tapping the notification dismisses it.
+		/// </summary>
 		public NotificationBuilder AutoCancel(bool shouldAutoCancel = true) { _notification.ShouldAutoCancel = shouldAutoCancel; return this; }
+		/// <summary>
+		/// Schedules delivery for an absolute time.
+		/// </summary>
 		public NotificationBuilder At(DateTime deliveryTime) { _notification.DeliveryTime = deliveryTime; return this; }
+		/// <summary>
+		/// Schedules delivery for <paramref name="delay"/> from now.
+		/// </summary>
 		public NotificationBuilder In(TimeSpan delay) { _notification.DeliveryTime = DateTime.Now + delay; return this; }
 
 		/// <summary>

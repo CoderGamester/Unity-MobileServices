@@ -3,7 +3,10 @@ using System.Threading.Tasks;
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Device
 {
-	/// <summary>App Tracking Transparency authorization status (mirrors iOS <c>ATTrackingManagerAuthorizationStatus</c>).</summary>
+	/// <summary>
+	/// App Tracking Transparency authorization status, mirroring iOS's
+	/// <c>ATTrackingManagerAuthorizationStatus</c>.
+	/// </summary>
 	public enum AttStatus
 	{
 		NotDetermined = 0,

@@ -17,6 +17,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			new Dictionary<int, TaskCompletionSource<PermissionStatus>>();
 		private int _nextId = 1;
 
+		/// <summary>The receiver GameObject the iOS bridge addresses by name, created on first use.</summary>
 		public static PermissionsCallbackReceiver Instance
 		{
 			get
@@ -45,6 +46,10 @@ namespace GameLovers.MobileServices.Device.Internal
 		// where status is the int value of PermissionStatus.
 		// ReSharper disable once UnusedMember.Global
 		// ReSharper disable once InconsistentNaming
+		/// <summary>
+		/// Resolves the pending request named in <paramref name="payload"/>, formatted
+		/// <c>"&lt;id&gt;:&lt;status&gt;"</c>. Must stay public: Unity dispatches it by name.
+		/// </summary>
 		public void OnPermissionResult(string payload)
 		{
 			try

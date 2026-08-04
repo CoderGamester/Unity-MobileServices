@@ -58,6 +58,7 @@ namespace GameLovers.MobileServices.Device
 #endif
 		}
 
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			_host.UnregisterSecondTick(OnSecondTick);

@@ -18,7 +18,9 @@ namespace GameLovers.MobileServices.Device
 		Notifications,
 	}
 
-	/// <summary>Result of a permission check / request.</summary>
+	/// <summary>
+	/// Result of a permission check / request.
+	/// </summary>
 	public enum PermissionStatus
 	{
 		NotDetermined,
@@ -35,10 +37,15 @@ namespace GameLovers.MobileServices.Device
 	/// </remarks>
 	public interface IPermissionsService
 	{
-		/// <summary>Returns the current status without prompting the user. Synchronous.</summary>
+		/// <summary>
+		/// Returns the current status without prompting the user. Synchronous.
+		/// </summary>
 		PermissionStatus Check(AppPermission permission);
 
-		/// <summary>Requests the permission, prompting the user if not yet determined. Idempotent if already granted/denied.</summary>
+		/// <summary>
+		/// Requests the permission, prompting the user if not yet determined. Idempotent if the
+		/// permission has already been granted or denied.
+		/// </summary>
 		Task<PermissionStatus> RequestAsync(AppPermission permission);
 
 		/// <summary>

@@ -53,6 +53,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private const float EnvelopePlotHeight = 110f;
 		private const float EnvelopeYAxisWidth = 30f;
 
+		/// <inheritdoc />
 		public override string title => "Mobile Services";
 
 		private readonly List<VisualElement> _playModeControls = new List<VisualElement>();

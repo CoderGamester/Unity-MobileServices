@@ -65,6 +65,9 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         public event Action<TapInput> Tapped;
 
+        /// <summary>
+        /// Enables EnhancedTouch and subscribes to the finger events.
+        /// </summary>
         protected virtual void OnEnable()
         {
             EnhancedTouchSupport.Enable();
@@ -73,6 +76,9 @@ namespace GameLovers.MobileServices.Gestures
             Touch.onFingerUp += OnFingerUp;
         }
 
+        /// <summary>
+        /// Unsubscribes from the finger events.
+        /// </summary>
         protected virtual void OnDisable()
         {
             Touch.onFingerDown -= OnFingerDown;

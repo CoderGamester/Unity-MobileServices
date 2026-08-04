@@ -25,8 +25,10 @@ namespace GameLovers.MobileServices.Editor.Build
 		, UnityEditor.Android.IPostGenerateGradleAndroidProject
 #endif
 	{
+		/// <inheritdoc />
 		public int callbackOrder => 0;
 
+		/// <inheritdoc />
 		public void OnPostprocessBuild(BuildReport report)
 		{
 			if (report == null)
