@@ -72,7 +72,7 @@ jobs:
           repository: CoderGamester/Frameworks
           # Immutable tooling snapshot. Update intentionally through
           # `release.py install-preflight`, never by following a moving branch.
-          ref: be8c1474ae2ab772fae76a29f07bd520abc3b3ac
+          ref: be8c147f3d12d94a4055d556ffdc0a26e077e5ec
           path: .release-tooling
           sparse-checkout: .claude/skills/unity-package-release/scripts
           persist-credentials: false
