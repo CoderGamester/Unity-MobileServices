@@ -45,6 +45,17 @@ namespace GameLovers.MobileServices.Device
 			Apply();
 		}
 
+		/// <summary>Converts a screen-pixel inset into the active UI Toolkit panel coordinate system.</summary>
+		internal static float ScreenPixelsToPanelUnits(float screenPixels, float scaledPixelsPerPoint)
+		{
+			if (scaledPixelsPerPoint <= 0f)
+			{
+				return screenPixels;
+			}
+
+			return screenPixels / scaledPixelsPerPoint;
+		}
+
 		private void OnSafeAreaChanged(Rect _)
 		{
 			Apply();
@@ -60,11 +71,14 @@ namespace GameLovers.MobileServices.Device
 				return;
 			}
 
-			// Convert from screen pixels to UI Toolkit padding (top-left origin).
-			var left   = safeArea.xMin;
-			var right  = screenWidth  - safeArea.xMax;
-			var top    = screenHeight - safeArea.yMax;
-			var bottom = safeArea.yMin;
+			// Screen.safeArea is expressed in screen pixels, while UI Toolkit styles use the
+			// panel's coordinate system. scaledPixelsPerPoint is Unity's authoritative conversion,
+			// including the PanelSettings Scale With Screen Size factor.
+			var scaledPixelsPerPoint = panel?.scaledPixelsPerPoint ?? 1f;
+			var left   = ScreenPixelsToPanelUnits(safeArea.xMin, scaledPixelsPerPoint);
+			var right  = ScreenPixelsToPanelUnits(screenWidth - safeArea.xMax, scaledPixelsPerPoint);
+			var top    = ScreenPixelsToPanelUnits(screenHeight - safeArea.yMax, scaledPixelsPerPoint);
+			var bottom = ScreenPixelsToPanelUnits(safeArea.yMin, scaledPixelsPerPoint);
 
 			style.paddingLeft   = left;
 			style.paddingRight  = right;

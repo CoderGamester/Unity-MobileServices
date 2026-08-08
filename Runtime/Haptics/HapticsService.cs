@@ -1,3 +1,4 @@
+using System;
 using GameLovers.MobileServices.Haptics.Internal;
 using UnityEngine;
 
@@ -5,7 +6,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Haptics
 {
 	/// <inheritdoc />
-	public sealed class HapticsService : IHapticsService
+	public sealed class HapticsService : IHapticsService, IDisposable
 	{
 		private readonly IHapticsBackend _backend;
 
@@ -15,15 +16,9 @@ namespace GameLovers.MobileServices.Haptics
 
 		private bool _enabled = true;
 		private bool _isPlaying;
+		private bool _disposed;
 		private HapticPreset _currentPreset;
 		private float _currentDurationSeconds;
-
-		public HapticsService() : this(CreateDefaultBackend()) { }
-
-		internal HapticsService(IHapticsBackend backend)
-		{
-			_backend = backend;
-		}
 
 		/// <summary>
 		/// The preset most recently passed to a <c>Play*</c> call. Reads <see cref="HapticPreset.None"/>
@@ -48,9 +43,14 @@ namespace GameLovers.MobileServices.Haptics
 		/// <inheritdoc />
 		public bool Enabled
 		{
-			get => _enabled;
+			get => !_disposed && _enabled;
 			set
 			{
+				if (_disposed)
+				{
+					return;
+				}
+
 				if (_enabled == value)
 				{
 					return;
@@ -64,10 +64,17 @@ namespace GameLovers.MobileServices.Haptics
 		}
 
 		/// <inheritdoc />
-		public bool IsSupported => _backend.IsSupported;
+		public bool IsSupported => !_disposed && _backend.IsSupported;
 
 		/// <inheritdoc />
-		public bool IsPlaying => _isPlaying;
+		public bool IsPlaying => !_disposed && _isPlaying;
+
+		public HapticsService() : this(CreateDefaultBackend()) { }
+
+		internal HapticsService(IHapticsBackend backend)
+		{
+			_backend = backend;
+		}
 
 		/// <inheritdoc />
 		public void PlayPreset(HapticPreset preset)
@@ -78,7 +85,7 @@ namespace GameLovers.MobileServices.Haptics
 		/// <inheritdoc />
 		public void PlayPresetDuration(HapticPreset preset, float duration = -1f)
 		{
-			if (!_enabled || preset == HapticPreset.None)
+			if (_disposed || !_enabled || preset == HapticPreset.None)
 			{
 				return;
 			}
@@ -108,7 +115,7 @@ namespace GameLovers.MobileServices.Haptics
 		/// <inheritdoc />
 		public void PlayCustom(float intensity01, float durationMs)
 		{
-			if (!_enabled || durationMs <= 0f)
+			if (_disposed || !_enabled || durationMs <= 0f)
 			{
 				return;
 			}
@@ -124,9 +131,46 @@ namespace GameLovers.MobileServices.Haptics
 			EnsureHost().ScheduleStop(durationMs / 1000f, OnAutoStop);
 		}
 
+		/// <summary>
+		/// Stops active output, cancels pending auto-stop work, and destroys this service's host.
+		/// </summary>
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			StopCurrentHaptic();
+			_disposed = true;
+
+			if (_host == null)
+			{
+				return;
+			}
+
+			_host.Cancel();
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				UnityEngine.Object.DestroyImmediate(_host.gameObject);
+			}
+			else
+#endif
+			{
+				UnityEngine.Object.Destroy(_host.gameObject);
+			}
+			_host = null;
+		}
+
 		/// <inheritdoc />
 		public void StopCurrentHaptic()
 		{
+			if (_disposed)
+			{
+				return;
+			}
+
 			CancelPendingAutoStop();
 			if (!_isPlaying)
 			{
@@ -166,7 +210,7 @@ namespace GameLovers.MobileServices.Haptics
 			}
 
 			var go = new GameObject("HapticsHost");
-			Object.DontDestroyOnLoad(go);
+			UnityEngine.Object.DontDestroyOnLoad(go);
 			_host = go.AddComponent<HapticsHost>();
 			return _host;
 		}

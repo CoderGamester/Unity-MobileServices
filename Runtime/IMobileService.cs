@@ -38,6 +38,8 @@ namespace GameLovers.MobileServices
 	/// </summary>
 	public sealed class MobileService : IMobileService, System.IDisposable
 	{
+		private bool _disposed;
+
 		/// <inheritdoc />
 		public INativeUiService NativeUi { get; }
 		/// <inheritdoc />
@@ -67,10 +69,43 @@ namespace GameLovers.MobileServices
 			Device = device;
 		}
 
-		/// <inheritdoc />
+		/// <summary>
+		/// Disposes every distinct injected child that implements <see cref="System.IDisposable"/>.
+		/// Children are owned by this facade, so callers must not use them after disposing the facade.
+		/// Calling this method more than once is safe.
+		/// </summary>
 		public void Dispose()
 		{
-			(Device as System.IDisposable)?.Dispose();
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			var disposed = new System.Collections.Generic.List<System.IDisposable>(4);
+			DisposeChild(NativeUi, disposed);
+			DisposeChild(Notifications, disposed);
+			DisposeChild(Haptics, disposed);
+			DisposeChild(Device, disposed);
+		}
+
+		private static void DisposeChild(object child, System.Collections.Generic.List<System.IDisposable> disposed)
+		{
+			if (!(child is System.IDisposable disposable))
+			{
+				return;
+			}
+
+			for (var i = 0; i < disposed.Count; i++)
+			{
+				if (ReferenceEquals(disposed[i], disposable))
+				{
+					return;
+				}
+			}
+
+			disposed.Add(disposable);
+			disposable.Dispose();
 		}
 	}
 }

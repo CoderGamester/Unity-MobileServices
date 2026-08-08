@@ -92,8 +92,10 @@ public interface IDeepLinkRouter
 ```
 
 ```csharp
-var router = new DeepLinkRouter(device.DeepLink);
-router.MapRoute("/promo/:id", (uri, p) => OpenPromo(p["id"]));
+using var router = new DeepLinkRouter(device.DeepLink, routes =>
+{
+    routes.MapRoute("/promo/:id", (uri, p) => OpenPromo(p["id"]));
+});
 router.MapRoute("/profile/:userId", (uri, p) => OpenProfile(p["userId"]));
 router.MapRoute("/settings", (uri, p) => OpenSettings());
 ```

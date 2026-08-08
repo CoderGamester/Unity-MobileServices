@@ -83,6 +83,87 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.AreEqual(12345, pending.Notification.Id);
 		}
 
+		[UnityTest]
+		// ADMIT: MobileNotificationService's Editor scheduling path could return a wrapper without
+		// registering it, making PendingNotifications disagree with the returned handle.
+		// RCR: MobileNotificationService.cs ScheduleNotification — return a new PendingNotification
+		// directly instead of RegisterPendingNotification → RED (pending count expected 1, was 0).
+		public IEnumerator ScheduleNotification_InEditor_AddsReturnedPendingToCollection()
+		{
+			var pending = _service.ScheduleNotification(_service.CreateNotification());
+
+			Assert.AreEqual(1, _service.PendingNotifications.Count);
+			Assert.AreSame(pending, _service.PendingNotifications[0]);
+			yield return null;
+		}
+
+#if UNITY_EDITOR
+		[Test]
+		// ADMIT: MobileNotificationService needs an explicit editor delivery path so the simulator can drive the sample's real service without changing scheduling semantics.
+		// RCR: MobileNotificationService.cs TrySimulateDelivery — return false before removing/raising → RED (delivery count expected 1, pending count expected 0).
+		public void TrySimulateDelivery_RemovesPendingAndRaisesDeliveredEventOnce()
+		{
+			var notification = _service.CreateNotification();
+			notification.Id = 4321;
+			notification.Title = "Simulator delivery";
+			var pending = _service.ScheduleNotification(notification);
+			PendingNotification delivered = null;
+			var deliveryCount = 0;
+			_service.OnLocalNotificationDeliveredEvent += received =>
+			{
+				delivered = received;
+				deliveryCount++;
+			};
+
+			Assert.IsTrue(_service.TrySimulateDelivery(notification.Id.Value));
+			Assert.AreEqual(1, deliveryCount);
+			Assert.AreSame(pending, delivered);
+			Assert.AreEqual(0, _service.PendingNotifications.Count);
+			Assert.IsFalse(_service.TrySimulateDelivery(notification.Id.Value));
+			Assert.AreEqual(1, deliveryCount);
+		}
+#endif
+
+		[UnityTest]
+		// ADMIT: MobileNotificationService.Dispose could leave its DontDestroyOnLoad host alive or
+		// perform work twice when ownership is released by both MobileService and the caller.
+		// RCR: MobileNotificationService.cs Dispose — replace UnityEngine.Object.Destroy with return → RED
+		// (host remains after one frame).
+		public IEnumerator Dispose_DestroysOwnHost_AndIsIdempotent()
+		{
+			var host = ResolveHost();
+			_service.Dispose();
+			Assert.DoesNotThrow(_service.Dispose);
+
+			yield return null;
+
+			Assert.IsTrue(host == null, "Dispose should destroy this service's own host");
+		}
+
+		[Test]
+		// ADMIT: MobileNotificationService could expose a partially destroyed host after disposal,
+		// producing inconsistent success or MissingReferenceException results across its public API.
+		// RCR: MobileNotificationService.cs ThrowIfDisposed — replace the throw with return → RED
+		// (PendingNotifications expected ObjectDisposedException, but no exception was thrown). 2026-08-09
+		public void PublicOperations_AfterDispose_ThrowObjectDisposedException()
+		{
+			var notification = _service.CreateNotification();
+			_service.Dispose();
+
+			Assert.Throws<ObjectDisposedException>(() => _ = _service.PendingNotifications);
+			Assert.Throws<ObjectDisposedException>(() => _ = _service.Mode);
+			Assert.Throws<ObjectDisposedException>(() => _service.Mode = OperatingMode.Queue);
+			Assert.Throws<ObjectDisposedException>(() => _service.CreateNotification());
+			Assert.Throws<ObjectDisposedException>(() => _service.ScheduleNotification(notification));
+			Assert.Throws<ObjectDisposedException>(() => _service.CancelNotification(1));
+			Assert.Throws<ObjectDisposedException>(() => _service.DismissNotification(1));
+			Assert.Throws<ObjectDisposedException>(_service.CancelAllScheduledNotifications);
+			Assert.Throws<ObjectDisposedException>(_service.DismissAllDisplayedNotifications);
+#if UNITY_EDITOR
+			Assert.Throws<ObjectDisposedException>(() => _service.TrySimulateDelivery(1));
+#endif
+		}
+
 		[Test]
 		// ADMIT: GameNotificationsMonoBehaviour.CancelNotification could invert its Initialized guard and throw on an initialized host.
 		// RCR: GameNotificationsMonoBehaviour.cs CancelNotification — `if (!Initialized)` → `if (Initialized)` → RED (InvalidOperationException 'Must call Initialize() first' where none expected).
@@ -90,6 +171,32 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			Assert.DoesNotThrow(() => _service.CancelNotification(1));
 			Assert.DoesNotThrow(() => _service.DismissNotification(1));
+		}
+
+		[Test]
+		// ADMIT: Editor cancellation could return before removing the in-memory pending row when no native backend exists.
+		// RCR: GameNotificationsMonoBehaviour.cs CancelNotification — restore the early `_platform == null` return → RED (pending count expected 0, was 1).
+		public void CancelNotification_RemovesPendingNotificationWithoutNativeBackend()
+		{
+			var notification = _service.CreateNotification();
+			var pending = _service.ScheduleNotification(notification);
+
+			_service.CancelNotification(pending.Notification.Id.Value);
+
+			Assert.AreEqual(0, _service.PendingNotifications.Count);
+		}
+
+		[Test]
+		// ADMIT: Editor Cancel All could return before clearing the in-memory pending rows when no native backend exists.
+		// RCR: GameNotificationsMonoBehaviour.cs CancelAllNotifications — restore the early `_platform == null` return → RED (pending count expected 0, was 2).
+		public void CancelAllScheduledNotifications_ClearsPendingNotificationsWithoutNativeBackend()
+		{
+			_service.ScheduleNotification(_service.CreateNotification());
+			_service.ScheduleNotification(_service.CreateNotification());
+
+			_service.CancelAllScheduledNotifications();
+
+			Assert.AreEqual(0, _service.PendingNotifications.Count);
 		}
 
 		[Test]

@@ -122,6 +122,27 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.AreEqual(0, _backend.StopCount);
 		}
 
+		[UnityTest]
+		// ADMIT: HapticsService.Dispose could release ownership without stopping active output or
+		// destroying the lazily-created host, leaking a DontDestroyOnLoad object between sessions.
+		// RCR: HapticsService.cs Dispose — replace UnityEngine.Object.Destroy with return → RED
+		// (host remains after one frame).
+		public IEnumerator Dispose_StopsOutput_DestroysHost_AndIsIdempotent()
+		{
+			_haptics.PlayPresetDuration(HapticPreset.Warning, 0.5f);
+			var host = GameObject.Find("HapticsHost");
+			Assert.IsNotNull(host);
+
+			_haptics.Dispose();
+			Assert.AreEqual(1, _backend.StopCount);
+			Assert.IsFalse(_haptics.IsPlaying);
+			Assert.DoesNotThrow(_haptics.Dispose);
+
+			yield return null;
+
+			Assert.IsTrue(host == null, "Dispose should destroy this service's own host");
+		}
+
 		private sealed class FakeHapticsBackend : IHapticsBackend
 		{
 			public bool IsSupportedValue;

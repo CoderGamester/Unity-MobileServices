@@ -31,6 +31,13 @@
     margin-bottom: 4px;
 }
 
+.msp-connection-status {
+    color: rgb(170, 220, 190);
+    font-size: 10px;
+    margin: 2px 4px 4px;
+    white-space: normal;
+}
+
 .msp-enabled-toggle {
     margin-top: 4px;
     -unity-font-style: bold;

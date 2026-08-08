@@ -4,21 +4,38 @@ using System.Collections.Generic;
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Device
 {
-	/// <inheritdoc />
+	/// <summary>
+	/// Dispatches deep-link paths to handlers registered through <see cref="IDeepLinkRouter"/>.
+	/// </summary>
+	/// <remarks>
+	/// The constructor configures all routes before it subscribes, so a cold-start replay sees the
+	/// complete route table and a configuration failure leaves no handler on the caller-owned service.
+	/// </remarks>
 	public sealed class DeepLinkRouter : IDeepLinkRouter, IDisposable
 	{
 		private readonly IDeepLinkService _deepLink;
 		private readonly List<Route> _routes = new List<Route>();
+		private bool _disposed;
 
-		public DeepLinkRouter(IDeepLinkService deepLink)
+		public DeepLinkRouter(IDeepLinkService deepLink, Action<IDeepLinkRouter> configure)
 		{
 			_deepLink = deepLink ?? throw new ArgumentNullException(nameof(deepLink));
+			if (configure == null) throw new ArgumentNullException(nameof(configure));
+
+			// Configure before subscribing so a thrown callback leaves no handler on the caller-owned service.
+			configure(this);
 			_deepLink.OnLinkActivated += OnLinkActivated;
 		}
 
 		/// <inheritdoc />
 		public void Dispose()
 		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
 			_deepLink.OnLinkActivated -= OnLinkActivated;
 			_routes.Clear();
 		}
@@ -26,6 +43,7 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public void MapRoute(string pathPattern, Action<Uri, IReadOnlyDictionary<string, string>> handler)
 		{
+			ThrowIfDisposed();
 			if (string.IsNullOrEmpty(pathPattern)) throw new ArgumentNullException(nameof(pathPattern));
 			if (handler == null) throw new ArgumentNullException(nameof(handler));
 			_routes.Add(new Route(pathPattern, handler));
@@ -34,6 +52,7 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public void RemoveRoute(string pathPattern)
 		{
+			ThrowIfDisposed();
 			if (string.IsNullOrEmpty(pathPattern)) return;
 			for (var i = _routes.Count - 1; i >= 0; i--)
 			{
@@ -47,6 +66,7 @@ namespace GameLovers.MobileServices.Device
 		/// <inheritdoc />
 		public bool TryDispatch(Uri uri)
 		{
+			ThrowIfDisposed();
 			if (uri == null) return false;
 			foreach (var route in _routes)
 			{
@@ -59,7 +79,23 @@ namespace GameLovers.MobileServices.Device
 			return false;
 		}
 
-		private void OnLinkActivated(Uri uri) => TryDispatch(uri);
+		private void OnLinkActivated(Uri uri)
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			TryDispatch(uri);
+		}
+
+		private void ThrowIfDisposed()
+		{
+			if (_disposed)
+			{
+				throw new ObjectDisposedException(nameof(DeepLinkRouter));
+			}
+		}
 
 		private sealed class Route
 		{

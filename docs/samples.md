@@ -1,28 +1,33 @@
 # Samples Index
 
-Four code-only samples ship with the package. Each is a single C# MonoBehaviour that builds a runtime UI canvas via legacy `UnityEngine.UI` — drop it on a GameObject, press Play. No `.unity` scene file, no `.prefab`, no asset references.
+Import the single **Mobile Services Samples** entry from `Window > Package Manager > Mobile Services > Samples`. The bundle is one sample with four scene-backed views and persistent bottom tabs: **Overview**, **Haptics**, **Notifications**, and **Links**. Set **Player Settings > Active Input Handling** to **Input System Package (New)** or **Both**, then open any scene from the Project window and enter Play Mode; the Game/Simulator view can render the UI outside Play Mode, but runtime buttons, fields, scrolling, and tabs become interactive only after Play Mode starts. The imported bundle contains one canonical [`README.md`](../Samples~/MobileServicesSamples/README.md) covering all four views.
 
-| Sample | Folder | Purpose |
-|--------|--------|---------|
-| Mobile Services Playground | [`Samples~/MobileServicesPlayground`](../Samples~/MobileServicesPlayground/README.md) | Kitchen-sink wiring proof. Buttons for every native UI / haptic / notification / permission / ATT / deep-link call. |
-| Haptics Palette | [`Samples~/HapticsPalette`](../Samples~/HapticsPalette/README.md) | Designer iteration tool. 3x3 preset grid + sequence recorder + replay. |
-| Notifications Scheduler | [`Samples~/NotificationsScheduler`](../Samples~/NotificationsScheduler/README.md) | Lifecycle demo. Channel CRUD, `OperatingMode` toggles, background-foreground round trip. |
-| Deep Link Router | [`Samples~/DeepLinkRouter`](../Samples~/DeepLinkRouter/README.md) | `IDeepLinkRouter.MapRoute` demo with three routes and cold-start replay instructions. |
+Each view's scene includes its own camera, `UIDocument`, `PanelSettings`, default runtime UI theme, safe-area container, responsive layout, and teardown-safe controller. Unity 6 InputForUI routes input directly to UI Toolkit, while shared navigation supplies the gesture bridge, so no uGUI EventSystem or extra scene wiring is required. Enabled buttons provide palette-specific hover, press, focus, and disabled states plus one committed `Selection` haptic. A short press stays a button; a drag that crosses the threshold cancels the button and uses the clamped content scroll, with the bottom navigation pinned outside that region. The gesture bridge also consumes package-level potential swipes when a simulator omits continuous UI Toolkit move events. Haptics demonstration controls do not add a redundant selection pulse.
 
-## Importing
+| View | Scene folder | What to try |
+|---|---|---|
+| Overview | [`MobileServicesPlayground`](../Samples~/MobileServicesSamples/README.md#overview) | Native UI, device/safe area, permissions, ATT, gestures, and activity logging. |
+| Haptics | [`HapticsPalette`](../Samples~/MobileServicesSamples/README.md#haptics) | All nine presets, natural/finite/indefinite playback, custom intensity/duration, live state, stop, and record/replay. |
+| Notifications | [`NotificationsScheduler`](../Samples~/MobileServicesSamples/README.md#notifications) | Fixed channels, permission status, operating modes, 5/30-second scheduling, reschedule, pending rows, cancellation, event logs, and the Device Simulator notification connection. Actions share a responsive wrapping row and may use two-line labels on narrow profiles. |
+| Links | [`DeepLinkRouter`](../Samples~/MobileServicesSamples/README.md#links) | `/promo/:id`, `/profile/:user`, and `/settings`, with raw/routed/unmatched events, parameters, and warm/cold-link guidance. |
 
-`Window > Package Manager > GameLovers.MobileServices > Samples > <sample-name>` — imports into `Assets/Samples/Mobile Services/<version>/<sample-name>/`.
+## Status text
 
-## Sample-only types
+Every status card follows the Notifications Scheduler convention: one sentence-case `Field: Value` per line. Boolean state uses `Yes` or `No`, missing state uses `None` or `Unknown`, and chronological events stay in the activity log. Notification pending rows place title, delivery, channel, and reschedule state on separate lines.
 
-All sample types live in `GameLovers.MobileServices.Samples.<Name>` namespaces and are **NOT** part of the public package API surface. When updating any sample's README or the main package README, never describe these types as if they were package API.
+## Combined player and build preparation
 
-## Why code-only
+The tabs work when the scenes are included in a build. When an individual scene is opened in the Editor, the sample's editor bridge loads another imported scene directly in Play Mode without changing Build Settings. A received OS deep link automatically opens the Links tab.
 
-Divergence from peer `com.gamelovers.services` / `com.gamelovers.uiservice` which ship `.unity` + `.prefab` files with hand-authored deterministic GUIDs.
+- **Tools > Mobile Samples Examples > Build All** validates the four authored scenes, snapshots the current effective global Build Settings or active overriding Build Profile, installs the exact Overview-first sample sequence, then opens Unity's native Build Profiles window.
+- **Tools > Mobile Samples Examples > Restore All** restores that exact prior scene configuration. It is visible at all times and enabled only while the session snapshot exists.
 
-- Zero asset dependencies — no `.unity` scenes, no `.prefab` files, no deterministic-GUID `.meta` files to keep in sync.
-- Diff-friendly — code reviewers see exactly what the sample does at the source level.
-- Easy to drop into any scene — no "now open `<sample>.unity`" step.
+Build All is preparation, not a replacement player-build dialog: Unity still owns platform selection, output path, and the final Build action. The sample-scoped preprocessor supplies all four scenes' additive native requirements through a temporary in-memory `MobileServicesConfig` clone; it never changes the persisted config asset or `EditorPrefs`.
 
-The trade-off is no built-in scene hierarchy or prefab structure for the user to inspect; acceptable for the mobile surface since most behaviour is fired by buttons, not configured by serialised state.
+Overview contributes the permissions and Android features it demonstrates. Haptics contributes Android vibration. Notifications contributes Android notification permission and vibration without enabling Push Notifications. Links contributes vibration and the sample-local postprocessor adds the deterministic Android intent filter or iOS URL scheme. Existing persisted project configuration remains unchanged.
+
+Restore state is stored in Unity `SessionState`: it survives a domain reload but not closing Unity. Restore before restarting Unity, changing to another prepared Build Profile, or deleting the imported sample. Re-running Build All after a restart snapshots the then-current scene configuration.
+
+## Build and device testing
+
+Editor surfaces are useful for trying the wiring, but haptics, OS permission prompts, ATT, real notification delivery, and warm/cold deep links still need an Android/iOS device or simulator. The Notifications Scheduler editor adapter can deliver its own pending items through the Device Simulator overlay without touching an OS backend. The Links native hook ships inside the imported bundle and activates whenever the Links scene is part of the player. See [`build-pipeline.md`](build-pipeline.md) and the single [sample README](../Samples~/MobileServicesSamples/README.md) for platform details.

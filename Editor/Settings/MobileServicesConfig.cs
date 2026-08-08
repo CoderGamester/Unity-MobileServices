@@ -70,6 +70,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds <c>POST_NOTIFICATIONS</c> (API 33+).</summary>
 		[SerializeField] public bool PostNotifications;
 
+		/// <summary>Adds <c>VIBRATE</c> for haptic feedback and vibrating notification channels.</summary>
+		[SerializeField] public bool Vibrate;
+
 		/// <summary>Adds <c>RECORD_AUDIO</c> (Microphone).</summary>
 		[SerializeField] public bool RecordAudio;
 
@@ -105,6 +108,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Default Maven coordinate for the Play In-App Review library injected on Android builds.</summary>
 		public const string DefaultPlayReviewCoordinate = "com.google.android.play:review:2.0.2";
 
+		private static MobileServicesConfig _cached;
+		private static bool _cachedIsTransient;
+
 		[SerializeField] private List<PermissionUsageRow> _permissionDescriptions = new List<PermissionUsageRow>();
 		[SerializeField] private AttUsageRow _attUsageDescription = new AttUsageRow();
 		[SerializeField] private CapabilityToggles _capabilities = new CapabilityToggles();
@@ -112,9 +118,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private bool _includePlayReviewDependency = true;
 		[SerializeField] private string _playReviewDependencyCoordinate = DefaultPlayReviewCoordinate;
 		[SerializeField] private bool _manageNativeBuildManually;
-
-		private static MobileServicesConfig _cached;
-		private static bool _cachedIsTransient;
 
 		/// <summary>
 		/// The single config for the project, located anywhere via <see cref="AssetDatabase.FindAssets(string)"/>.
@@ -215,16 +218,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 			}
 		}
 
-		/// <summary>Marks the asset dirty and saves it (no-op for the transient in-memory fallback instance).</summary>
-		public void Persist()
-		{
-			EditorUtility.SetDirty(this);
-			if (AssetDatabase.Contains(this))
-			{
-				AssetDatabase.SaveAssets();
-			}
-		}
-
 		/// <summary>
 		/// Finds the existing config asset anywhere in the project, or creates one under
 		/// <c>Assets/Editor/</c> if none exists, then caches and returns it. Used by the
@@ -253,6 +246,66 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_cached = created;
 			_cachedIsTransient = false;
 			return created;
+		}
+
+		/// <summary>
+		/// Returns a per-permission "Suggested copy" usage description. These follow Apple's review
+		/// guidelines (concrete, user-visible benefit) so the team isn't left to write the wording
+		/// from scratch.
+		/// </summary>
+		public static string GetSuggestedCopy(AppPermission permission)
+		{
+			switch (permission)
+			{
+				case AppPermission.Camera:
+					return "Allows you to take photos and videos to share inside the app.";
+				case AppPermission.Microphone:
+					return "Allows you to record audio for voice chat and clip sharing.";
+				case AppPermission.LocationWhenInUse:
+					return "Lets us show nearby content while you have the app open.";
+				case AppPermission.LocationAlways:
+					return "Lets us notify you about nearby events even when the app is in the background.";
+				case AppPermission.PhotoLibrary:
+					return "Allows you to attach photos from your library to your in-app content.";
+				case AppPermission.PhotoLibraryAddOnly:
+					return "Lets us save the screenshots and recordings you make in the app to your library.";
+				case AppPermission.Notifications:
+					return "Allows us to send you reward reminders and important game updates.";
+				default:
+					return string.Empty;
+			}
+		}
+
+		/// <summary>Returns a suggested ATT usage description following Apple's review guidelines.</summary>
+		public static string GetSuggestedAttCopy() =>
+			"Your data will be used to provide a better personalised experience and to support our developers.";
+
+		/// <summary>
+		/// Maps <see cref="AppPermission"/> to the iOS Info.plist key the postprocessor must inject.
+		/// </summary>
+		public static string GetIosUsageKey(AppPermission permission)
+		{
+			switch (permission)
+			{
+				case AppPermission.Camera:               return "NSCameraUsageDescription";
+				case AppPermission.Microphone:           return "NSMicrophoneUsageDescription";
+				case AppPermission.LocationWhenInUse:    return "NSLocationWhenInUseUsageDescription";
+				case AppPermission.LocationAlways:       return "NSLocationAlwaysAndWhenInUseUsageDescription";
+				case AppPermission.PhotoLibrary:         return "NSPhotoLibraryUsageDescription";
+				case AppPermission.PhotoLibraryAddOnly:  return "NSPhotoLibraryAddUsageDescription";
+				case AppPermission.Notifications:        return null; // No Info.plist key on iOS.
+				default:                                 return null;
+			}
+		}
+
+		/// <summary>Marks the asset dirty and saves it (no-op for the transient in-memory fallback instance).</summary>
+		public void Persist()
+		{
+			EditorUtility.SetDirty(this);
+			if (AssetDatabase.Contains(this))
+			{
+				AssetDatabase.SaveAssets();
+			}
 		}
 
 		/// <summary>
@@ -332,56 +385,6 @@ namespace GameLovers.MobileServices.Editor.Settings
 			CollectLocales(_attUsageDescription.Entries, set);
 			set.RemoveWhere(code => string.Equals(code, DefaultLocaleCode, StringComparison.OrdinalIgnoreCase));
 			return new List<string>(set);
-		}
-
-		/// <summary>
-		/// Returns a per-permission "Suggested copy" usage description. These follow Apple's review
-		/// guidelines (concrete, user-visible benefit) so the team isn't left to write the wording
-		/// from scratch.
-		/// </summary>
-		public static string GetSuggestedCopy(AppPermission permission)
-		{
-			switch (permission)
-			{
-				case AppPermission.Camera:
-					return "Allows you to take photos and videos to share inside the app.";
-				case AppPermission.Microphone:
-					return "Allows you to record audio for voice chat and clip sharing.";
-				case AppPermission.LocationWhenInUse:
-					return "Lets us show nearby content while you have the app open.";
-				case AppPermission.LocationAlways:
-					return "Lets us notify you about nearby events even when the app is in the background.";
-				case AppPermission.PhotoLibrary:
-					return "Allows you to attach photos from your library to your in-app content.";
-				case AppPermission.PhotoLibraryAddOnly:
-					return "Lets us save the screenshots and recordings you make in the app to your library.";
-				case AppPermission.Notifications:
-					return "Allows us to send you reward reminders and important game updates.";
-				default:
-					return string.Empty;
-			}
-		}
-
-		/// <summary>Returns a suggested ATT usage description following Apple's review guidelines.</summary>
-		public static string GetSuggestedAttCopy() =>
-			"Your data will be used to provide a better personalised experience and to support our developers.";
-
-		/// <summary>
-		/// Maps <see cref="AppPermission"/> to the iOS Info.plist key the postprocessor must inject.
-		/// </summary>
-		public static string GetIosUsageKey(AppPermission permission)
-		{
-			switch (permission)
-			{
-				case AppPermission.Camera:               return "NSCameraUsageDescription";
-				case AppPermission.Microphone:           return "NSMicrophoneUsageDescription";
-				case AppPermission.LocationWhenInUse:    return "NSLocationWhenInUseUsageDescription";
-				case AppPermission.LocationAlways:       return "NSLocationAlwaysAndWhenInUseUsageDescription";
-				case AppPermission.PhotoLibrary:         return "NSPhotoLibraryUsageDescription";
-				case AppPermission.PhotoLibraryAddOnly:  return "NSPhotoLibraryAddUsageDescription";
-				case AppPermission.Notifications:        return null; // No Info.plist key on iOS.
-				default:                                 return null;
-			}
 		}
 
 		/// <summary>

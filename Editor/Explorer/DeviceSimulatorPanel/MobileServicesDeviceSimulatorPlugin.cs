@@ -47,14 +47,11 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private const string HeaderNote = "Fires native-UI mocks into the simulated phone screen (edit + play). Live diagnostics below need Play mode.";
 		private const string PlayModeBannerText = "Some controls are disabled until you enter Play mode, they spawn runtime hosts or read/drive live device state. Mock previews, haptic presets, and the envelope graph work in edit mode.";
 		private const string HapticsNote = "Haptics fire only on a physical device. Select a preset to inspect its vibration envelope (the editor calibration cue).";
-		private const string NotificationsNote = "Preview the heads-up banner (works in edit mode). For live scheduling / channels / queueing / pending, use the NotificationsScheduler sample — it drives the game's own service.";
+		private const string NotificationsNote = "Preview a generic banner or connect to the active NotificationsScheduler sample. Connected delivery uses the sample's own pending service and events.";
 		private const string PermissionsInfo = "The first runtime RequestAsync() on a NotDetermined permission shows the OS prompt in the overlay; afterwards it is cached.";
 		private const string AttInfo = "The first runtime RequestAuthorizationAsync() on a NotDetermined status shows the ATT prompt in the overlay (iOS skin only); afterwards it is cached.";
 		private const float EnvelopePlotHeight = 110f;
 		private const float EnvelopeYAxisWidth = 30f;
-
-		/// <inheritdoc />
-		public override string title => "Mobile Services";
 
 		private readonly List<VisualElement> _playModeControls = new List<VisualElement>();
 		private readonly List<VisualElement> _editModeBanners = new List<VisualElement>();
@@ -80,6 +77,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		private VisualElement _envelopeCanvas;
 		private Label _envelopeMaxLabel;
 
+		private Label _notificationStatus;
+		private Button _deliverNextNotificationButton;
+
 		// ---- Gestures diagnostics ----
 		private GestureController _gestureController;
 		// Auto-spawned in play mode when the scene has no GestureController, so the user needs zero
@@ -104,6 +104,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 		// ---- ATT state control ----
 		private EnumField _attStateField;
 		private VisualElement _attPendingRow;
+
+		/// <inheritdoc />
+		public override string title => "Mobile Services";
 
 		/// <inheritdoc />
 		public override void OnCreate()
@@ -156,6 +159,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			root.schedule.Execute(() =>
 			{
 				SyncPlatformFromHost();
+				MobileNotificationSimulation.Tick();
 				RefreshDiagnostics();
 				RefreshPlayModeGating();
 			}).Every(500);
@@ -169,10 +173,12 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			ApplyActionSheetButtonState(MobileSimulatorState.Platform);
 			MobileSimulatorState.PlatformChanged += OnPlatformChanged;
 			MobileSimulatorState.EnabledChanged += OnEnabledChanged;
+			MobileNotificationSimulation.ActiveTargetChanged += OnNotificationTargetChanged;
 			root.RegisterCallback<DetachFromPanelEvent>(_ =>
 			{
 				MobileSimulatorState.PlatformChanged -= OnPlatformChanged;
 				MobileSimulatorState.EnabledChanged -= OnEnabledChanged;
+				MobileNotificationSimulation.ActiveTargetChanged -= OnNotificationTargetChanged;
 			});
 
 			return root;
@@ -555,11 +561,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			var foldout = new Foldout { text = "Notifications", value = false };
 			foldout.AddToClassList("msp-foldout");
 
-			// Preview-only by design: live scheduling / channels / queueing would run on a throwaway
-			// MobileNotificationService disconnected from the game, duplicating the NotificationsScheduler sample.
 			var note = new Label(NotificationsNote);
 			note.AddToClassList("msp-note");
 			foldout.Add(note);
+
+			_notificationStatus = new Label();
+			_notificationStatus.AddToClassList("msp-connection-status");
+			foldout.Add(_notificationStatus);
+
+			_deliverNextNotificationButton = MakeActionButton("Deliver next pending", DeliverNextNotification);
+			foldout.Add(_deliverNextNotificationButton);
 
 			foldout.Add(MakeActionButton("Show heads-up banner", () => MobileSimulatorState.PushNotificationBanner(new SimulatedNotificationBannerSpec
 			{
@@ -574,6 +585,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 			return foldout;
 		}
+
+		private void DeliverNextNotification()
+		{
+			MobileNotificationSimulation.TryDeliverNext();
+			RefreshNotificationDiagnostics();
+		}
+
+		private void OnNotificationTargetChanged() => RefreshNotificationDiagnostics();
 
 		// ---- Gestures ----
 
@@ -781,9 +800,29 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 
 		private void RefreshDiagnostics()
 		{
+			RefreshNotificationDiagnostics();
 			RefreshGestureDiagnostics();
 			RefreshPermissionDiagnostics();
 			RefreshAttDiagnostics();
+		}
+
+		private void RefreshNotificationDiagnostics()
+		{
+			if (_notificationStatus == null)
+			{
+				return;
+			}
+
+			var target = MobileNotificationSimulation.ActiveTarget;
+			if (target == null)
+			{
+				_notificationStatus.text = "Not connected — generic preview only.";
+				_deliverNextNotificationButton?.SetEnabled(false);
+				return;
+			}
+
+			_notificationStatus.text = $"Connected: {target.DisplayName} ({target.PendingCount} pending)";
+			_deliverNextNotificationButton?.SetEnabled(target.PendingCount > 0);
 		}
 
 		private void RefreshGestureDiagnostics()

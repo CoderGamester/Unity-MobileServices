@@ -15,7 +15,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		public void Init()
 		{
 			_deepLink = new DeepLinkService();
-			_router = new DeepLinkRouter(_deepLink);
+			_router = new DeepLinkRouter(_deepLink, _ => { });
 		}
 
 		[TearDown]
@@ -27,10 +27,47 @@ namespace GameLoversEditor.MobileServices.Tests
 
 		[Test]
 		// ADMIT: DeepLinkRouter's constructor could stop rejecting a null IDeepLinkService with ArgumentNullException.
-		// RCR: DeepLinkRouter.cs DeepLinkRouter(IDeepLinkService) — throw ArgumentException instead of ArgumentNullException → RED (wrong exception type).
+		// RCR: DeepLinkRouter.cs DeepLinkRouter(IDeepLinkService, configure) — throw ArgumentException instead of ArgumentNullException → RED (wrong exception type).
 		public void Ctor_NullDeepLink_Throws()
 		{
-			Assert.Throws<ArgumentNullException>(() => new DeepLinkRouter(null));
+			Assert.Throws<ArgumentNullException>(() => new DeepLinkRouter(null, _ => { }));
+		}
+
+		[Test]
+		// ADMIT: DeepLinkRouter's constructor could accept a null configuration callback and leave a
+		// router with no deterministic route setup.
+		// RCR: DeepLinkRouter.cs DeepLinkRouter — remove the configure null guard → RED (expected ArgumentNullException).
+		public void Ctor_NullConfigure_Throws()
+		{
+			Assert.Throws<ArgumentNullException>(() => new DeepLinkRouter(_deepLink, null));
+		}
+
+		[Test]
+		// ADMIT: DeepLinkRouter could subscribe before invoking configure, causing a cold-start link to
+		// be dispatched before routes exist.
+		// RCR: DeepLinkRouter.cs constructor — move `_deepLink.OnLinkActivated += OnLinkActivated` above
+		// `configure(this)` → RED (handler never fires for the synchronously replayed link).
+		public void Ctor_ConfiguresBeforeSubscription()
+		{
+			var received = 0;
+			var replaying = new ReplayingDeepLinkService(new Uri("myapp://settings"));
+			var router = new DeepLinkRouter(replaying, configured =>
+				configured.MapRoute("/settings", (_, __) => received++));
+			Assert.AreEqual(1, received);
+			router.Dispose();
+		}
+
+		[Test]
+		// ADMIT: DeepLinkRouter could subscribe before invoking a configuration callback that throws,
+		// leaving a dangling event handler on the caller-owned service.
+		// RCR: DeepLinkRouter.cs constructor — move subscription before configure → RED (add count expected 0, was 1).
+		public void Ctor_ConfigurationFailure_DoesNotSubscribe()
+		{
+			var service = new TrackingDeepLinkService();
+
+			Assert.Throws<InvalidOperationException>(() => new DeepLinkRouter(service, _ =>
+				throw new InvalidOperationException("configuration failed")));
+			Assert.AreEqual(0, service.AddCount);
 		}
 
 		[Test]
@@ -131,6 +168,56 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			_router.MapRoute("/x", (_, __) => { });
 			Assert.IsFalse(_router.TryDispatch(null));
+		}
+
+		[Test]
+		// ADMIT: DeepLinkRouter.Dispose could leave its public route operations callable after ownership ends.
+		// RCR: DeepLinkRouter.cs ThrowIfDisposed — replace ObjectDisposedException with return → RED
+		// (expected ObjectDisposedException).
+		public void Dispose_IsIdempotentAndGuardsOperations()
+		{
+			_router.Dispose();
+			Assert.DoesNotThrow(_router.Dispose);
+			Assert.Throws<ObjectDisposedException>(() => _router.MapRoute("/x", (_, __) => { }));
+			Assert.Throws<ObjectDisposedException>(() => _router.RemoveRoute("/x"));
+			Assert.Throws<ObjectDisposedException>(() => _router.TryDispatch(new Uri("myapp://x")));
+		}
+
+		private sealed class ReplayingDeepLinkService : IDeepLinkService
+		{
+			private readonly Uri _coldStart;
+			private bool _replayed;
+
+			public event Action<Uri> OnLinkActivated
+			{
+				add
+				{
+					if (_replayed) return;
+					_replayed = true;
+					value(_coldStart);
+				}
+				remove { }
+			}
+
+			public Uri PendingColdStartLink => _replayed ? null : _coldStart;
+
+			public ReplayingDeepLinkService(Uri coldStart) => _coldStart = coldStart;
+		}
+
+		private sealed class TrackingDeepLinkService : IDeepLinkService
+		{
+			public int AddCount { get; private set; }
+
+			public event Action<Uri> OnLinkActivated
+			{
+				add
+				{
+					AddCount++;
+				}
+				remove { }
+			}
+
+			public Uri PendingColdStartLink => null;
 		}
 	}
 }

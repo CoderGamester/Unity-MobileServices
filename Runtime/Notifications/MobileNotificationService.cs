@@ -34,7 +34,7 @@ namespace GameLovers.MobileServices.Notifications
 		/// Gets a collection of notifications that are scheduled or queued.
 		/// </summary>
 		IReadOnlyList<PendingNotification> PendingNotifications { get; }
-		
+
 		/// <summary>
 		/// Create a new instance of a <see cref="IGameNotification"/> for this platform.
 		/// </summary>
@@ -71,12 +71,13 @@ namespace GameLovers.MobileServices.Notifications
 		/// </summary>
 		void DismissAllDisplayedNotifications();
 	}
-	
+
 	/// <inheritdoc />
-	public class MobileNotificationService : INotificationService
+	public class MobileNotificationService : INotificationService, IDisposable
 	{
 		private readonly GameNotificationsMonoBehaviour _monoBehaviour;
 		private readonly GameNotificationChannel[] _channels;
+		private bool _disposed;
 
 		/// <inheritdoc />
 		public event Action<PendingNotification> OnLocalNotificationDeliveredEvent;
@@ -84,18 +85,33 @@ namespace GameLovers.MobileServices.Notifications
 		public event Action<PendingNotification> OnLocalNotificationExpiredEvent;
 
 		/// <inheritdoc />
-		public IReadOnlyList<PendingNotification> PendingNotifications => _monoBehaviour.PendingNotifications;
+		public IReadOnlyList<PendingNotification> PendingNotifications
+		{
+			get
+			{
+				ThrowIfDisposed();
+				return _monoBehaviour.PendingNotifications;
+			}
+		}
 
 		/// <inheritdoc />
 		public OperatingMode Mode
 		{
-			get => _monoBehaviour.Mode;
-			set => _monoBehaviour.Mode = value;
+			get
+			{
+				ThrowIfDisposed();
+				return _monoBehaviour.Mode;
+			}
+			set
+			{
+				ThrowIfDisposed();
+				_monoBehaviour.Mode = value;
+			}
 		}
 
 		/// <summary>The queueing / delivery mode the host MonoBehaviour was configured with.</summary>
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
-		internal OperatingMode CurrentMode => _monoBehaviour != null ? _monoBehaviour.Mode : OperatingMode.NoQueue;
+		internal OperatingMode CurrentMode => !_disposed && _monoBehaviour != null ? _monoBehaviour.Mode : OperatingMode.NoQueue;
 
 		/// <summary>The channels passed to the constructor (Android default-channel-id resolution + Explorer display).</summary>
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
@@ -110,13 +126,14 @@ namespace GameLovers.MobileServices.Notifications
 			_monoBehaviour.OnLocalNotificationDelivered = notification => OnLocalNotificationDeliveredEvent?.Invoke(notification);
 			_monoBehaviour.OnLocalNotificationExpired = notification => OnLocalNotificationExpiredEvent?.Invoke(notification);
 
-			_monoBehaviour.Initialize(channels);
+			_monoBehaviour.Initialize(_channels);
 			UnityEngine.Object.DontDestroyOnLoad(_monoBehaviour);
 		}
 
 		/// <inheritdoc />
 		public IGameNotification CreateNotification()
 		{
+			ThrowIfDisposed();
 #if UNITY_EDITOR
 			return new EditorGameNotification();
 #else
@@ -127,13 +144,15 @@ namespace GameLovers.MobileServices.Notifications
 		/// <inheritdoc />
 		public PendingNotification ScheduleNotification(IGameNotification gameNotification)
 		{
+			ThrowIfDisposed();
+			if (gameNotification == null) throw new ArgumentNullException(nameof(gameNotification));
 #if UNITY_EDITOR
 			if (!gameNotification.Id.HasValue)
-            {
-                // Generate an ID for items that don't have one (just so they can be identified later)
-                gameNotification.Id = Math.Abs(DateTime.Now.ToString("yyMMddHHmmssffffff").GetHashCode());
-            }
-			return new PendingNotification(gameNotification);
+			{
+				// Editor scheduling needs an ID so the in-memory pending item remains cancellable.
+				gameNotification.Id = Math.Abs(DateTime.Now.ToString("yyMMddHHmmssffffff").GetHashCode());
+			}
+			return _monoBehaviour.RegisterPendingNotification(gameNotification);
 #else
 			return _monoBehaviour.ScheduleNotification(gameNotification);
 #endif
@@ -142,25 +161,76 @@ namespace GameLovers.MobileServices.Notifications
 		/// <inheritdoc />
 		public void CancelNotification(int notificationId)
 		{
+			ThrowIfDisposed();
 			_monoBehaviour.CancelNotification(notificationId);
 		}
 
 		/// <inheritdoc />
 		public void DismissNotification(int notificationId)
 		{
+			ThrowIfDisposed();
 			_monoBehaviour.DismissNotification(notificationId);
 		}
 
 		/// <inheritdoc />
 		public void CancelAllScheduledNotifications()
 		{
+			ThrowIfDisposed();
 			_monoBehaviour.CancelAllNotifications();
 		}
 
 		/// <inheritdoc />
 		public void DismissAllDisplayedNotifications()
 		{
+			ThrowIfDisposed();
 			_monoBehaviour.DismissAllNotifications();
+		}
+
+		/// <summary>
+		/// Detaches notification callbacks and destroys this service's host. Notifications already handed
+		/// to the operating system are not cancelled; callers may safely dispose and recreate the service.
+		/// </summary>
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			OnLocalNotificationDeliveredEvent = null;
+			OnLocalNotificationExpiredEvent = null;
+
+			if (_monoBehaviour == null)
+			{
+				return;
+			}
+
+#if UNITY_EDITOR
+			if (!Application.isPlaying)
+			{
+				UnityEngine.Object.DestroyImmediate(_monoBehaviour.gameObject);
+				return;
+			}
+#endif
+			UnityEngine.Object.Destroy(_monoBehaviour.gameObject);
+		}
+
+#if UNITY_EDITOR
+		/// <summary>Delivers a pending notification through the editor simulator without changing scheduling behavior.</summary>
+		internal bool TrySimulateDelivery(int notificationId)
+		{
+			ThrowIfDisposed();
+			return _monoBehaviour.TrySimulateDelivery(notificationId);
+		}
+#endif
+
+		private void ThrowIfDisposed()
+		{
+			if (_disposed)
+			{
+				throw new ObjectDisposedException(nameof(MobileNotificationService));
+			}
 		}
 	}
 }

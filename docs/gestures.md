@@ -58,10 +58,6 @@ public struct TapInput
 }
 ```
 
-## Debug overlay
-
-`GestureController` has a `[SerializeField] Text _label` ("Debug" header). Assigning it surfaces per-gesture metrics live — useful for tuning the thresholds. Leave null in production.
-
 ## NOT in the umbrella facade
 
 The `IMobileService` umbrella doesn't expose Gestures — `GestureController` is a per-scene MonoBehaviour, not a service-locator-style service. Add it to scenes that need it; subscribe from your input controller.
@@ -70,4 +66,4 @@ The `IMobileService` umbrella doesn't expose Gestures — `GestureController` is
 
 - Editor pointer simulation requires `TouchSimulation` on a scene GameObject (Unity Input System feature).
 - The Device Simulator panel's **Gestures** foldout finds the live `GestureController` via `Object.FindFirstObjectByType` and surfaces the last-detected swipe + tap metrics.
-- End-to-end gesture detection isn't unit-tested — it requires the Input System's `InputTestFixture`. Only the math (`ActiveGesture` / `SwipeInput` / `TapInput`) is covered. `GestureController` has a smoke test verifying subscribe/unsubscribe lifecycle.
+- Deterministic end-to-end Enhanced Touch injection isn't part of the package test assembly because it requires the Input System's `InputTestFixture`. The package covers gesture math, duplicate input-index resilience, and the controller's Enhanced Touch subscription lifecycle; imported-sample pointer behavior is verified through the real-input sample workflow.

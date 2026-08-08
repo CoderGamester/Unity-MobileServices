@@ -1,0 +1,28 @@
+.sample-root { background-color: rgb(25, 17, 9); color: rgb(255, 248, 238); font-size: 16px; }
+.sample-scroll { padding-left: 12px; padding-right: 12px; padding-top: 12px; padding-bottom: 24px; }
+.sample-hero { flex-shrink: 0; background-color: rgb(58, 38, 18); border-left-width: 4px; border-left-color: rgb(255, 193, 98); padding-left: 18px; padding-right: 18px; padding-top: 16px; padding-bottom: 16px; margin-bottom: 12px; }
+.sample-title { font-size: 34px; -unity-font-style: bold; color: rgb(255, 248, 238); margin-bottom: 6px; }
+.sample-subtitle { font-size: 17px; color: rgb(255, 220, 169); white-space: normal; }
+.sample-eyebrow { font-size: 13px; -unity-font-style: bold; color: rgb(255, 193, 98); margin-bottom: 5px; }
+.sample-status-card { flex-shrink: 0; background-color: rgb(42, 28, 13); border-left-width: 2px; border-left-color: rgb(181, 126, 58); padding-left: 14px; padding-right: 14px; padding-top: 12px; padding-bottom: 10px; margin-bottom: 12px; }
+.sample-status { color: rgb(255, 238, 207); font-size: 15px; white-space: normal; margin-bottom: 4px; }
+.sample-card { flex-shrink: 0; background-color: rgb(48, 32, 14); border-top-width: 1px; border-top-color: rgb(112, 76, 35); border-bottom-width: 1px; border-bottom-color: rgb(112, 76, 35); border-left-width: 1px; border-left-color: rgb(112, 76, 35); border-right-width: 1px; border-right-color: rgb(112, 76, 35); padding-left: 16px; padding-right: 16px; padding-top: 14px; padding-bottom: 14px; margin-bottom: 12px; }
+.sample-section { font-size: 21px; -unity-font-style: bold; color: rgb(255, 203, 124); margin-bottom: 4px; }
+.sample-card-description { color: rgb(235, 211, 172); font-size: 15px; white-space: normal; margin-bottom: 12px; }
+.sample-action-grid { flex-shrink: 0; flex-direction: row; flex-wrap: wrap; align-items: stretch; }
+.sample-button { flex-shrink: 0; min-width: 148px; min-height: 44px; flex-grow: 1; background-color: rgb(75, 51, 23); border-top-width: 1px; border-top-color: rgb(255, 193, 98); border-bottom-width: 1px; border-bottom-color: rgb(255, 193, 98); border-left-width: 1px; border-left-color: rgb(255, 193, 98); border-right-width: 1px; border-right-color: rgb(255, 193, 98); color: rgb(255, 248, 238); font-size: 16px; -unity-font-style: bold; white-space: normal; margin-right: 8px; margin-bottom: 8px; padding-left: 12px; padding-right: 12px; }
+.sample-primary-action { flex-shrink: 0; min-height: 48px; background-color: rgb(255, 193, 98); border-top-width: 1px; border-top-color: rgb(255, 232, 190); border-bottom-width: 1px; border-bottom-color: rgb(255, 232, 190); border-left-width: 1px; border-left-color: rgb(255, 232, 190); border-right-width: 1px; border-right-color: rgb(255, 232, 190); color: rgb(45, 27, 7); font-size: 17px; -unity-font-style: bold; }
+.sample-log { flex-shrink: 0; background-color: rgb(31, 20, 8); border-left-width: 3px; border-left-color: rgb(255, 193, 98); color: rgb(255, 246, 230); font-size: 15px; white-space: normal; padding-left: 12px; padding-right: 12px; padding-top: 12px; padding-bottom: 12px; min-height: 96px; }
+.sample-help-card { flex-shrink: 0; background-color: rgb(39, 26, 12); border-left-width: 2px; border-left-color: rgb(181, 126, 58); padding-left: 14px; padding-right: 14px; padding-top: 12px; padding-bottom: 12px; margin-top: 2px; }
+.sample-caption { color: rgb(239, 219, 187); font-size: 14px; white-space: normal; }
+.sample-button, .sample-primary-action { transition-property: background-color, border-color, scale, translate, opacity; transition-duration: 120ms; transition-timing-function: ease-out; }
+.sample-button:hover { background-color: rgb(98, 67, 31); }
+.sample-button:active { background-color: rgb(53, 35, 15); scale: 0.98; translate: 0 1px; }
+.sample-button:focus { border-color: rgb(255, 248, 238); }
+.sample-button:disabled { opacity: 0.45; scale: 1; translate: 0 0; }
+.sample-button--pressed { background-color: rgb(53, 35, 15); scale: 0.96; translate: 0 2px; opacity: 0.92; }
+.sample-primary-action.sample-button--pressed { background-color: rgb(222, 155, 61); }
+.sample-primary-action:hover { background-color: rgb(255, 213, 145); }
+.sample-primary-action:active { background-color: rgb(222, 155, 61); scale: 0.98; translate: 0 1px; }
+.sample-primary-action:focus { border-color: rgb(255, 248, 238); }
+.sample-primary-action:disabled { opacity: 0.45; scale: 1; translate: 0 0; }

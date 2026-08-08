@@ -11,6 +11,17 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class SafeAreaContainerTest
 	{
 		[Test]
+		// ADMIT: A scaled PanelSettings layout could apply screen-pixel safe insets directly as panel units,
+		// pushing content farther from a notch as the panel scale increases.
+		// RCR: SafeAreaContainer.cs ScreenPixelsToPanelUnits — return screenPixels unchanged → RED (92 expected 41.43).
+		public void ScreenPixelsToPanelUnits_ScaledPanel_ConvertsInsetToPanelCoordinates()
+		{
+			var converted = SafeAreaContainer.ScreenPixelsToPanelUnits(92f, 2.220833f);
+
+			Assert.AreEqual(41.43f, converted, 0.01f);
+		}
+
+		[Test]
 		// ADMIT: SafeAreaContainer.SetSafeAreaService could subscribe without applying the current safe area, leaving the container unpadded until the next change.
 		// RCR: SafeAreaContainer.cs SetSafeAreaService — drop the trailing `Apply()` → RED (paddingLeft expected 10 was 0).
 		public void SetSafeAreaService_AppliesPaddingFromCurrentSafeArea()
@@ -72,11 +83,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			public int HandlerCount;
 
-			public FakeSafeAreaService(Rect safeArea)
-			{
-				SafeArea = safeArea;
-			}
-
 			public Rect SafeArea { get; private set; }
 
 			private event Action<Rect> _onChanged;
@@ -85,6 +91,11 @@ namespace GameLoversEditor.MobileServices.Tests
 			{
 				add { _onChanged += value; HandlerCount++; }
 				remove { _onChanged -= value; HandlerCount--; }
+			}
+
+			public FakeSafeAreaService(Rect safeArea)
+			{
+				SafeArea = safeArea;
 			}
 
 			public void RaiseChanged(Rect newArea)

@@ -1,17 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.InputSystem.EnhancedTouch;
-using UnityEngine.Serialization;
-using UnityEngine.UI;
 using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace GameLovers.MobileServices.Gestures
 {
     /// <summary>
-    /// Controller that interprets takes pointer input from <see cref="Touch"/> and detects
-    /// directional swipes and detects taps.
+    /// Controller that interprets pointer input from <see cref="Touch"/> and detects
+    /// directional swipes and taps.
     /// </summary>
     public class GestureController : MonoBehaviour
     {
@@ -38,12 +35,9 @@ namespace GameLovers.MobileServices.Gestures
         [SerializeField]
         private float _swipeDirectionSamenessThreshold = 0.6f;
 
-        [FormerlySerializedAs("label")]
-        [Header("Debug"), SerializeField]
-        private Text _label;
-
-        // Mapping of input IDs to their active gesture tracking objects.
         private readonly Dictionary<int, ActiveGesture> _activeGestures = new Dictionary<int, ActiveGesture>();
+
+        private bool _isSubscribedToFingerEvents;
 
         /// <summary>
         /// Event fired when the user presses on the screen.
@@ -74,6 +68,7 @@ namespace GameLovers.MobileServices.Gestures
             Touch.onFingerDown += OnFingerDown;
             Touch.onFingerMove += OnFingerMove;
             Touch.onFingerUp += OnFingerUp;
+            _isSubscribedToFingerEvents = true;
         }
 
         /// <summary>
@@ -81,10 +76,28 @@ namespace GameLovers.MobileServices.Gestures
         /// </summary>
         protected virtual void OnDisable()
         {
-            Touch.onFingerDown -= OnFingerDown;
-            Touch.onFingerMove -= OnFingerMove;
-            Touch.onFingerUp -= OnFingerUp;
-            EnhancedTouchSupport.Disable();
+            if (_isSubscribedToFingerEvents && EnhancedTouchSupport.enabled)
+            {
+                Touch.onFingerDown -= OnFingerDown;
+                Touch.onFingerMove -= OnFingerMove;
+                Touch.onFingerUp -= OnFingerUp;
+            }
+
+            _isSubscribedToFingerEvents = false;
+
+            if (EnhancedTouchSupport.enabled)
+            {
+                EnhancedTouchSupport.Disable();
+            }
+        }
+
+        /// <summary>Tracks a press, replacing any stale gesture that uses the same input identifier.</summary>
+        internal void OnPressed(int inputId, Vector2 position, double time)
+        {
+            var newGesture = new ActiveGesture(inputId, position, time);
+            _activeGestures[inputId] = newGesture;
+
+            Pressed?.Invoke(new SwipeInput(newGesture));
         }
 
         private void OnFingerDown(Finger finger)
@@ -120,18 +133,6 @@ namespace GameLovers.MobileServices.Gestures
                 (gesture.EndTime - gesture.StartTime) <= _maxTapDuration;
         }
 
-        private void OnPressed(int inputId, Vector2 position, double time)
-        {
-            Debug.Assert(!_activeGestures.ContainsKey(inputId));
-
-            var newGesture = new ActiveGesture(inputId, position, time);
-            _activeGestures.Add(inputId, newGesture);
-
-            DebugInfo(newGesture);
-
-            Pressed?.Invoke(new SwipeInput(newGesture));
-        }
-
         private void OnDragged(int inputId, Vector2 position, double time)
         {
             if (!_activeGestures.TryGetValue(inputId, out var existingGesture))
@@ -147,7 +148,6 @@ namespace GameLovers.MobileServices.Gestures
                 PotentiallySwiped?.Invoke(new SwipeInput(existingGesture));
             }
 
-            DebugInfo(existingGesture);
         }
 
         private void OnReleased(int inputId, Vector2 position, double time)
@@ -171,45 +171,6 @@ namespace GameLovers.MobileServices.Gestures
                 Tapped?.Invoke(new TapInput(existingGesture));
             }
 
-            DebugInfo(existingGesture);
-        }
-
-        private void DebugInfo(ActiveGesture gesture)
-        {
-            if (_label == null) return;
-
-            var builder = new StringBuilder();
-
-            builder.AppendFormat("ID: {0}", gesture.InputId);
-            builder.AppendLine();
-            builder.AppendFormat("Start Position: {0}", gesture.StartPosition);
-            builder.AppendLine();
-            builder.AppendFormat("Position: {0}", gesture.EndPosition);
-            builder.AppendLine();
-            builder.AppendFormat("Duration: {0}", gesture.EndTime - gesture.StartTime);
-            builder.AppendLine();
-            builder.AppendFormat("Sameness: {0}", gesture.SwipeDirectionSameness);
-            builder.AppendLine();
-            builder.AppendFormat("Travel distance: {0}", gesture.TravelDistance);
-            builder.AppendLine();
-            builder.AppendFormat("Samples: {0}", gesture.Samples);
-            builder.AppendLine();
-            builder.AppendFormat("Realtime since startup: {0}", Time.realtimeSinceStartup);
-            builder.AppendLine();
-            builder.AppendFormat("Starting Timestamp: {0}", gesture.StartTime);
-            builder.AppendLine();
-            builder.AppendFormat("Ending Timestamp: {0}", gesture.EndTime);
-            builder.AppendLine();
-
-            _label.text = builder.ToString();
-
-            if (Camera.main == null) return;
-
-            var worldStart = Camera.main.ScreenToWorldPoint(gesture.StartPosition);
-            var worldEnd = Camera.main.ScreenToWorldPoint(gesture.EndPosition);
-
-            worldStart.z += 5;
-            worldEnd.z += 5;
         }
     }
 }

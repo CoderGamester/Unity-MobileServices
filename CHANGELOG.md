@@ -24,16 +24,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Device Simulator Plugin**: An embedded Unity Device Simulator panel provides platform-shaped native UI mocks, live diagnostics, and a per-preset haptic envelope graph.
 - **Mobile Services Config asset**: Configure localized permission descriptions, capability toggles, Android manifest opt-ins, and Play In-App Review Gradle setup from `Tools > GameLovers > Mobile Services > Select Mobile Services Config`.
 - **Build Postprocessor**: Automatically inject iOS usage descriptions and entitlements, Android manifest entries, and the Play In-App Review Gradle dependency, with validation for missing configuration.
-- **Samples**: Added `MobileServicesPlayground`, `HapticsPalette`, `NotificationsScheduler`, and `DeepLinkRouter`.
+- **Samples**: Added one importable **Mobile Services Samples** bundle containing independently playable Playground, Haptics Palette, Notifications Scheduler, and Deep Link Router scenes.
 - **Documentation**: Added subsystem references and editor-tooling guides for the Device Simulator and build pipeline.
 
 **Changed**:
 - Consolidated the package under the `com.gamelovers.mobileservices` package name, `GameLovers.MobileServices.*` namespaces, and `GameLovers.MobileServices` assembly.
-- Updated the package baseline to Unity 6 (6000.0+) and added the Unity Mobile Notifications and Input System dependencies.
+- Updated the package baseline to Unity 6 and documented the supported 6000.5.7f1, 6000.3.21f1, and 6000.0.81f1 validation editors.
+- Moved sample build menus, the UI Toolkit build window, temporary configuration, and the Deep Link native hook into the optional sample bundle; the package retains only consumer-wide native build integration under `Editor/NativeBuild`.
+- Reworked the imported Mobile Services sample bundle into one four-scene player with persistent Overview, Haptics, Notifications, and Links navigation; deep links now open Links automatically.
+- Consolidated the imported sample documentation into one bundle-root README with sections for all four views, replacing duplicated controller-level guides.
+- Replaced the sample build window and per-scene builds with generic **Build All** / **Restore All** menu commands. Build All prepares the canonical four-scene Build Profile/global scene list and opens Unity's native build UI; Restore All uses session-scoped exact scene restoration while the build preprocessor applies combined native requirements without modifying the persisted config asset or `EditorPrefs`.
+- Standardized sample status cards on one `Field: Value` per line with `Yes`/`No` booleans and multi-line notification pending details.
+- Migrated sample UI Toolkit input to Unity 6 InputForUI and removed the package's `com.unity.ugui` dependency; consumers use the package's existing Input System requirement with Active Input Handling set to **Input System Package (New)** or **Both**.
 
 **Fixed**:
 - Fixed persisted notifications so nullable IDs, badge numbers, and delivery times survive background/foreground rescheduling.
 - Fixed local notification delivered and expired events so subscribers added after service construction receive callbacks.
+- Fixed generated Android manifest mutation to run against the generated application manifest, with namespace-aware activity selection and fail-fast ambiguity handling.
+- Fixed editor notification scheduling so generated notifications appear in the pending collection.
+- Fixed all sample ScrollViews and built-in controls by assigning a self-contained default runtime UI Toolkit theme to every bundled scene.
+- Fixed the Device Simulator's idle full-screen mock stage intercepting pointer input intended for sample UI beneath it.
+- Fixed sample navigation to fill the safe area so bottom tabs remain pinned while page content scrolls.
+- Fixed duplicate Enhanced Touch input indices from throwing during sample interaction, and removed the obsolete sample-test-only assembly grant and verifier path.
+- Fixed the Device Simulator overlay's transient panel theme and Notifications Scheduler's deprecated scene lookup warning.
+- Added palette-specific hover, press, focus and disabled button states plus committed `Selection` click haptics to every sample; haptic demonstration actions avoid a redundant second pulse.
+- Fixed simulator clicks that omit `PointerUpEvent` by clearing pressed states on committed clicks, and added gesture-based drag fallback when continuous UI Toolkit move events are unavailable.
+- Reorganized Notifications Scheduler actions into one responsive wrapping row; labels may use two lines and only wrap when the available width requires it.
+- Fixed editor notification cancellation so both individual pending rows and Cancel pending clear the sample's in-memory schedule when no native platform backend exists.
+- Fixed simulator scroll direction and drag arbitration so an upward content drag scrolls naturally and never commits a button action accidentally.
+- Connected the Notifications Scheduler sample's editor-owned notification service to the Device Simulator with explicit pending delivery, due-time simulation, and a generic-preview fallback.
 
 **Removed**:
 - Removed legacy tap detection; use the Unity Input System's `TapInteraction` instead.

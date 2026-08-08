@@ -9,7 +9,7 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](explorer.md) to preview platform-shaped mocks inside the simulated phone. |
 | `ShowAlertPopUp` throws `SystemException` | Running on an unsupported platform (Standalone, WebGL). Mobile-only API. |
 | iOS alert button callback fires the wrong handler | Two buttons in the same alert share their `Text`. iOS matches by text — keep button texts unique within a single alert. |
-| `RequestReview()` does nothing on Android | Missing `com.google.android.play:review:2.0.1` in `mainTemplate.gradle`. The call logs an error and returns; it does NOT throw. |
+| `RequestReview()` does nothing on Android | The generated Gradle project does not contain `com.google.android.play:review` (or the config opted out). The call logs an error and returns; it does NOT throw. |
 | `RequestReview()` doesn't show the prompt every time | Working as intended — both iOS `SKStoreReviewController` and Play In-App Review throttle the prompt frequency. |
 
 ## Notifications
@@ -61,7 +61,11 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | Symptom | Fix |
 |---------|-----|
 | iOS build fails with `[GameLovers.MobileServices] iOS build failed because…` | A referenced permission has an empty usage description. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` and fill the missing field (the `Fill missing English descriptions with suggested copy` button is a quick start), or enable `Manage Native Build Manually` if you manage `Info.plist` yourself. |
-| Android build doesn't pick up `<uses-permission>` entries | Your project lacks `Assets/Plugins/Android/mainTemplate.xml`. Enable `Player Settings > Publishing Settings > Custom Main Manifest` and rebuild. |
+| Android build doesn't pick up `<uses-permission>` entries | Inspect the generated application manifest, not `mainTemplate.xml`. The postprocessor fails when it cannot uniquely identify Unity's application activity; enable `Manage Native Build Manually` only when another build tool owns the manifest. |
+| The Mobile Samples build menu is missing | Import the single **Mobile Services Samples** entry from Package Manager and wait for its editor assembly to compile. The package alone intentionally does not install sample menus. |
+| Build All reports a missing scene | Remove the incomplete imported bundle and import **Mobile Services Samples** again. Build All resolves all four scenes by stable asset GUID and does not depend on the currently open scene. |
+| **Build All** is disabled | Exit Play Mode and wait for compilation or another player build to finish. The command then installs the canonical four-scene list and opens Unity's native Build Profiles window. |
+| **Restore All** is disabled | There is no current-session Build All snapshot. Restore state intentionally survives domain reloads but not closing Unity; re-run Build All to capture the current scene list. |
 | The Mobile Services panel is missing from the Device Simulator | Open `Window > General > Device Simulator` and look in the Control Panel column. The panel is auto-discovered; if it's absent, ensure the `GameLovers.MobileServices.Editor` assembly compiled (check the Console for errors). |
 | Mocks fired from the panel don't render | The overlay paints into the Game / Simulator view — keep the Device Simulator window open (the overlay is alive only while the Device Simulator panel is open). |
 | Simulator overlay shows generic Unity dialogs | The simulator USS files didn't load. Verify `Editor/Explorer/Overlays/MobileSimulator.Common.uss` is present in the package and re-import. |

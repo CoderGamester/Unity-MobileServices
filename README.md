@@ -1,6 +1,6 @@
 # GameLovers Mobile Services
 
-[![Unity Version](https://img.shields.io/badge/Unity-6000.0%2B-blue.svg)](https://unity3d.com/get-unity/download)
+[![Unity Version](https://img.shields.io/badge/Unity-6000.0%20%7C%206000.3%20%7C%206000.5-blue.svg)](https://unity3d.com/get-unity/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/github/v/tag/CoderGamester/com.gamelovers.mobileservices?label=version)](CHANGELOG.md)
 
@@ -24,15 +24,23 @@ Building mobile-specific features in Unity often requires dealing with platform-
 | **Forgotten `Info.plist` keys → App Store rejection** | Mobile Services Config asset + build postprocessor auto-inject `NS*UsageDescription` keys (localized per device language), entitlements, and Android manifest entries; fail-fast validation lists every missing key |
 | **Editor testing challenges** | A Device Simulator plugin panel paints platform-shaped mocks inside the simulated phone (edit + play) with live diagnostics; `EditorPlatformSimulator` drives state for unit tests |
 
-**Built for production:** Uses Unity's official packages (`com.unity.mobile.notifications`, `com.unity.inputsystem`). Tested in real mobile games.
+**Built for production:** Uses Unity's official Mobile Notifications and Input System packages. Tested in real mobile games.
 
 ---
 
 ## System Requirements
 
-- **[Unity](https://unity.com/download)** 6000.0+ (Unity 6)
+- **[Unity](https://unity.com/download)** Unity 6 only. The supported validation matrix is:
+
+  | Stream | Exact validation editor |
+  |---|---|
+  | Primary 6000.5.x | 6000.5.7f1 |
+  | Supported 6000.3.x | 6000.3.21f1 |
+  | Supported 6000.0.x | 6000.0.81f1 |
+
+  Other Unity versions are unsupported/untested.
 - **[Unity Mobile Notifications](https://docs.unity3d.com/Packages/com.unity.mobile.notifications@latest)** (2.3.0) — automatically resolved
-- **[Unity Input System](https://docs.unity3d.com/Packages/com.unity.inputsystem@latest)** (1.11.0) — automatically resolved
+- **[Unity Input System](https://docs.unity3d.com/Packages/com.unity.inputsystem@latest)** (1.11.0) — automatically resolved; set **Active Input Handling** to **Input System Package (New)** or **Both** so Unity 6 routes the sample's UI Toolkit input through InputForUI, without a uGUI dependency
 
 | Platform | Status |
 |---|---|
@@ -118,8 +126,10 @@ var att = await device.Att.RequestAuthorizationAsync();
 device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 
 // Or with the router:
-var router = new DeepLinkRouter(device.DeepLink);
-router.MapRoute("/promo/:id", (uri, p) => OpenPromo(p["id"]));
+var router = new DeepLinkRouter(device.DeepLink, routes =>
+{
+    routes.MapRoute("/promo/:id", (uri, p) => OpenPromo(p["id"]));
+});
 ```
 
 ### Haptics
@@ -153,7 +163,7 @@ var camera = await mobile.Device.Permissions.RequestAsync(AppPermission.Camera);
 | Service | Purpose |
 |---------|---------|
 | `NativeUiService` (static) + `INativeUiService` (instance) | Alerts, sheets, toasts, review, share |
-| `INotificationService` / `MobileNotificationService` | Local + remote notifications with channel CRUD, fluent `Schedule()` builder, 4 `OperatingMode`s |
+| `INotificationService` / `MobileNotificationService` | Local + remote notifications with channel registration, fluent `Schedule()` builder, and 4 `OperatingMode`s |
 | `GestureController` | EnhancedTouch swipe + tap detection |
 | `IHapticsService` / `HapticsService` | 9 cross-platform presets + custom intensity + time-bounded looping |
 | `IDeviceService` / `DeviceService` | Umbrella over `SafeArea`, `ScreenWake`, `Battery`, `AudioSession`, `Permissions`, `Att`, `DeepLink` |
@@ -167,9 +177,10 @@ For full per-subsystem API reference, see [`docs/`](docs/README.md).
 
 ## Editor tooling
 
-All Mobile Services editor tooling lives inside Unity's Device Simulator:
+Runtime simulation and diagnostics live inside Unity's Device Simulator:
 
 - **`Window > General > Device Simulator`** — a **Mobile Services** panel appears automatically in the Control Panel. It bundles the controls (alerts / toasts / share / haptics / notifications / gestures / permissions / ATT / app review), live-state diagnostics, and a per-preset haptic envelope graph. Firing a mock paints it **inside the simulated phone screen** at the right scale and safe area, in **edit and play mode** — no second window, no platform toggle to keep in sync (the skin auto-syncs from the selected device profile).
+- **Notification scheduler connection** — when the `NotificationsScheduler` sample is active in Play Mode, the panel's **Deliver next pending** action and due-time poll drive that sample's own service and paint its exact notification payload; without an active sample, **Show heads-up banner** remains a generic editor preview.
 - **`EditorPlatformSimulator`** — static API for driving device / permission / ATT / deep-link state from edit-mode tests and scripted automation.
 
 Plus a **Mobile Services Config** asset (open via **`Tools > GameLovers > Mobile Services > Select Mobile Services Config`**) for per-permission localized usage descriptions, capability toggles, and the auto-injection build postprocessor.
@@ -180,16 +191,18 @@ See [`docs/explorer.md`](docs/explorer.md) and [`docs/build-pipeline.md`](docs/b
 
 ## Samples
 
-Four code-only samples ship with the package — import via `Window > Package Manager > GameLovers.MobileServices > Samples`:
+Import the single **Mobile Services Samples** bundle from `Window > Package Manager > Mobile Services > Samples`. It is one sample with four ready-to-open UI Toolkit views. The imported bundle's single [sample README](Samples~/MobileServicesSamples/README.md) documents their shared setup and view-specific workflows.
 
 | Sample | Purpose |
 |--------|---------|
-| Mobile Services Playground | Kitchen-sink wiring proof for every subsystem. |
-| Haptics Palette | Designer iteration tool with sequence recorder + replay. |
-| Notifications Scheduler | Channel CRUD + `OperatingMode` lifecycle demo. |
-| Deep Link Router | `MapRoute` pattern + cold-start replay instructions. |
+| [Overview](Samples~/MobileServicesSamples/README.md#overview) | Native UI, permissions, device state, ATT, gestures, and safe-area wiring. |
+| [Haptics](Samples~/MobileServicesSamples/README.md#haptics) | Designer iteration tool with sequence recorder + replay. |
+| [Notifications](Samples~/MobileServicesSamples/README.md#notifications) | Fixed-channel scheduling/cancellation and `OperatingMode` lifecycle demo. |
+| [Links](Samples~/MobileServicesSamples/README.md#links) | Route-pattern, raw-link, and cold-start replay demo. |
 
-See [`docs/samples.md`](docs/samples.md) for setup details.
+Each scene opens directly from the Project window and remains independently playable. In the combined player, persistent bottom tabs navigate between **Overview**, **Haptics**, **Notifications**, and **Links**; a received OS deep link opens the Links tab automatically. Enter Play Mode before using buttons, fields, scrolling, or navigation in the Game/Simulator view; Unity 6 InputForUI routes input to UI Toolkit while the shared navigation supplies the gesture bridge, so no GameObject wiring is required. Every enabled button has visual hover/press/focus feedback and emits one `Selection` haptic when its click commits; a drag that crosses the scroll threshold cancels the button and scrolls instead. Sample ScrollViews are clamped, drag smoothly from content or controls (with a gesture fallback for simulator touch streams), and keep the bottom navigation pinned. Status cards use one `Field: Value` per line.
+
+The only supported player output contains all four scenes, starting on Overview. Choose **Tools > Mobile Samples Examples > Build All** to install that exact scene list and open Unity's native Build Profiles window. Choose **Restore All** in the same menu to restore the prior scene configuration during the current Unity session. These sample-owned menu items and their editor bridge are never included in player builds. See [`docs/samples.md`](docs/samples.md) for setup details.
 
 ---
 
@@ -207,6 +220,7 @@ See [`docs/samples.md`](docs/samples.md) for setup details.
 | [docs/build-pipeline.md](docs/build-pipeline.md) | Project Settings + build postprocessor (and manual fallback) |
 | [docs/samples.md](docs/samples.md) | Samples index |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Symptom-to-fix table |
+| [docs/superpowers/README.md](docs/superpowers/README.md) | Approved design records and implementation plans |
 | [AGENTS.md](AGENTS.md) | Contributor/agent guide (architecture, gotchas, workflows) |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

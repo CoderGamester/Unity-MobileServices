@@ -1,6 +1,6 @@
 # Build Pipeline & Config
 
-The package ships a build postprocessor (`MobileServicesBuildPostprocessor`) and a `MobileServicesConfig` asset that together automate the iOS Info.plist / .entitlements / Android manifest / gradle mutations the framework's permission and capability surface needs.
+The package ships a consumer-wide postprocessor (`Editor/NativeBuild/MobileServicesBuildPostprocessor.cs`) and a `MobileServicesConfig` asset that together automate the iOS Info.plist / .entitlements / Android manifest / gradle mutations the framework's permission and capability surface needs. Sample-only build tools live inside the optional **Mobile Services Samples** bundle.
 
 ## Mobile Services Config asset
 
@@ -39,12 +39,9 @@ Idempotent — re-running against the same Xcode project produces no diff if the
 
 ### Android injection step
 
-Patches `Assets/Plugins/Android/mainTemplate.xml`:
+Android permissions and share queries are applied to the **generated Gradle project's manifest** from `IPostGenerateGradleAndroidProject`. The postprocessor parses XML with namespace-aware APIs, locates the one manifest containing Unity's actual `UnityPlayerActivity` or `UnityPlayerGameActivity`, and adds configured `<uses-permission>` entries and the optional `ACTION_SEND` `<queries>` block idempotently. If no manifest or more than one candidate activity manifest is found, the build fails with an actionable `BuildFailedException` instead of silently editing `mainTemplate.xml` or the wrong library manifest.
 
-- Appends `<uses-permission android:name="..." />` entries for the configured toggles (Camera, Mic, Location, Photo Library, Notifications). Idempotent (skips entries already present).
-- Appends a `<queries><intent><action android:name="android.intent.action.SEND" /><data android:mimeType="*/*" /></intent></queries>` block when the share-chooser opt-in is on (Android 11+ visibility requirement for share targets).
-
-If `mainTemplate.xml` is absent, the postprocessor logs a warning pointing at `Player Settings > Publishing Settings > Custom Main Manifest` — Unity won't generate one automatically.
+The package no longer mutates `Assets/Plugins/Android/mainTemplate.xml` after the build. This matters because post-build edits to that template cannot affect the already-generated player. Consumers that manage a custom manifest manually can enable `Manage Native Build Manually`.
 
 ### Android Gradle dependency step (Play In-App Review)
 
@@ -53,6 +50,18 @@ If `mainTemplate.xml` is absent, the postprocessor logs a warning pointing at `P
 - **Conflict-safe**: it scans every `.gradle` file in the generated project and skips entirely if `com.google.android.play:review` is already declared by any source (hand-written gradle, EDM4U, another SDK) — it never double-declares or fights your version pin.
 - **Editable**: repoint `PlayReviewDependencyCoordinate` to an internal mirror or a pinned/forced version to resolve a Gradle conflict.
 - **Opt-out**: turn `Include Play Review dependency` off for non-Play targets (Amazon / Huawei / sideload) and declare it yourself.
+
+### Deep Link Router sample hook
+
+When the imported Links scene is present in the effective project build scenes, the bundle's editor assembly adds an Android `VIEW` intent filter with `DEFAULT` and `BROWSABLE` categories to the actual Unity activity. The iOS hook adds only an additive `CFBundleURLTypes` entry. No Push Notifications or Associated Domains entitlement is added for this sample. Deleting the sample bundle removes this hook; the package postprocessor contains no Deep Link sample path or type.
+
+The custom scheme is deterministic: the lower-case application identifier is filtered to ASCII letters, digits, `+`, `.`, and `-`; invalid runs become `-`, `gl-` is prefixed when the result does not start with a letter, and an empty result falls back to `gamelovers-mobile-sample`. This makes the same application identifier produce the same scheme in Android and iOS exports.
+
+### Combined sample player build
+
+After importing **Mobile Services Samples**, choose **Tools > Mobile Samples Examples > Build All**. The sample-owned command validates the four scenes, snapshots the effective global Build Settings or active overriding Build Profile in `SessionState`, installs the exact Overview-first scene sequence, then opens Unity's native Build Profiles window. Unity retains ownership of target selection, output location, and the final Build command.
+
+During a canonical four-scene player build, the sample preprocessor clones the effective config into a hidden in-memory object and applies the bundle's combined native requirements. The package postprocessor reads the clone while the build is active and falls back to the normal project config afterwards. Cleanup runs after the build and on a cancelled-build safety path. **Restore All** restores the captured scene list and enabled flags during the current Unity session. It never changes the persisted config asset or `EditorPrefs`; the session snapshot is unavailable after closing Unity.
 
 ## Build mutation map & escape hatches
 
@@ -63,8 +72,8 @@ Everything the package writes at build time, and how to override or disable each
 | iOS | Base (`en`) usage description strings | `Info.plist` | Per-permission text in the config asset; set the key yourself and it is not overwritten |
 | iOS | Localized usage descriptions + `CFBundleLocalizations` | `<locale>.lproj/InfoPlist.strings` | Add/remove `LocaleEntry` rows per permission/ATT; emitted only for non-`en` locales |
 | iOS | Push / Associated Domains capabilities | `GameLoversMobileServices.entitlements` | Per-capability toggles (see entitlements caveat below) |
-| Android | `<uses-permission>` entries | `mainTemplate.xml` | Per-permission Android-manifest toggles; skipped if already present |
-| Android | Share `<queries>` block | `mainTemplate.xml` | `IncludeShareQueriesBlock` toggle; skipped if `ACTION_SEND` already present |
+| Android | `<uses-permission>` entries | generated application manifest | Per-permission Android-manifest toggles; skipped if already present |
+| Android | Share `<queries>` block | generated application manifest | `IncludeShareQueriesBlock` toggle; skipped if `ACTION_SEND` already present |
 | Android | `com.google.android.play:review` dependency | generated `build.gradle` | `IncludePlayReviewDependency` toggle + editable `PlayReviewDependencyCoordinate`; skipped if already declared anywhere |
 
 Cross-cutting controls:
@@ -86,7 +95,7 @@ The scan is intentionally pessimistic for permissions — when permissions are r
 
 ## Manual fallback
 
-Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` by hand can opt out of the automation by leaving every capability toggle off in the config asset (or enabling `Manage Native Build Manually`). The postprocessor's validation step still runs but with nothing to inject. In that case, the configuration steps you need to follow:
+Teams that prefer to manage `Info.plist` / `.entitlements` / Android manifests by hand can opt out of the automation by leaving every capability toggle off in the config asset (or enabling `Manage Native Build Manually`). The postprocessor's validation step still runs but with nothing to inject. In that case, the configuration steps you need to follow:
 
 ### iOS Info.plist
 
@@ -107,7 +116,7 @@ Teams that prefer to manage `Info.plist` / `.entitlements` / `mainTemplate.xml` 
 | Push Notifications | `aps-environment` (set to `development` or `production`) |
 | Associated Domains | `com.apple.developer.associated-domains` array |
 
-### Android manifest
+### Android manifest (manual fallback)
 
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />

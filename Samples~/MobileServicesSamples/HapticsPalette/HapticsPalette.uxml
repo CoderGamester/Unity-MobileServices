@@ -1,0 +1,35 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:mobile="GameLovers.MobileServices.Device">
+    <Style src="HapticsPalette.uss" />
+    <Style src="../Shared/MobileServicesSampleNavigation.uss" />
+    <mobile:SafeAreaContainer name="root" class="sample-root">
+        <ui:VisualElement class="sample-layout">
+        <ui:ScrollView class="sample-scroll">
+            <ui:VisualElement class="sample-hero">
+                <ui:Label text="Haptics Palette" class="sample-title" />
+                <ui:Label text="Feel each preset, tune a custom vibration, then replay the sequence you recorded." class="sample-subtitle" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-status-card">
+                <ui:Label text="HAPTIC STATUS" class="sample-eyebrow" />
+                <ui:Label name="status" class="sample-status" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="1 · Pick a preset" class="sample-section" />
+                <ui:Label text="Natural plays once. 0.6s and Indefinite demonstrate duration-controlled feedback." class="sample-card-description" />
+                <ui:VisualElement name="preset-list" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="2 · Create a custom feel" class="sample-section" />
+                <ui:VisualElement class="sample-control-group"><ui:Label text="Intensity" class="sample-control-label" /><ui:Slider name="intensity" low-value="0" high-value="1" value="0.8" class="sample-slider" /></ui:VisualElement>
+                <ui:VisualElement class="sample-control-group"><ui:Label text="Duration (ms)" class="sample-control-label" /><ui:SliderInt name="duration-ms" low-value="20" high-value="2000" value="250" class="sample-slider" /></ui:VisualElement>
+                <ui:Button name="custom-play" text="Play custom haptic" class="sample-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="3 · Replay your sequence" class="sample-section" />
+                <ui:Label name="recording" text="Play a preset to begin recording." class="sample-log" />
+                <ui:VisualElement class="sample-action-grid"><ui:Button name="replay" text="Replay" class="sample-button" /><ui:Button name="clear" text="Clear sequence" class="sample-button" /><ui:Button name="stop" text="Stop haptic" class="sample-button" /></ui:VisualElement>
+            </ui:VisualElement>
+        </ui:ScrollView>
+        <ui:VisualElement name="sample-navigation" class="sample-navigation sample-navigation-host" />
+        </ui:VisualElement>
+    </mobile:SafeAreaContainer>
+</ui:UXML>

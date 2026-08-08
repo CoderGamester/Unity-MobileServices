@@ -1,0 +1,10 @@
+.sample-root, .sample-layout { flex-grow: 1; min-height: 0; }
+.sample-scroll { flex-grow: 1; min-height: 0; }
+.sample-navigation-host { flex-shrink: 0; }
+.sample-navigation { flex-shrink: 0; flex-direction: row; justify-content: space-around; background-color: rgba(0, 0, 0, 0.28); border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.22); padding: 8px 4px; }
+.sample-navigation-button { flex-grow: 1; min-width: 0; min-height: 44px; background-color: rgba(255, 255, 255, 0.08); border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.18); border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.18); border-left-width: 1px; border-left-color: rgba(255, 255, 255, 0.18); border-right-width: 1px; border-right-color: rgba(255, 255, 255, 0.18); color: rgb(255, 255, 255); font-size: 14px; -unity-font-style: bold; margin-left: 3px; margin-right: 3px; padding-left: 4px; padding-right: 4px; transition-property: background-color, border-color, scale, translate, opacity; transition-duration: 120ms; transition-timing-function: ease-out; }
+.sample-navigation-button:hover { background-color: rgba(255, 255, 255, 0.18); }
+.sample-navigation-button:active { background-color: rgba(0, 0, 0, 0.28); scale: 0.97; translate: 0 1px; }
+.sample-navigation-button:focus { border-color: rgb(255, 255, 255); }
+.sample-navigation-button.sample-button--pressed { background-color: rgba(0, 0, 0, 0.32); scale: 0.96; translate: 0 2px; opacity: 0.92; }
+.sample-navigation-button--current, .sample-navigation-button--current:disabled { opacity: 1; background-color: rgba(255, 255, 255, 0.3); border-bottom-width: 3px; border-bottom-color: rgb(255, 255, 255); color: rgb(255, 255, 255); }

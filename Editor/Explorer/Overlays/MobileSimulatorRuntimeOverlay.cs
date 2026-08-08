@@ -32,7 +32,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 		private static GameObject _hostObject;
 		private static OverlayController _controller;
+		private static PanelSettings _panelSettings;
 		private static bool _pluginActive;
+
+		private static bool ShouldBeAlive => _pluginActive;
 
 		static MobileSimulatorRuntimeOverlay()
 		{
@@ -51,8 +54,6 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			_pluginActive = active;
 			RefreshLifecycle();
 		}
-
-		private static bool ShouldBeAlive => _pluginActive;
 
 		private static void RefreshLifecycle()
 		{
@@ -80,10 +81,13 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 			var panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
 			panelSettings.name = "MobileSimulator.PanelSettings";
-			// short.MaxValue puts the overlay above any consumer UIDocument that hasn't explicitly
-			// claimed the same priority. Tie-breaks fall back to GameObject name lexicographic order;
-			// "[EditorOnly] ..." sorts near the top thanks to the leading bracket.
-			panelSettings.sortingOrder = short.MaxValue;
+			var themeStyleSheet = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+			themeStyleSheet.name = "MobileSimulator.ThemeStyleSheet";
+			themeStyleSheet.hideFlags = HideFlags.HideAndDontSave;
+			panelSettings.themeStyleSheet = themeStyleSheet;
+			// An empty UIDocument panel still consumes Game-view pointer events ahead of lower panels.
+			// Keep the simulator below a sample until it has a native mock to present.
+			panelSettings.sortingOrder = short.MinValue;
 			// Scale the mock USS (authored in logical-point units) UP to the device's native pixel
 			// grid. The Device Simulator reports Screen.width/height in PHYSICAL pixels (e.g. iPhone
 			// 15 Pro = 1179x2556), so ScaleWithScreenSize against a logical-phone reference resolution
@@ -112,9 +116,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}
 
 			var document = _hostObject.AddComponent<UIDocument>();
-			document.panelSettings = panelSettings;
+			_panelSettings = panelSettings;
+			document.panelSettings = _panelSettings;
 
-			_controller = new OverlayController(document.rootVisualElement);
+			_controller = new OverlayController(document);
 		}
 
 		private static void Teardown()
@@ -130,6 +135,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				_hostObject = null;
 			}
 			DestroyStaleHosts();
+			_panelSettings = null;
 		}
 
 		private static void DestroyStaleHosts()
@@ -155,8 +161,19 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			}
 		}
 
+		private static void SetOverlayPriority(bool aboveSample)
+		{
+			if (_panelSettings == null)
+			{
+				return;
+			}
+
+			_panelSettings.sortingOrder = aboveSample ? short.MaxValue : short.MinValue;
+		}
+
 		private sealed class OverlayController
 		{
+			private readonly UIDocument _document;
 			private readonly VisualElement _root;
 			private readonly VisualElement _stage;
 			private readonly VisualElement _watermark;
@@ -165,9 +182,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			private readonly StyleSheet _iosSheet;
 			private readonly StyleSheet _androidSheet;
 
-			internal OverlayController(VisualElement root)
+			internal OverlayController(UIDocument document)
 			{
-				_root = root;
+				_document = document;
+				_root = document.rootVisualElement;
 				_root.style.flexGrow = 1;
 				// Root must not absorb input — only the scrim of an active mock should be modal.
 				_root.pickingMode = PickingMode.Ignore;
@@ -200,6 +218,9 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 				_stage = new VisualElement { name = "simulator-stage" };
 				_stage.AddToClassList("simulator-stage");
+				// The stage fills the screen but must not become the top panel's idle hit target.
+				// Active mock children retain PickingMode.Position and remain intentionally modal.
+				_stage.pickingMode = PickingMode.Ignore;
 				rootContainer.Add(_stage);
 
 				_watermark = new VisualElement { name = "simulator-watermark" };
@@ -223,6 +244,13 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				MobileSimulatorState.NotificationBannerRequested += OnNotificationBanner;
 				MobileSimulatorState.PermissionDialogRequested += OnPermissionDialog;
 				MobileSimulatorState.DismissAllRequested += OnDismissAll;
+
+				// In Play Mode an otherwise empty top-level UIDocument prevents the sample's
+				// panel from receiving pointer input. Reattach only while rendering a mock.
+				if (Application.isPlaying)
+				{
+					_document.enabled = false;
+				}
 			}
 
 			internal void Dispose()
@@ -294,12 +322,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			private void OnAlert(SimulatedAlertSpec spec)
 			{
 				ClearStage();
+				ShowStage();
 				_stage.Add(MockBuilders.BuildAlert(MobileSimulatorState.Platform, spec, ClearStage));
 			}
 
 			private void OnToast(SimulatedToastSpec spec)
 			{
 				ClearStage();
+				ShowStage();
 				var toast = MockBuilders.BuildToast(MobileSimulatorState.Platform, spec);
 				_stage.Add(toast);
 				var seconds = spec.IsLongDuration ? 3.5f : 2.0f;
@@ -307,7 +337,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				{
 					if (_stage.Contains(toast))
 					{
-						_stage.Remove(toast);
+						ClearStage();
 					}
 				}).StartingIn((long)(seconds * 1000f));
 			}
@@ -315,25 +345,28 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			private void OnShare(SimulatedShareSpec spec)
 			{
 				ClearStage();
+				ShowStage();
 				_stage.Add(MockBuilders.BuildShareSheet(MobileSimulatorState.Platform, spec, ClearStage));
 			}
 
 			private void OnReview()
 			{
 				ClearStage();
+				ShowStage();
 				_stage.Add(MockBuilders.BuildReviewPrompt(MobileSimulatorState.Platform, ClearStage));
 			}
 
 			private void OnNotificationBanner(SimulatedNotificationBannerSpec spec)
 			{
 				ClearStage();
+				ShowStage();
 				var banner = MockBuilders.BuildNotificationBanner(MobileSimulatorState.Platform, spec);
 				_stage.Add(banner);
 				_root.schedule.Execute(() =>
 				{
 					if (_stage.Contains(banner))
 					{
-						_stage.Remove(banner);
+						ClearStage();
 					}
 				}).StartingIn(4000);
 			}
@@ -341,6 +374,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			private void OnPermissionDialog(SimulatedPermissionDialogSpec spec)
 			{
 				ClearStage();
+				ShowStage();
 				var dialog = MockBuilders.BuildPermissionDialog(MobileSimulatorState.Platform, spec, result =>
 				{
 					ClearStage();
@@ -354,6 +388,16 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 				ClearStage();
 			}
 
+			private void ShowStage()
+			{
+				if (Application.isPlaying)
+				{
+					_document.enabled = true;
+				}
+
+				SetOverlayPriority(true);
+			}
+
 			private void ClearStage()
 			{
 				if (_stage == null)
@@ -361,6 +405,11 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 					return;
 				}
 				_stage.Clear();
+				SetOverlayPriority(false);
+				if (Application.isPlaying)
+				{
+					_document.enabled = false;
+				}
 			}
 		}
 	}

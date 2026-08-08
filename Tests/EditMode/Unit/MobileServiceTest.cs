@@ -41,5 +41,48 @@ namespace GameLoversEditor.MobileServices.Tests
 				Substitute.For<IDeviceService>());
 			Assert.DoesNotThrow(mobile.Dispose);
 		}
+
+		[Test]
+		// ADMIT: MobileService.Dispose could omit a disposable child or dispose a child again on a repeated call.
+		// RCR: IMobileService.cs MobileService.Dispose — remove DisposeChild(NativeUi, disposed) → RED
+		// (native UI Dispose count expected 1, was 0).
+		public void Dispose_DisposesEachDistinctDisposableInstance_Once()
+		{
+			var nativeUi = Substitute.For<INativeUiService, System.IDisposable>();
+			var notifications = Substitute.For<INotificationService, System.IDisposable>();
+			var haptics = Substitute.For<IHapticsService, System.IDisposable>();
+			var device = Substitute.For<IDeviceService, System.IDisposable>();
+			var mobile = new MobileService(
+				nativeUi,
+				notifications,
+				haptics,
+				device);
+
+			mobile.Dispose();
+			mobile.Dispose();
+
+			((System.IDisposable)nativeUi).Received(1).Dispose();
+			((System.IDisposable)notifications).Received(1).Dispose();
+			((System.IDisposable)haptics).Received(1).Dispose();
+			((System.IDisposable)device).Received(1).Dispose();
+		}
+
+		[Test]
+		// ADMIT: MobileService.Dispose could invoke Dispose twice when two facade children share one instance.
+		// RCR: IMobileService.cs DisposeChild — replace the ReferenceEquals return with continue → RED
+		// (shared Dispose count expected 1, was 2).
+		public void Dispose_SharedDisposableChild_DisposesOnce()
+		{
+			var shared = Substitute.For<INotificationService, IDeviceService, System.IDisposable>();
+			var mobile = new MobileService(
+				Substitute.For<INativeUiService>(),
+				shared,
+				Substitute.For<IHapticsService>(),
+				(IDeviceService)shared);
+
+			mobile.Dispose();
+
+			((System.IDisposable)shared).Received(1).Dispose();
+		}
 	}
 }

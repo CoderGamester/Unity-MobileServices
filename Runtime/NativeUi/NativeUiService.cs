@@ -30,6 +30,13 @@ namespace GameLovers.MobileServices.NativeUi
 	/// </summary>
 	public static class NativeUiService
 	{
+#if UNITY_IOS
+		/// <summary>Native iOS callback signature; the button is identified by its text.</summary>
+		internal delegate void AlertButtonDelegate(string buttonText);
+
+		private static AlertButton[] _currentButtons;
+#endif
+
 #if UNITY_EDITOR
 		// Editor-only override hook consumed by EditorPlatformSimulator so the Device Simulator can model
 		// the real "shown when requested" review flow in the editor (mirroring the Permissions / ATT
@@ -129,7 +136,7 @@ namespace GameLovers.MobileServices.NativeUi
 		/// platform DOES surface an error (Android's Play flow cannot run — Play Core library missing,
 		/// the request flow failed, or launch threw), it is logged as a warning / error.
 		/// On Android the Play In-App Review library is auto-injected at build time by
-		/// <c>MobileServicesBuildPostprocessor</c> (Project Settings &gt; GameLovers &gt; Mobile Services).
+		/// <c>MobileServicesBuildPostprocessor</c> (Tools &gt; GameLovers &gt; Mobile Services &gt; Select Mobile Services Config).
 		/// If you opt out of that injection you must add it yourself to <c>mainTemplate.gradle</c>:
 		/// <c>implementation 'com.google.android.play:review:2.0.2'</c> (or newer). This never throws.
 		/// </remarks>
@@ -273,9 +280,6 @@ namespace GameLovers.MobileServices.NativeUi
 #endif
 
 #if UNITY_IOS
-		/// <summary>Native iOS callback signature; the button is identified by its text.</summary>
-		internal delegate void AlertButtonDelegate(string buttonText);
-
 		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversAlertMessage")]
 		private static extern void AlertMessage(bool isSheet, string title, string message, string[] buttonsText,
 			int[] buttonsStyle, int buttonsLength, AlertButtonDelegate alertButtonCallback);
@@ -306,8 +310,6 @@ namespace GameLovers.MobileServices.NativeUi
 				}
 			}
 		}
-
-		private static AlertButton[] _currentButtons;
 #elif UNITY_ANDROID
 		private class AndroidButtonCallback : AndroidJavaProxy
 		{

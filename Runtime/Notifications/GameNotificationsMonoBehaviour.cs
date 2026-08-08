@@ -33,14 +33,13 @@ namespace GameLovers.MobileServices.Notifications
 
         QueueClearAndReschedule = Queue | ClearOnForegrounding | RescheduleAfterClearing,
     }
-        
+
     /// <summary>
     /// Global notifications manager that serves as a wrapper for multiple platforms' notification systems.
     /// </summary>
     public sealed class GameNotificationsMonoBehaviour : MonoBehaviour
     {
-        
-        
+
         // Minimum amount of time that a notification should be into the future before it's queued when we background.
         private static readonly TimeSpan _minimumNotificationTime = new TimeSpan(0, 0, 2);
 
@@ -276,7 +275,7 @@ namespace GameLovers.MobileServices.Notifications
             foreach (var notificationChannel in channels)
             {
                 var platform = _platform as AndroidNotificationsPlatform;
-                
+
                 if (!doneDefault)
                 {
                     doneDefault = true;
@@ -361,12 +360,7 @@ namespace GameLovers.MobileServices.Notifications
                 throw new InvalidOperationException("Must call Initialize() first.");
             }
 
-            if (_platform == null)
-            {
-                return;
-            }
-
-            _platform.CancelNotification(notificationId);
+            _platform?.CancelNotification(notificationId);
 
             // Remove the cancelled notification from scheduled list
             var index = PendingNotifications.FindIndex(scheduledNotification =>
@@ -389,12 +383,7 @@ namespace GameLovers.MobileServices.Notifications
                 throw new InvalidOperationException("Must call Initialize() first.");
             }
 
-            if (_platform == null)
-            {
-                return;
-            }
-
-            _platform.CancelAllScheduledNotifications();
+            _platform?.CancelAllScheduledNotifications();
 
             PendingNotifications.Clear();
         }
@@ -428,6 +417,37 @@ namespace GameLovers.MobileServices.Notifications
             _platform?.DismissAllDisplayedNotifications();
         }
 
+        /// <summary>Registers an editor-only notification in the same pending collection used by runtime scheduling.</summary>
+        internal PendingNotification RegisterPendingNotification(IGameNotification notification)
+        {
+            if (notification == null)
+            {
+                throw new ArgumentNullException(nameof(notification));
+            }
+
+            var result = new PendingNotification(notification);
+            PendingNotifications.Add(result);
+            return result;
+        }
+
+#if UNITY_EDITOR
+        /// <summary>Delivers one pending notification through the normal foreground callback path for editor simulation.</summary>
+        internal bool TrySimulateDelivery(int notificationId)
+        {
+            int deliveredIndex = PendingNotifications.FindIndex(
+                pendingNotification => pendingNotification.Notification.Id == notificationId);
+            if (deliveredIndex < 0)
+            {
+                return false;
+            }
+
+            var pendingNotification = PendingNotifications[deliveredIndex];
+            PendingNotifications.RemoveAt(deliveredIndex);
+            OnLocalNotificationDelivered?.Invoke(pendingNotification);
+            return true;
+        }
+#endif
+
         // Event fired by _platform when a notification is received.
         private void OnNotificationReceived(IGameNotification deliveredNotification)
         {
@@ -440,7 +460,7 @@ namespace GameLovers.MobileServices.Notifications
             // Find in pending list
             int deliveredIndex = PendingNotifications.FindIndex(
                 scheduledNotification => scheduledNotification.Notification.Id == deliveredNotification.Id);
-            
+
             if (deliveredIndex >= 0)
             {
                 OnLocalNotificationDelivered?.Invoke(PendingNotifications[deliveredIndex]);
@@ -476,7 +496,7 @@ namespace GameLovers.MobileServices.Notifications
                     if (deliveryTime.HasValue && deliveryTime.Value > DateTime.Now)
                     {
                         var pendingNotification = ScheduleNotification(savedNotification.AsGameNotification(_platform));
-                        
+
                         pendingNotification.Reschedule = true;
                     }
                 }
