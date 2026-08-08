@@ -25,3 +25,4 @@ This folder contains the full API reference for each subsystem, plus the editor-
 |-------|------|
 | Samples index | [samples.md](samples.md) |
 | Troubleshooting & symptoms→fix | [troubleshooting.md](troubleshooting.md) |
+| Approved design records | [superpowers/README.md](superpowers/README.md) |
