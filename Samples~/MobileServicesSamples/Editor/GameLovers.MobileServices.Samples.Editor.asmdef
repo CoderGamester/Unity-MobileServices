@@ -1,0 +1,14 @@
+{
+    "name": "GameLovers.MobileServices.Samples.Editor",
+    "rootNamespace": "GameLovers.MobileServices.Samples.Editor",
+    "references": ["GameLovers.MobileServices.Samples", "GameLovers.MobileServices", "GameLovers.MobileServices.Editor"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

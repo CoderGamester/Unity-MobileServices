@@ -1,0 +1,22 @@
+{
+    "name": "GameLovers.MobileServices.Editor",
+    "rootNamespace": "GameLovers.MobileServices.Editor",
+    "references": [
+        "GameLovers.MobileServices",
+        "Unity.InputSystem",
+        "Unity.Notifications",
+        "Unity.Notifications.Android",
+        "Unity.Notifications.iOS"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

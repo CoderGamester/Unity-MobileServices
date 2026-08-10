@@ -1,229 +1,238 @@
-# Package Starter Kit
+# GameLovers Mobile Services
 
-The purpose of this starter kit is to provide the data structure and development guidelines for new packages meant for the **Unity Package Manager (UPM)**.
+[![Unity Version](https://img.shields.io/badge/Unity-6000.0%20%7C%206000.3%20%7C%206000.5-blue.svg)](https://unity3d.com/get-unity/download)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/github/v/tag/CoderGamester/com.gamelovers.mobileservices?label=version)](CHANGELOG.md)
 
-## Are you ready to become a package?
-The Package Manager is a work in progress for Unity. Because of that, your package needs to meet these criteria to become an official Unity package:
-- **Your code accesses public Unity C# APIs only.**
-- **Your code doesn't require security, obfuscation, or conditional access control.**
+> **Quick Links**: [Installation](#installation) | [Quick Start](#quick-start) | [Services](#services-at-a-glance) | [Samples](#samples) | [Related docs](#related-docs) | [Contributing](#contributing)
 
+## Why Use This Package?
 
-## Package structure
+Building mobile-specific features in Unity often requires dealing with platform-specific code, native bridges, and fragmented APIs. This **Mobile Services** package consolidates essential mobile functionality into a unified, easy-to-use API:
 
-```none
-<root>
-  ├── package.json
-  ├── README.md
-  ├── CHANGELOG.md
-  ├── Third Party Notices.md
-  ├── Editor
-  │   ├── FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Editor.asmdef
-  │   └── EditorExample.cs
-  ├── Runtime
-  │   ├── FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.asmdef
-  │   └── RuntimeExample.cs
-  ├── Tests
-  │   ├── .tests.json
-  │   ├── Editor
-  │   │   ├── FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Editor.Tests.asmdef
-  │   │   └── EditorExampleTest.cs
-  │   └── Runtime
-  │        ├── FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Tests.asmdef
-  │        └── RuntimeExampleTest.cs
-  ├── Samples
-  │   └── Example
-  │       ├── .sample.json
-  │       └── SampleExample.cs
-  └── Documentation
-       ├── Native UI.md
-       └── Images
+| Problem | Solution |
+|---------|----------|
+| **Platform-specific UI code** | Native UI service bridges iOS/Android alerts, toasts, review prompts, and share sheets with one API |
+| **Notification complexity** | Notification service wraps Unity Mobile Notifications with channel management + a fluent `service.Schedule().In(...).Title(...).Send()` builder |
+| **Custom gesture detection** | Gesture controller provides swipe and tap detection via Unity's EnhancedTouch |
+| **Haptic plugin sprawl** | Zero-dependency `IHapticsService` with 9 presets, custom intensity, and time-bounded looping — built directly on iOS/Android primitives |
+| **Scattered device APIs** | One `IDeviceService` umbrella over `SafeArea`, `ScreenWake`, `Battery`, `AudioSession`, `Permissions`, `Att`, `DeepLink` — each child also independently mockable |
+| **Deep-link routing boilerplate** | `IDeepLinkRouter.MapRoute("/promo/:id", handler)` over `IDeepLinkService` |
+| **iOS silent switch muting audio** | `device.AudioSession.ConfigureForPlayback()` overrides `AVAudioSession` category in one line |
+| **iOS App Tracking Transparency** | `device.Att.RequestAuthorizationAsync()` — direct `ATTrackingManager` bridge, no `com.unity.ads.ios-support` dependency |
+| **Cold-start deep link loss** | `device.DeepLink` queues the launch link for the first subscriber so you never miss it |
+| **Forgotten `Info.plist` keys → App Store rejection** | Mobile Services Config asset + build postprocessor auto-inject `NS*UsageDescription` keys (localized per device language), entitlements, and Android manifest entries; fail-fast validation lists every missing key |
+| **Editor testing challenges** | A Device Simulator plugin panel paints platform-shaped mocks inside the simulated phone (edit + play) with live diagnostics; `EditorPlatformSimulator` drives state for unit tests |
+
+**Built for production:** Uses Unity's official Mobile Notifications and Input System packages. Tested in real mobile games.
+
+---
+
+## System Requirements
+
+- **[Unity](https://unity.com/download)** Unity 6 only. The supported validation matrix is:
+
+  | Stream | Exact validation editor |
+  |---|---|
+  | Primary 6000.5.x | 6000.5.7f1 |
+  | Supported 6000.3.x | 6000.3.21f1 |
+  | Supported 6000.0.x | 6000.0.81f1 |
+
+  Other Unity versions are unsupported/untested.
+- **[Unity Mobile Notifications](https://docs.unity3d.com/Packages/com.unity.mobile.notifications@latest)** (2.3.0) — automatically resolved
+- **[Unity Input System](https://docs.unity3d.com/Packages/com.unity.inputsystem@latest)** (1.11.0) — automatically resolved; set **Active Input Handling** to **Input System Package (New)** or **Both** so Unity 6 routes the sample's UI Toolkit input through InputForUI, without a uGUI dependency
+
+| Platform | Status |
+|---|---|
+| iOS | ✅ Fully supported |
+| Android | ✅ Fully supported |
+| Editor | ✅ Supported (no-op fallbacks + truth-mirror simulator) |
+| Standalone | ⚠️ Gestures + SafeArea + Battery (level/status); Haptics returns `IsSupported = false`; iOS audio session / ATT are no-ops |
+| WebGL | ❌ Not supported |
+
+## Installation
+
+### Via Unity Package Manager (Recommended)
+
+1. Open Unity Package Manager (`Window` → `Package Manager`)
+2. Click `+` → `Add package from git URL`
+3. Enter: `https://github.com/CoderGamester/com.gamelovers.mobileservices.git`
+
+### Via manifest.json
+
+```json
+{
+  "dependencies": {
+    "com.gamelovers.mobileservices": "https://github.com/CoderGamester/com.gamelovers.mobileservices.git"
+  }
+}
 ```
 
-## Develop your package
-Package development works best within the Unity Editor.  Here's how to get started:
+---
 
-1. Enter your package name. The name you choose should contain your default organization followed by the name you typed. For example: `FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi`.
+## Quick Start
 
-2. [Enter the information](#FillOutFields) for your package in the `package.json` file.
+### Native UI
 
-3. [Rename and update](#Asmdef) assembly definition files.
+```csharp
+using GameLovers.MobileServices.NativeUi;
 
-4. [Document](#Doc) your package.
+NativeUiService.ShowAlertPopUp(
+    isAlertSheet: false,
+    title: "Delete Save?",
+    message: "This action cannot be undone.",
+    new AlertButton { Text = "Cancel", Style = AlertButtonStyle.Cancel },
+    new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, Callback = OnDeleteConfirmed });
 
-5. [Add samples](#Populate) to your package (code & assets).
-
-6. [Validate](#Valid) your package.
-
-7. [Add tests](#Tests) to your package.
-
-8. Update the `CHANGELOG.md` file. 
-
-    Every new feature or bug fix should have a trace in this file. For more details on the chosen changelog format, see [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
-
-9. Make sure your package [meets all legal requirements](#Legal).
-
-10. Publish your package.
-
-
-
-<a name="FillOutFields"></a>
-### Completing the package manifest
-
-You can either modify the package manifest (`package.json`) file directly in the Inspector or by using an external editor. 
-
-To use the Inspector, select the `package.json` file in the Project browser. The **Package Native UI Manifest** page opens for editing.
-
-Update these required attributes in the `package.json` file: 
-
-| **Attribute name:** | **Description:**                                             |
-| ------------------- | ------------------------------------------------------------ |
-| **name**            | The officially registered package name. This name must conform to the [Unity Package Manager naming convention](https://docs.unity3d.com/Manual/upm-manifestPkg.html#name), which uses reverse domain name notation. For example: <br />`"com.[YourCompanyName].[your-package-name]"` |
-| **displayName**     | A user-friendly name to appear in the Unity Editor (for example, in the Project Browser, the Package Manager window, etc.). For example: <br />`"Terrain Builder SDK"` <br/>__NOTE:__ Use a display name that will help users understand what your package is intended for. |
-| **version**         | The package version number (**'MAJOR.MINOR.PATCH"**). This value must respect [semantic versioning](http://semver.org/). For more information, see [Package version](https://docs.unity3d.com/Manual/upm-manifestPkg.html#pkg-ver) in the Unity User Manual. |
-| **unity**           | The lowest Unity version the package is compatible with. If omitted, the package is considered compatible with all Unity versions. <br /><br />The expected format is "**&lt;MAJOR&gt;.&lt;MINOR&gt;**" (for example, **2018.3**). |
-| **description**     | A brief description of the package. This is the text that appears in the [details view](upm-ui-details) of the Packages window. Any [UTF-8](https://en.wikipedia.org/wiki/UTF-8) character code is supported. This means that you can use special formatting character codes, such as line breaks (**\n**) and bullets (**\u25AA**). |
-
-Update the following recommended fields in file **package.json**:
-
-| **Attribute name:** | **Description:**                                             |
-| ------------------- | ------------------------------------------------------------ |
-| **dependencies**    | A map of package dependencies. Keys are package names, and values are specific versions. They indicate other packages that this package depends on. For more information, see [Dependencies](https://docs.unity3d.com/Manual/upm-dependencies.html) in the Unity User Manual.<br /><br />**NOTE**: The Package Manager does not support range syntax, only **SemVer** versions. |
-| **keywords**        | An array of keywords used by the Package Manager search APIs. This helps users find relevant packages. |
-
-
-
-<a name="Asmdef"></a>
-### Updating the Assembly Definition files
-
-You must associate scripts inside a package to an assembly definition file (.asmdef). Assembly definition files are the Unity equivalent to a C# project in the .NET ecosystem. You must set explicit references in the assembly definition file to other assemblies (whether in the same package or in external packages). See [Assembly Definitions](https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html) for more details.
-
-Use these conventions for naming and storing your assembly definition files to ensure that the compiled assembly filenames follow the [.NET Framework Design Guidelines](https://docs.microsoft.com/en-us/dotnet/standard/design-guidelines/):
-
-* Store Editor-specific code under a root editor assembly definition file:
-
-  `Editor/FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Editor.asmdef`
-
-* Store runtime-specific code under a root runtime assembly definition file:
-
-  `Runtime/FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.asmdef`
-
-* Configure related test assemblies for your editor and runtime scripts:
-
-  `Tests/Editor/FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Editor.Tests.asmdef`
-
-  `Tests/Runtime/FirstLightGames9Ad7d6dcE4674628Adec8954Dcbaabe5.NativeUi.Tests.asmdef`
-
-To get a more general view of a recommended package folder layout, see [Package layout](https://docs.unity3d.com/Manual/cus-layout.html).
-
-
-
-<a name="Doc"></a>
-### Providing documentation
-
-Use the `Documentations~/Native UI.md` documentation file to create preliminary, high-level documentation. This document should introduce users to the features and sample files included in your package.  Your package documentation files will be used to generate online and local docs, available from the Package Manager UI.
-
-**Document your public APIs**
-* All public APIs need to be documented with **XmlDoc**.
-* API documentation is generated from [XmlDoc tags](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/xmldoc/xml-documentation-comments) included with all public APIs found in the package. See [Editor/EditorExample.cs](Editor/EditorExample.cs) for an example.
-
-
-
-
-<a name="Populate"></a>
-### Adding Assets to your package
-
-If your package contains a sample, rename the `Samples/Example` folder, and update the `.sample.json` file in it.
-
-In the case where your package contains multiple samples, you can make a copy of the `Samples/Example` folder for each sample, and update the `.sample.json` file accordingly.
-
-Similar to `.tests.json` file, there is a `"createSeparatePackage"` field in `.sample.json`. If set to true, the CI will create a separate package for the sample.
-
-Delete the `Samples` folder altogether if your package does not need samples.
-
-As of Unity release 2019.1, the Package Manager recognizes the `/Samples` directory in a package. Unity doesn't automatically import samples when a user adds the package to a Project. However, users can click a button in the details view of a package in the **Packages** window to optionally import samples into their `/Assets` directory.
-
-
-
-
-<a name="Valid"></a>
-### Validating your package
-
-Before you publish your package, you need to make sure that it passes all the necessary validation checks by using the Package Validation Suite extension (optional).
-
-Once you install the Validation Suite package, a **Validate** button appears in the details view of a package in the **Packages** window. To install the extension, follow these steps:
-
-1. Point your Project manifest to a staging registry by adding this line to the manifest: 
-    `"registry": "https://staging-packages.unity.com"`
-2. Install the **Package Validation Suite v0.3.0-preview.13** or above from the **Packages** window in Unity. Make sure the package scope is set to **All Packages**, and select **Show preview packages** from the **Advanced** menu.
-3. After installation, a **Validate** button appears in the **Packages** window. Click the button to run a series of tests, then click the **See Results** button for additional information:
-    * If it succeeds, a green bar with a **Success** message appears.
-    * If it fails, a red bar with a **Failed** message appears.
-
-**NOTE:** The validation suite is still in preview.
-
-
-
-
-<a name="Tests"></a>
-### Adding tests to your package
-
-All packages must contain tests.  Tests are essential for Unity to ensure that the package works as expected in different scenarios.
-
-**Editor tests**
-* Write all your Editor Tests in `Tests/Editor`
-
-**Playmode Tests**
-
-* Write all your Playmode Tests in `Tests/Runtime`.
-
-#### Separating the tests from the package
-
-You can create a separate package for the tests, which allows you to exclude a large number of tests and Assets from being published in your main package, while still making it easy to test it.
-
-Open the `Tests/.tests.json` file and set the **createSeparatePackage** attribute:
-
-| **Value to set:** | **Result:**                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| **true**          | CI creates a separate package for these tests. At publish time, the Package Manager adds metadata to link the packages together. |
-| **false**         | Keep the tests as part of the published package.             |
-
-
-
-<a name="Legal"></a>
-### Meeting the legal requirements
-
-You can use the Third Party Notices.md file to make sure your package meets any legal requirements. For example, here is a sample license file from the Unity Timeline package:
-
-```
-Unity Timeline copyright © 2017-2019 Unity Technologies ApS
-
-Licensed under the Unity Companion License for Unity-dependent projects--see [Unity Companion License](http://www.unity3d.com/legal/licenses/Unity_Companion_License).
-
-Unless expressly provided otherwise, the Software under this license is made available strictly on an “AS IS” BASIS WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. Please review the license for details on these and other terms and conditions.
-
+NativeUiService.ShowToastMessage("Item Collected!", isLongDuration: false);
+NativeUiService.RequestReview(); // Android Play Review dependency is auto-injected at build time
+NativeUiService.Share(text: "Check out my high score!", url: "https://example.com/game");
 ```
 
+### Notifications
 
+```csharp
+using GameLovers.MobileServices.Notifications;
 
-#### Third Party Notices
+var service = new MobileNotificationService(
+    new GameNotificationChannel("default", "Default", "Default notifications"),
+    new GameNotificationChannel("rewards", "Rewards", "Daily reward reminders"));
 
-If your package has third-party elements, you can include the licenses in a Third Party Notices.md file. You can include a **Component Name**, **License Type**, and **Provide License Details** section for each license you want to include. For example:
-
-```
-This package contains third-party software components governed by the license(s) indicated below:
-
-Component Name: Semver
-
-License Type: "MIT"
-
-[SemVer License](https://github.com/myusername/semver/blob/master/License.txt)
-
-Component Name: MyComponent
-
-License Type: "MyLicense"
-
-[MyComponent License](https://www.mycompany.com/licenses/License.txt)
-
+service.Schedule()
+    .In(TimeSpan.FromHours(24))
+    .Title("Daily Reward Ready!")
+    .Body("Your daily reward is waiting for you!")
+    .Channel("rewards")
+    .BadgeIncrement()
+    .Send();
 ```
 
-**NOTE**: Any URLs you use should point to a location that contains the reproduced license and the copyright information (if applicable).
+### Device
+
+```csharp
+using GameLovers.MobileServices.Device;
+
+IDeviceService device = new DeviceService();
+
+device.Battery.OnLowPowerModeChanged += () => Debug.Log($"LPM -> {device.Battery.IsLowPowerMode}");
+device.ScreenWake.KeepAwake = true;
+device.AudioSession.ConfigureForPlayback();
+
+var perms = await device.Permissions.RequestAsync(AppPermission.Camera, AppPermission.Microphone);
+if (perms[AppPermission.Camera] == PermissionStatus.Granted) { /* … */ }
+
+var att = await device.Att.RequestAuthorizationAsync();
+
+device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
+
+// Or with the router:
+var router = new DeepLinkRouter(device.DeepLink, routes =>
+{
+    routes.MapRoute("/promo/:id", (uri, p) => OpenPromo(p["id"]));
+});
+```
+
+### Haptics
+
+```csharp
+using GameLovers.MobileServices.Haptics;
+
+IHapticsService haptics = new HapticsService();
+haptics.PlayPreset(HapticPreset.Success);
+haptics.PlayPresetDuration(HapticPreset.ImpactHeavy, duration: 0.5f);  // auto-stop after 0.5s
+haptics.PlayCustom(intensity01: 0.7f, durationMs: 250f);
+haptics.StopCurrentHaptic();
+```
+
+### Umbrella facade
+
+```csharp
+using GameLovers.MobileServices;
+
+IMobileService mobile = new MobileService();          // bind once
+mobile.NativeUi.ShowToastMessage("hi", false);
+mobile.Notifications.Schedule().In(TimeSpan.FromHours(1)).Title("x").Send();
+mobile.Haptics.PlayPreset(HapticPreset.Selection);
+var camera = await mobile.Device.Permissions.RequestAsync(AppPermission.Camera);
+```
+
+---
+
+## Services at a Glance
+
+| Service | Purpose |
+|---------|---------|
+| `NativeUiService` (static) + `INativeUiService` (instance) | Alerts, sheets, toasts, review, share |
+| `INotificationService` / `MobileNotificationService` | Local + remote notifications with channel registration, fluent `Schedule()` builder, and 4 `OperatingMode`s |
+| `GestureController` | EnhancedTouch swipe + tap detection |
+| `IHapticsService` / `HapticsService` | 9 cross-platform presets + custom intensity + time-bounded looping |
+| `IDeviceService` / `DeviceService` | Umbrella over `SafeArea`, `ScreenWake`, `Battery`, `AudioSession`, `Permissions`, `Att`, `DeepLink` |
+| `IDeepLinkRouter` / `DeepLinkRouter` | Path-pattern routing over `IDeepLinkService` |
+| `IMobileService` / `MobileService` | Package-wide umbrella facade (NativeUi / Notifications / Haptics / Device) |
+| `SafeAreaContainer` | UI Toolkit `VisualElement` that pads itself to the safe area |
+
+For full per-subsystem API reference, see [`docs/`](docs/README.md).
+
+---
+
+## Editor tooling
+
+Runtime simulation and diagnostics live inside Unity's Device Simulator:
+
+- **`Window > General > Device Simulator`** — a **Mobile Services** panel appears automatically in the Control Panel. It bundles the controls (alerts / toasts / share / haptics / notifications / gestures / permissions / ATT / app review), live-state diagnostics, and a per-preset haptic envelope graph. Firing a mock paints it **inside the simulated phone screen** at the right scale and safe area, in **edit and play mode** — no second window, no platform toggle to keep in sync (the skin auto-syncs from the selected device profile).
+- **Notification scheduler connection** — when the `NotificationsScheduler` sample is active in Play Mode, the panel's **Deliver next pending** action and due-time poll drive that sample's own service and paint its exact notification payload; without an active sample, **Show heads-up banner** remains a generic editor preview.
+- **`EditorPlatformSimulator`** — static API for driving device / permission / ATT / deep-link state from edit-mode tests and scripted automation.
+
+Plus a **Mobile Services Config** asset (open via **`Tools > GameLovers > Mobile Services > Select Mobile Services Config`**) for per-permission localized usage descriptions, capability toggles, semantic iOS/Android deep-link registrations, and the auto-injection build postprocessor. The build callback resolves this persisted asset explicitly; with no persisted asset (and no temporary sample context) it performs no native mutation.
+
+See [`docs/explorer.md`](docs/explorer.md) and [`docs/build-pipeline.md`](docs/build-pipeline.md) for the full guide.
+
+---
+
+## Samples
+
+Import the single **Mobile Services Samples** bundle from `Window > Package Manager > Mobile Services > Samples`. It is one sample with four ready-to-open UI Toolkit views. The imported bundle's single [sample README](Samples~/MobileServicesSamples/README.md) documents their shared setup and view-specific workflows.
+
+| Sample | Purpose |
+|--------|---------|
+| [Overview](Samples~/MobileServicesSamples/README.md#overview) | Native UI, permissions, device state, ATT, gestures, and safe-area wiring. |
+| [Haptics](Samples~/MobileServicesSamples/README.md#haptics) | Designer iteration tool with sequence recorder + replay. |
+| [Notifications](Samples~/MobileServicesSamples/README.md#notifications) | Fixed-channel scheduling/cancellation and `OperatingMode` lifecycle demo. |
+| [Links](Samples~/MobileServicesSamples/README.md#links) | Route-pattern, raw-link, and cold-start replay demo. |
+
+Each scene opens directly from the Project window and remains independently playable. In the combined player, persistent bottom tabs navigate between **Overview**, **Haptics**, **Notifications**, and **Links**; a received OS deep link opens the Links tab automatically. Enter Play Mode before using buttons, fields, scrolling, or navigation in the Game/Simulator view; Unity 6 InputForUI routes input to UI Toolkit while the shared navigation supplies the gesture bridge, so no GameObject wiring is required. Every enabled button has visual hover/press/focus feedback and emits one `Selection` haptic when its click commits; a drag that crosses the scroll threshold cancels the button and scrolls instead. Sample ScrollViews are clamped, drag smoothly from content or controls (with a gesture fallback for simulator touch streams), and keep the bottom navigation pinned. Status cards use one `Field: Value` per line.
+
+The only supported player output contains all four scenes, starting on Overview. Choose **Tools > Mobile Samples Examples > Build All** to validate the imported serialized `SceneAsset` catalog, install that exact ordered scene list, and open Unity's native Build Profiles window. Choose **Restore All** in the same menu to restore the prior scene configuration during the current Unity session. The sample contributes native requirements through the shared `MobileServicesConfig` pipeline only for that exact four-scene build; the package postprocessor remains the sole native mutator. Use **Tools > Mobile Samples Examples > Verify Scene Catalog** to emit current page/path/derived-GUID identities. These sample-owned menu items and their editor bridge are never included in player builds. See [`docs/samples.md`](docs/samples.md) for setup details.
+
+---
+
+## Related docs
+
+| Document | Purpose |
+|---|---|
+| [docs/README.md](docs/README.md) | Full API reference index |
+| [docs/native-ui.md](docs/native-ui.md) | Native UI deep dive |
+| [docs/notifications.md](docs/notifications.md) | Notifications deep dive (channels, modes, builder, persistence) |
+| [docs/haptics.md](docs/haptics.md) | Haptics deep dive (presets, envelope, looping, backends) |
+| [docs/gestures.md](docs/gestures.md) | Gesture detection deep dive |
+| [docs/device.md](docs/device.md) | Device umbrella + 8 children + DeepLinkRouter |
+| [docs/explorer.md](docs/explorer.md) | Device Simulator panel & in-Game-view simulator overlay |
+| [docs/build-pipeline.md](docs/build-pipeline.md) | Project Settings + build postprocessor (and manual fallback) |
+| [docs/samples.md](docs/samples.md) | Samples index |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | Symptom-to-fix table |
+| [docs/superpowers/README.md](docs/superpowers/README.md) | Approved design records and implementation plans |
+| [AGENTS.md](AGENTS.md) | Contributor/agent guide (architecture, gotchas, workflows) |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+
+## Contributing
+
+Contributions are welcome! Report bugs or request features via [GitHub Issues](https://github.com/CoderGamester/com.gamelovers.mobileservices/issues). Include target platform (iOS/Android) and device info. For development setup, architecture, and coding standards, see [AGENTS.md](AGENTS.md).
+
+## Support
+
+- **Issues**: [Report bugs or request features](https://github.com/CoderGamester/com.gamelovers.mobileservices/issues)
+- **Discussions**: [Ask questions and share ideas](https://github.com/CoderGamester/com.gamelovers.mobileservices/discussions)
+
+## License
+
+MIT — see [LICENSE.md](LICENSE.md).

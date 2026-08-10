@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:mobile="GameLovers.MobileServices.Device">
+    <Style src="DeepLinkRouter.uss" />
+    <Style src="../Shared/MobileServicesSampleNavigation.uss" />
+    <mobile:SafeAreaContainer name="root" class="sample-root">
+        <ui:VisualElement class="sample-layout">
+        <ui:ScrollView class="sample-scroll">
+            <ui:VisualElement class="sample-hero">
+                <ui:Label text="Deep Link Router" class="sample-title" />
+                <ui:Label text="Send a sample URL, see which route matches, then compare it with the raw deep-link event." class="sample-subtitle" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-status-card">
+                <ui:Label text="CURRENT APP LINK" class="sample-eyebrow" />
+                <ui:Label name="scheme" class="sample-status" />
+                <ui:Label name="cold-start" class="sample-status" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="1 · Try a routed link" class="sample-section" />
+                <ui:Label text="Each button uses the router and writes the matching route to the log." class="sample-card-description" />
+                <ui:VisualElement class="sample-action-grid">
+                    <ui:Button name="promo" text="Promo route" class="sample-button" />
+                    <ui:Button name="profile" text="Profile route" class="sample-button" />
+                    <ui:Button name="settings" text="Settings route" class="sample-button" />
+                    <ui:Button name="unmatched" text="Unmatched route" class="sample-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="2 · Compare raw delivery" class="sample-section" />
+                <ui:Label text="This emits the deep-link event without asking the router to match it." class="sample-card-description" />
+                <ui:Button name="raw" text="Emit raw deep-link event" class="sample-button" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-card">
+                <ui:Label text="Routing activity" class="sample-section" />
+                <ui:Label name="log" text="Run a route to start the activity log." class="sample-log" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sample-help-card">
+                <ui:Label text="DEVICE TESTING" class="sample-eyebrow" />
+                <ui:Label text="Warm links arrive while the app is running. Cold links launch the app and replay to the first subscriber. Android: ACTION_VIEW intent. iOS: xcrun simctl openurl." class="sample-caption" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+        <ui:VisualElement name="sample-navigation" class="sample-navigation sample-navigation-host" />
+        </ui:VisualElement>
+    </mobile:SafeAreaContainer>
+</ui:UXML>

@@ -1,0 +1,17 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:mobile="GameLovers.MobileServices.Device">
+    <Style src="NotificationsScheduler.uss" />
+    <Style src="../Shared/MobileServicesSampleNavigation.uss" />
+    <mobile:SafeAreaContainer name="root" class="sample-root">
+        <ui:VisualElement class="sample-layout">
+        <ui:ScrollView class="sample-scroll">
+            <ui:VisualElement class="sample-hero"><ui:Label text="Notifications Scheduler" class="sample-title" /><ui:Label text="Check permission, choose a channel and operating mode, then schedule and inspect notification delivery." class="sample-subtitle" /></ui:VisualElement>
+            <ui:VisualElement class="sample-status-card"><ui:Label text="PERMISSION STATUS" class="sample-eyebrow" /><ui:Label name="permission-status" class="sample-status" /><ui:VisualElement class="sample-action-grid"><ui:Button name="permission-check" text="Check permission" class="sample-button" /><ui:Button name="permission-request" text="Request permission" class="sample-button" /></ui:VisualElement></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="1 · Choose notification behavior" class="sample-section" /><ui:VisualElement class="sample-field-row"><ui:Label text="Channel" class="sample-control-label" /><ui:DropdownField name="channel" choices="default" class="sample-field" /></ui:VisualElement><ui:VisualElement class="sample-field-row"><ui:Label text="Operating mode" class="sample-control-label" /><ui:DropdownField name="mode" choices="NoQueue" class="sample-field" /></ui:VisualElement></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="2 · Schedule delivery" class="sample-section" /><ui:Label text="Use a short delay to see delivery in the editor, or choose reschedule to explore queue behavior." class="sample-card-description" /><ui:VisualElement class="notification-action-grid"><ui:Button name="schedule-5" text="Schedule in 5 s" class="sample-button notification-action" /><ui:Button name="schedule-30" text="Schedule in 30 s" class="sample-button notification-action" /><ui:Button name="schedule-reschedule" text="Reschedule in 30 s" class="sample-button notification-action" /><ui:Button name="cancel-all" text="Cancel pending" class="sample-button notification-action" /><ui:Button name="dismiss-all" text="Dismiss shown" class="sample-button notification-action" /></ui:VisualElement></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Pending notifications" class="sample-section" /><ui:VisualElement name="pending-list" /></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Delivery activity" class="sample-section" /><ui:Label name="log" text="Schedule a notification to begin the activity log." class="sample-log" /></ui:VisualElement>
+        </ui:ScrollView>
+        <ui:VisualElement name="sample-navigation" class="sample-navigation sample-navigation-host" />
+        </ui:VisualElement>
+    </mobile:SafeAreaContainer>
+</ui:UXML>

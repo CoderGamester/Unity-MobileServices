@@ -79,3 +79,9 @@ crashlytics-build.properties
 
 
 
+
+# Tests audit history (unity-tests-audit skill -- local developer state, never committed)
+.audit-history.md
+
+# CI config: tracked in git, excluded from the published UPM tarball
+.github/

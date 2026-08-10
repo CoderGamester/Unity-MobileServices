@@ -1,0 +1,160 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using GameLovers.MobileServices.Device.Internal;
+using UnityEngine;
+
+// ReSharper disable once CheckNamespace
+namespace GameLovers.MobileServices.Device
+{
+	/// <inheritdoc />
+	public sealed class AttService : IAttService
+	{
+#if UNITY_IOS && !UNITY_EDITOR
+		[DllImport("__Internal")] private static extern int  _GameLoversAttCurrentStatus();
+		[DllImport("__Internal")] private static extern void _GameLoversAttRequestAuthorization(int requestId, string callbackGameObject, string callbackMethod);
+#endif
+
+#if UNITY_EDITOR
+		// Editor-only override hooks consumed by EditorPlatformSimulator so the Device Simulator can
+		// model the real OS flow in the editor. When set, the editor short-circuit paths consult these
+		// instead of returning the default Authorized; when unset, the default is unchanged and runtime
+		// non-Editor builds carry none of this surface.
+		//   - EditorCurrentStatusOverride / EditorRequestResultOverride: synchronous reads (the simulated persisted decision).
+		//   - EditorRequestAsyncOverride: the first request shows the ATT prompt and the returned Task completes when the
+		//     user answers; takes precedence over the synchronous EditorRequestResultOverride.
+		internal static AttStatus? EditorCurrentStatusOverride;
+		internal static AttStatus? EditorRequestResultOverride;
+		internal static Func<Task<AttStatus>> EditorRequestAsyncOverride;
+#endif
+
+		/// <inheritdoc />
+		public AttStatus CurrentStatus
+		{
+			get
+			{
+#if UNITY_IOS && !UNITY_EDITOR
+				return (AttStatus)_GameLoversAttCurrentStatus();
+#elif UNITY_EDITOR
+				return EditorCurrentStatusOverride ?? AttStatus.Authorized;
+#else
+				return AttStatus.Authorized;
+#endif
+			}
+		}
+
+		/// <inheritdoc />
+		public Task<AttStatus> RequestAuthorizationAsync()
+		{
+#if UNITY_IOS && !UNITY_EDITOR
+			var tcs = new TaskCompletionSource<AttStatus>();
+			var id = AttCallbackReceiver.Instance.Register(tcs);
+			_GameLoversAttRequestAuthorization(id, "AttCallbackReceiver", "OnAttResult");
+			return tcs.Task;
+#elif UNITY_EDITOR
+			var asyncOver = EditorRequestAsyncOverride;
+			if (asyncOver != null)
+			{
+				return asyncOver();
+			}
+			return Task.FromResult(EditorRequestResultOverride ?? AttStatus.Authorized);
+#else
+			return Task.FromResult(AttStatus.Authorized);
+#endif
+		}
+	}
+}
+
+namespace GameLovers.MobileServices.Device.Internal
+{
+	/// <summary>
+	/// Internal MonoBehaviour that receives ATT results from the iOS bridge via <c>UnitySendMessage</c>.
+	/// Mirrors the shape of <see cref="PermissionsCallbackReceiver"/> so each subsystem owns its own
+	/// payload format and we don't have to multiplex.
+	/// </summary>
+	internal sealed class AttCallbackReceiver : MonoBehaviour
+	{
+		private static AttCallbackReceiver _instance;
+		private readonly Dictionary<int, TaskCompletionSource<AttStatus>> _pending =
+			new Dictionary<int, TaskCompletionSource<AttStatus>>();
+		private int _nextId = 1;
+
+		/// <summary>The receiver GameObject the iOS bridge addresses by name, created on first use.</summary>
+		public static AttCallbackReceiver Instance
+		{
+			get
+			{
+				if (_instance != null)
+				{
+					return _instance;
+				}
+
+				var go = new GameObject("AttCallbackReceiver");
+				DontDestroyOnLoad(go);
+				_instance = go.AddComponent<AttCallbackReceiver>();
+				return _instance;
+			}
+		}
+
+		/// <summary>
+		/// Reserves a request id the native bridge will echo back, and parks the completion source
+		/// against it until the user answers.
+		/// </summary>
+		public int Register(TaskCompletionSource<AttStatus> tcs)
+		{
+			var id = _nextId++;
+			_pending[id] = tcs;
+			return id;
+		}
+
+		// Native iOS bridge calls UnitySendMessage("AttCallbackReceiver", "OnAttResult", "<id>:<status>")
+		// where status is the int value of AttStatus.
+		// ReSharper disable once UnusedMember.Global
+		// ReSharper disable once InconsistentNaming
+		/// <summary>
+		/// Resolves the pending request named in <paramref name="payload"/>, formatted
+		/// <c>"&lt;id&gt;:&lt;status&gt;"</c>. Must stay public: Unity dispatches it by name.
+		/// </summary>
+		public void OnAttResult(string payload)
+		{
+			try
+			{
+				var sep = payload.IndexOf(':');
+				if (sep <= 0) return;
+				var idText = payload.Substring(0, sep);
+				var statusText = payload.Substring(sep + 1);
+
+				if (!int.TryParse(idText, out var id) || !int.TryParse(statusText, out var statusInt))
+				{
+					return;
+				}
+
+				if (!_pending.TryGetValue(id, out var tcs))
+				{
+					return;
+				}
+
+				_pending.Remove(id);
+				tcs.TrySetResult((AttStatus)statusInt);
+			}
+			catch (Exception e)
+			{
+				Debug.LogError($"[GameLovers.MobileServices] AttCallbackReceiver failed to parse '{payload}': {e.Message}");
+			}
+		}
+
+		private void OnDestroy()
+		{
+			if (_instance == this)
+			{
+				_instance = null;
+			}
+			foreach (var tcs in _pending.Values)
+			{
+				tcs.TrySetCanceled();
+			}
+			_pending.Clear();
+		}
+	}
+}

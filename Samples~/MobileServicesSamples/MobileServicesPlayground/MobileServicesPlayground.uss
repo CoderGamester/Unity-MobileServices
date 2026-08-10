@@ -1,0 +1,32 @@
+.sample-root { background-color: rgb(9, 22, 36); color: rgb(241, 249, 255); font-size: 16px; }
+.sample-scroll { padding-left: 12px; padding-right: 12px; padding-top: 12px; padding-bottom: 24px; }
+.sample-hero { flex-shrink: 0; background-color: rgb(18, 55, 83); border-left-width: 4px; border-left-color: rgb(100, 205, 255); padding: 16px 18px; margin-bottom: 12px; }
+.sample-title { font-size: 34px; -unity-font-style: bold; color: rgb(241, 249, 255); margin-bottom: 6px; }
+.sample-subtitle { font-size: 17px; color: rgb(194, 226, 247); white-space: normal; }
+.sample-eyebrow { font-size: 13px; -unity-font-style: bold; color: rgb(100, 205, 255); margin-bottom: 5px; }
+.sample-status-card { flex-shrink: 0; background-color: rgb(14, 43, 66); border-left-width: 2px; border-left-color: rgb(74, 157, 210); padding: 12px 14px; margin-bottom: 12px; }
+.sample-status { color: rgb(218, 242, 255); font-size: 15px; white-space: normal; margin-bottom: 5px; }
+.sample-card { flex-shrink: 0; background-color: rgb(13, 39, 60); border-top-width: 1px; border-top-color: rgb(39, 95, 132); border-bottom-width: 1px; border-bottom-color: rgb(39, 95, 132); border-left-width: 1px; border-left-color: rgb(39, 95, 132); border-right-width: 1px; border-right-color: rgb(39, 95, 132); padding: 14px 16px; margin-bottom: 12px; }
+.sample-section { font-size: 21px; -unity-font-style: bold; color: rgb(129, 214, 255); margin-bottom: 4px; }
+.sample-card-description { color: rgb(201, 229, 246); font-size: 15px; white-space: normal; margin-bottom: 12px; }
+.sample-action-grid { flex-shrink: 0; flex-direction: row; flex-wrap: wrap; align-items: stretch; margin-top: 8px; }
+.sample-action-grid .sample-button, .sample-action-grid .sample-primary-action { min-width: 0; flex-basis: 0; white-space: normal; padding-left: 8px; padding-right: 8px; }
+.sample-button { flex-shrink: 0; min-width: 148px; min-height: 44px; flex-grow: 1; background-color: rgb(23, 66, 96); border-top-width: 1px; border-top-color: rgb(100, 205, 255); border-bottom-width: 1px; border-bottom-color: rgb(100, 205, 255); border-left-width: 1px; border-left-color: rgb(100, 205, 255); border-right-width: 1px; border-right-color: rgb(100, 205, 255); color: rgb(241, 249, 255); font-size: 16px; -unity-font-style: bold; margin-right: 8px; margin-bottom: 8px; padding-left: 12px; padding-right: 12px; }
+.sample-primary-action { flex-shrink: 0; min-width: 148px; min-height: 48px; flex-grow: 1; background-color: rgb(100, 205, 255); color: rgb(5, 32, 51); font-size: 17px; -unity-font-style: bold; margin-right: 8px; margin-bottom: 8px; }
+.sample-row { flex-shrink: 0; flex-direction: row; flex-wrap: nowrap; align-items: center; background-color: rgb(18, 54, 80); padding: 9px 10px; margin-bottom: 7px; }
+.sample-row-label { min-width: 0; flex-basis: 0; flex-grow: 1; flex-shrink: 1; color: rgb(211, 240, 255); font-size: 15px; -unity-font-style: bold; white-space: normal; margin-right: 6px; }
+.sample-row .sample-button { min-width: 0; flex-basis: 0; flex-grow: 1; padding-left: 6px; padding-right: 6px; font-size: 14px; white-space: normal; }
+.sample-help-card { flex-shrink: 0; background-color: rgb(13, 43, 66); border-left-width: 2px; border-left-color: rgb(74, 157, 210); padding: 12px 14px; margin-bottom: 12px; }
+.sample-caption { color: rgb(204, 230, 245); font-size: 15px; white-space: normal; }
+.sample-log { flex-shrink: 0; background-color: rgb(6, 23, 36); border-left-width: 3px; border-left-color: rgb(100, 205, 255); color: rgb(225, 245, 255); font-size: 15px; white-space: normal; padding: 12px; min-height: 92px; }
+.sample-button, .sample-primary-action { transition-property: background-color, border-color, scale, translate, opacity; transition-duration: 120ms; transition-timing-function: ease-out; }
+.sample-button:hover { background-color: rgb(32, 87, 124); }
+.sample-button:active { background-color: rgb(16, 48, 71); scale: 0.98; translate: 0 1px; }
+.sample-button:focus { border-color: rgb(241, 249, 255); }
+.sample-button:disabled { opacity: 0.45; scale: 1; translate: 0 0; }
+.sample-button--pressed { background-color: rgb(12, 39, 60); scale: 0.96; translate: 0 2px; opacity: 0.92; }
+.sample-primary-action.sample-button--pressed { background-color: rgb(70, 166, 219); }
+.sample-primary-action:hover { background-color: rgb(142, 220, 255); }
+.sample-primary-action:active { background-color: rgb(70, 166, 219); scale: 0.98; translate: 0 1px; }
+.sample-primary-action:focus { border-color: rgb(241, 249, 255); }
+.sample-primary-action:disabled { opacity: 0.45; scale: 1; translate: 0 0; }

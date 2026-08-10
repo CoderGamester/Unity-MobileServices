@@ -1,0 +1,117 @@
+.simulator-root.platform-ios .mock-card {
+    border-radius: 14px;
+    border-width: 0;
+    background-color: rgba(245, 245, 245, 0.98);
+}
+
+.simulator-root.platform-ios .mock-card-alert {
+    width: 70%;
+    max-width: 280px;
+}
+
+.simulator-root.platform-ios .mock-card-sheet {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    background-color: transparent;
+    padding: 0;
+}
+
+.simulator-root.platform-ios .mock-card-sheet .mock-card-button {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(0, 122, 255);
+    border-radius: 12px;
+    margin-bottom: 4px;
+    height: 44px;
+    -unity-font-style: normal;
+}
+
+.simulator-root.platform-ios .mock-card-sheet .mock-card-button-cancel {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(0, 122, 255);
+    -unity-font-style: bold;
+    margin-top: 4px;
+}
+
+.simulator-root.platform-ios .mock-card-sheet .mock-card-button-destructive {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(255, 59, 48);
+}
+
+.simulator-root.platform-ios .mock-card-button {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(0, 122, 255);
+    border-radius: 0;
+    border-width: 0;
+    border-top-width: 0;
+    border-color: rgba(0, 0, 0, 0.12);
+    height: 34px;
+}
+
+.simulator-root.platform-ios .mock-card-button-row {
+    border-top-width: 1px;
+    border-color: rgba(0, 0, 0, 0.12);
+    margin-top: 12px;
+}
+
+.simulator-root.platform-ios .mock-card-button-cancel {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(0, 122, 255);
+    -unity-font-style: bold;
+}
+
+.simulator-root.platform-ios .mock-card-button-destructive {
+    background-color: rgba(245, 245, 245, 0.98);
+    color: rgb(255, 59, 48);
+}
+
+.simulator-root.platform-ios .mock-card-title {
+    -unity-text-align: middle-center;
+}
+
+.simulator-root.platform-ios .mock-card-message {
+    -unity-text-align: middle-center;
+}
+
+.simulator-root.platform-ios .mock-toast-top {
+    top: 16px;
+}
+
+.simulator-root.platform-ios .mock-toast-pill {
+    background-color: rgba(50, 50, 50, 0.92);
+}
+
+.simulator-root.platform-ios .mock-notif-top-ios {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+}
+
+.simulator-root.platform-ios .mock-notif-card {
+    background-color: rgba(250, 250, 252, 0.97);
+    border-radius: 16px;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.simulator-root.platform-ios .mock-notif-icon {
+    border-radius: 9px;
+}
+
+/* StoreKit review sheet: a compact centered card titled with the app name. */
+.simulator-root.platform-ios .mock-review-card-ios {
+    width: 74%;
+    max-width: 270px;
+    align-items: center;
+}
+
+.simulator-root.platform-ios .mock-review-card-ios .mock-card-title {
+    font-size: 15px;
+}
+
+.simulator-root.platform-ios .mock-review-card-ios .mock-card-message {
+    -unity-text-align: middle-center;
+}

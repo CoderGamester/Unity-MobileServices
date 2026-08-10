@@ -1,0 +1,18 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:mobile="GameLovers.MobileServices.Device">
+    <Style src="MobileServicesPlayground.uss" />
+    <Style src="../Shared/MobileServicesSampleNavigation.uss" />
+    <mobile:SafeAreaContainer name="root" class="sample-root">
+        <ui:VisualElement class="sample-layout">
+        <ui:ScrollView name="scroll" class="sample-scroll">
+            <ui:VisualElement class="sample-hero"><ui:Label text="Mobile Services Overview" class="sample-title" /><ui:Label text="Explore native UI, permissions, device state, ATT, gestures and safe-area handling. Use the tabs below for focused haptics, notifications and links." class="sample-subtitle" /></ui:VisualElement>
+            <ui:VisualElement class="sample-status-card"><ui:Label text="LIVE DEVICE STATUS" class="sample-eyebrow" /><ui:Label name="safe-area-status" class="sample-status" /><ui:Label name="device-status" class="sample-status" /></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Native UI" class="sample-section" /><ui:Label text="These actions open the platform-native UI where it is available." class="sample-card-description" /><ui:VisualElement class="sample-action-grid"><ui:Button name="native-alert" text="Show alert" class="sample-button" /><ui:Button name="native-sheet" text="Action sheet" class="sample-button" /><ui:Button name="native-toast" text="Toast" class="sample-button" /><ui:Button name="native-review" text="Request review" class="sample-button" /><ui:Button name="native-share" text="Share" class="sample-button" /></ui:VisualElement></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Permissions" class="sample-section" /><ui:Label text="Check the current OS decision or request it when the platform supports the prompt." class="sample-card-description" /><ui:VisualElement name="permission-list" /></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Tracking and device" class="sample-section" /><ui:VisualElement class="sample-action-grid"><ui:Button name="att-request" text="Request ATT" class="sample-button" /><ui:Button name="keep-awake" text="Toggle keep awake" class="sample-button" /><ui:Button name="audio-session" text="Configure audio" class="sample-button" /></ui:VisualElement></ui:VisualElement>
+            <ui:VisualElement class="sample-help-card"><ui:Label text="GESTURES" class="sample-eyebrow" /><ui:Label text="Tap or swipe on a touch device or in the Device Simulator. Gesture events are written to the log below." class="sample-caption" /></ui:VisualElement>
+            <ui:VisualElement class="sample-card"><ui:Label text="Activity log" class="sample-section" /><ui:Label name="log" text="Choose an action to begin the log." class="sample-log" /></ui:VisualElement>
+        </ui:ScrollView>
+        <ui:VisualElement name="sample-navigation" class="sample-navigation sample-navigation-host" />
+        </ui:VisualElement>
+    </mobile:SafeAreaContainer>
+</ui:UXML>

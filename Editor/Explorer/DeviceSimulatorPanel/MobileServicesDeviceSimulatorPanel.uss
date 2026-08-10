@@ -1,0 +1,184 @@
+#mobile-services-plugin-root {
+    flex-direction: column;
+    padding: 6px;
+}
+
+/* The Device Simulator Control Panel column is narrow — wrap every label instead of clipping it. */
+#mobile-services-plugin-root Label {
+    white-space: normal;
+}
+
+.msp-header {
+    flex-direction: column;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.msp-title {
+    -unity-font-style: bold;
+    font-size: 12px;
+    color: rgb(220, 220, 230);
+}
+
+.msp-note {
+    font-size: 10px;
+    -unity-font-style: italic;
+    color: rgba(220, 220, 230, 0.6);
+    white-space: normal;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+.msp-connection-status {
+    color: rgb(170, 220, 190);
+    font-size: 10px;
+    margin: 2px 4px 4px;
+    white-space: normal;
+}
+
+.msp-enabled-toggle {
+    margin-top: 4px;
+    -unity-font-style: bold;
+}
+
+/* Highlighted info card — more visible than .msp-note for section-level guidance. */
+.msp-banner {
+    background-color: rgba(80, 130, 200, 0.12);
+    border-left-width: 3px;
+    border-left-color: rgba(120, 170, 240, 0.85);
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    padding: 6px 8px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+}
+
+.msp-banner-label {
+    font-size: 10px;
+    color: rgb(205, 218, 240);
+    white-space: normal;
+}
+
+.msp-button-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.msp-button {
+    margin: 2px;
+    padding: 4px 6px;
+    min-height: 22px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.msp-button-danger {
+    background-color: rgba(220, 60, 60, 0.55);
+    color: white;
+    -unity-font-style: bold;
+}
+
+.msp-foldout {
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+/* ---- Diagnostics: section labels, rows, status pills (ported from the former Explorer USS) ---- */
+
+.tab-section-label {
+    -unity-font-style: bold;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-bottom: 2px;
+    color: rgb(180, 210, 255);
+}
+
+.row {
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 4px;
+    border-bottom-width: 1px;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.row-label {
+    flex-grow: 1;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.row-value {
+    font-size: 11px;
+    color: rgb(200, 200, 200);
+    margin-right: 6px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- Haptics envelope graph ---- */
+
+.haptic-envelope-canvas {
+    height: 80px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    margin: 4px 0;
+}
+
+.haptic-bar {
+    background-color: rgba(120, 210, 255, 0.7);
+    border-radius: 1px;
+}
+
+/* ---- Permission status pills ---- */
+
+.perm-pill-granted {
+    background-color: rgba(50, 180, 50, 0.30);
+    border-color: rgba(80, 200, 80, 0.65);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(120, 240, 120);
+    font-size: 10px;
+}
+
+.perm-pill-denied {
+    background-color: rgba(200, 50, 50, 0.30);
+    border-color: rgba(220, 80, 80, 0.65);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(255, 130, 130);
+    font-size: 10px;
+}
+
+.perm-pill-undetermined {
+    background-color: rgba(180, 180, 180, 0.25);
+    border-color: rgba(200, 200, 200, 0.55);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(220, 220, 220);
+    font-size: 10px;
+}
+
+.perm-pill-restricted {
+    background-color: rgba(200, 130, 0, 0.30);
+    border-color: rgba(220, 160, 0, 0.55);
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 1px 6px;
+    color: rgb(240, 200, 90);
+    font-size: 10px;
+}

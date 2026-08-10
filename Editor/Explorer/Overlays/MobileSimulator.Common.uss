@@ -1,0 +1,292 @@
+.simulator-root {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: rgb(18, 18, 22);
+}
+
+.simulator-stage {
+    flex-grow: 1;
+    position: relative;
+}
+
+.simulator-watermark {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.simulator-watermark Label {
+    color: rgb(255, 210, 80);
+    font-size: 10px;
+    -unity-font-style: bold;
+}
+
+.simulator-platform-label {
+    margin-left: 6px;
+    color: rgb(170, 200, 255);
+}
+
+.mock-scrim {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    justify-content: center;
+    align-items: center;
+}
+
+.mock-card {
+    background-color: rgb(245, 245, 250);
+    color: rgb(20, 20, 22);
+    padding: 16px;
+    width: 80%;
+    max-width: 320px;
+}
+
+.mock-card-title {
+    color: rgb(20, 20, 22);
+    -unity-font-style: bold;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.mock-card-message {
+    color: rgb(40, 40, 44);
+    font-size: 11px;
+    margin-bottom: 12px;
+    white-space: normal;
+}
+
+.mock-card-message-warning {
+    color: rgb(200, 80, 40);
+    -unity-font-style: italic;
+}
+
+.mock-card-button-row {
+    margin-top: 8px;
+}
+
+.mock-card-button-row-horizontal {
+    flex-direction: row;
+}
+
+.mock-card-button-row-vertical {
+    flex-direction: column;
+}
+
+.mock-card-button {
+    flex-grow: 1;
+    margin: 2px;
+    height: 28px;
+    background-color: rgba(70, 130, 220, 0.95);
+    color: white;
+    border-width: 0;
+    -unity-font-style: bold;
+}
+
+.mock-card-button-cancel {
+    background-color: rgba(120, 120, 130, 0.4);
+    color: rgb(40, 40, 50);
+    -unity-font-style: normal;
+}
+
+.mock-card-button-destructive {
+    background-color: rgba(220, 60, 60, 0.95);
+    color: white;
+}
+
+.mock-toast-top {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.mock-toast-bottom {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.mock-toast-pill {
+    background-color: rgba(50, 50, 56, 0.95);
+    border-radius: 18px;
+    padding: 8px 16px;
+}
+
+.mock-toast-pill Label {
+    color: rgb(240, 240, 245);
+    font-size: 11px;
+}
+
+.mock-share-card {
+    width: 92%;
+    max-width: 360px;
+}
+
+.mock-share-title {
+    color: rgb(20, 20, 22);
+    -unity-font-style: bold;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.mock-share-summary {
+    color: rgb(60, 60, 70);
+    font-size: 10px;
+    -unity-font-style: italic;
+    margin-bottom: 10px;
+    white-space: normal;
+}
+
+.mock-share-grid-ios {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.mock-share-list-android {
+    flex-direction: column;
+}
+
+.mock-share-tile {
+    width: 70px;
+    height: 56px;
+    margin: 4px;
+    background-color: rgba(100, 120, 160, 0.18);
+    border-radius: 8px;
+    justify-content: center;
+    align-items: center;
+    padding: 4px;
+}
+
+.mock-share-tile Label {
+    color: rgb(40, 40, 60);
+    font-size: 9px;
+}
+
+.mock-review-card {
+}
+
+.mock-review-stars {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+
+.mock-review-star {
+    color: rgba(120, 120, 135, 0.55);
+    font-size: 30px;
+    margin: 0 3px;
+}
+
+.mock-review-star-filled {
+    color: rgb(255, 190, 50);
+}
+
+/* Android Play bottom-sheet header: small circular app icon + title row. */
+.mock-review-header-android {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.mock-review-appicon {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background-color: rgb(33, 150, 83);
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.mock-review-appicon Label {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 16px;
+}
+
+.mock-permission-card {
+}
+
+.mock-notif-card {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.10);
+    background-color: rgba(248, 248, 250, 0.98);
+}
+
+.mock-notif-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    background-color: rgb(88, 120, 240);
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.mock-notif-icon Label {
+    color: white;
+    -unity-font-style: bold;
+    font-size: 18px;
+}
+
+.mock-notif-content {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.mock-notif-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.mock-notif-appname {
+    font-size: 10px;
+    color: rgba(20, 20, 25, 0.55);
+    -unity-font-style: bold;
+}
+
+.mock-notif-time {
+    font-size: 10px;
+    color: rgba(20, 20, 25, 0.45);
+}
+
+.mock-notif-title {
+    color: rgb(20, 20, 22);
+    -unity-font-style: bold;
+    font-size: 13px;
+}
+
+.mock-notif-subtitle {
+    color: rgba(20, 20, 22, 0.8);
+    font-size: 12px;
+}
+
+.mock-notif-body {
+    color: rgba(20, 20, 22, 0.72);
+    font-size: 12px;
+    margin-top: 1px;
+    white-space: normal;
+}
