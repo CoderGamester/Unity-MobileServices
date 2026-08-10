@@ -48,7 +48,8 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <summary>
 		/// Shows an alert native OS message popup with the given <paramref name="title"/>, <paramref name="message"/>
 		/// and the <paramref name="buttons"/> ordered from left to right.
-		/// If on iOS device, it can be set the pop up to be visible as an alert sheet depending on the given <paramref name="isAlertSheet"/>
+		/// If on iOS device, it can be set the pop up to be visible as an alert sheet depending on the
+		/// given <paramref name="isAlertSheet"/>
 		/// </summary>
 		/// <exception cref="SystemException">
 		/// Thrown if the current platform is not iOS nor Android

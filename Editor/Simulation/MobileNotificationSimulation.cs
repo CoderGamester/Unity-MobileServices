@@ -80,7 +80,9 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			return true;
 		}
 
-		/// <summary>Advances the connected target by at most one due notification while the simulator is enabled.</summary>
+		/// <summary>
+		/// Advances the connected target by at most one due notification while the simulator is enabled.
+		/// </summary>
 		public static void Tick()
 		{
 			if (MobileSimulatorState.Enabled)

@@ -5,7 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-08-04
+## [1.0.0] - 2026-08-10
 
 **New**:
 - Initial release of the consolidated **Mobile Services** package.
@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Device**: The `Device` umbrella service exposes safe area, screen wake, battery and low-power mode, iOS audio session, permissions, App Tracking Transparency, and deep links.
 - **Permissions**: Unified iOS and Android runtime permissions for Camera, Microphone, Location, Photo Library, Notifications, and multi-permission async requests.
 - **App Tracking Transparency**: An iOS 14.5+ `ATTrackingManager` bridge with no dependency on `com.unity.ads.ios-support`.
-- **Deep Links**: An `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber.
+- **Deep Links**: An `Application.deepLinkActivated` wrapper with cold-start link queueing for the first subscriber. Added typed deep-link configuration with semantic deduplication, explicit persisted/effective-config resolution, fail-fast malformed enabled settings, warning-only scanner mismatches, and no-op behavior when no persisted config or temporary context exists.
 - **Deep Link Router**: Route patterns over `IDeepLinkService` with captured parameters such as `/promo/:id`.
 - **Mobile Service umbrella**: `IMobileService` provides one DI registration for Native UI, Notifications, Haptics, and Device services.
 - **Native UI instance interface**: `INativeUiService` and `NativeUiServiceInstance` support mockable consumer code.
@@ -30,29 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Changed**:
 - Consolidated the package under the `com.gamelovers.mobileservices` package name, `GameLovers.MobileServices.*` namespaces, and `GameLovers.MobileServices` assembly.
 - Updated the package baseline to Unity 6 and documented the supported 6000.5.7f1, 6000.3.21f1, and 6000.0.81f1 validation editors.
-- Moved sample build menus, the UI Toolkit build window, temporary configuration, and the Deep Link native hook into the optional sample bundle; the package retains only consumer-wide native build integration under `Editor/NativeBuild`.
-- Reworked the imported Mobile Services sample bundle into one four-scene player with persistent Overview, Haptics, Notifications, and Links navigation; deep links now open Links automatically.
-- Consolidated the imported sample documentation into one bundle-root README with sections for all four views, replacing duplicated controller-level guides.
-- Replaced the sample build window and per-scene builds with generic **Build All** / **Restore All** menu commands. Build All prepares the canonical four-scene Build Profile/global scene list and opens Unity's native build UI; Restore All uses session-scoped exact scene restoration while the build preprocessor applies combined native requirements without modifying the persisted config asset or `EditorPrefs`.
-- Standardized sample status cards on one `Field: Value` per line with `Yes`/`No` booleans and multi-line notification pending details.
-- Migrated sample UI Toolkit input to Unity 6 InputForUI and removed the package's `com.unity.ugui` dependency; consumers use the package's existing Input System requirement with Active Input Handling set to **Input System Package (New)** or **Both**.
 
 **Fixed**:
 - Fixed persisted notifications so nullable IDs, badge numbers, and delivery times survive background/foreground rescheduling.
 - Fixed local notification delivered and expired events so subscribers added after service construction receive callbacks.
-- Fixed generated Android manifest mutation to run against the generated application manifest, with namespace-aware activity selection and fail-fast ambiguity handling.
 - Fixed editor notification scheduling so generated notifications appear in the pending collection.
-- Fixed all sample ScrollViews and built-in controls by assigning a self-contained default runtime UI Toolkit theme to every bundled scene.
-- Fixed the Device Simulator's idle full-screen mock stage intercepting pointer input intended for sample UI beneath it.
-- Fixed sample navigation to fill the safe area so bottom tabs remain pinned while page content scrolls.
-- Fixed duplicate Enhanced Touch input indices from throwing during sample interaction, and removed the obsolete sample-test-only assembly grant and verifier path.
-- Fixed the Device Simulator overlay's transient panel theme and Notifications Scheduler's deprecated scene lookup warning.
-- Added palette-specific hover, press, focus and disabled button states plus committed `Selection` click haptics to every sample; haptic demonstration actions avoid a redundant second pulse.
-- Fixed simulator clicks that omit `PointerUpEvent` by clearing pressed states on committed clicks, and added gesture-based drag fallback when continuous UI Toolkit move events are unavailable.
-- Reorganized Notifications Scheduler actions into one responsive wrapping row; labels may use two lines and only wrap when the available width requires it.
-- Fixed editor notification cancellation so both individual pending rows and Cancel pending clear the sample's in-memory schedule when no native platform backend exists.
-- Fixed simulator scroll direction and drag arbitration so an upward content drag scrolls naturally and never commits a button action accidentally.
-- Connected the Notifications Scheduler sample's editor-owned notification service to the Device Simulator with explicit pending delivery, due-time simulation, and a generic-preview fallback.
 
 **Removed**:
 - Removed legacy tap detection; use the Unity Input System's `TapInteraction` instead.

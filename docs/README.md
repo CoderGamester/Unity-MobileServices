@@ -26,3 +26,4 @@ This folder contains the full API reference for each subsystem, plus the editor-
 | Samples index | [samples.md](samples.md) |
 | Troubleshooting & symptoms→fix | [troubleshooting.md](troubleshooting.md) |
 | Approved design records | [superpowers/README.md](superpowers/README.md) |
+| Native build ownership decision | [2026-08-09-mobile-services-native-build-ownership-design.md](superpowers/specs/2026-08-09-mobile-services-native-build-ownership-design.md) |

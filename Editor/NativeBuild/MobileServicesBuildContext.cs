@@ -11,8 +11,18 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private static MobileServicesConfig _activeConfig;
 		private static string _activeIdentity;
 
-		/// <summary>Returns the active build override or the project's normal configuration.</summary>
-		public static MobileServicesConfig EffectiveConfig => _activeConfig != null ? _activeConfig : MobileServicesConfig.Instance;
+		/// <summary>
+		/// Returns the active override or the unique persisted configuration; returns false when neither exists.
+		/// </summary>
+		public static bool TryGetEffectiveConfig(out MobileServicesConfig config)
+		{
+			if (_activeConfig != null)
+			{
+				config = _activeConfig;
+				return true;
+			}
+			return MobileServicesConfig.TryGetPersistedConfig(out config);
+		}
 
 		/// <summary>Identifies the active override, or returns an empty string outside a scoped build.</summary>
 		public static string ActiveIdentity => _activeIdentity ?? string.Empty;
@@ -24,7 +34,9 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			if (configure == null) throw new ArgumentNullException(nameof(configure));
 			if (_activeConfig != null) throw new InvalidOperationException($"Mobile Services build context '{_activeIdentity}' is already active.");
 
-			var clone = UnityEngine.Object.Instantiate(MobileServicesConfig.Instance);
+			var clone = MobileServicesConfig.TryGetPersistedConfig(out var persisted)
+				? UnityEngine.Object.Instantiate(persisted)
+				: MobileServicesConfig.CreateNeutralTransient();
 			clone.name = $"{nameof(MobileServicesConfig)} ({identity})";
 			clone.hideFlags = HideFlags.HideAndDontSave;
 			try

@@ -82,7 +82,9 @@ namespace GameLovers.MobileServices.Device.Internal
 			_onLateUpdate -= callback;
 		}
 
-		/// <summary>Subscribes to a roughly-once-per-second tick (cheaper than LateUpdate; useful for connectivity polling).</summary>
+		/// <summary>
+		/// Subscribes to a roughly-once-per-second tick (cheaper than LateUpdate; useful for connectivity polling).
+		/// </summary>
 		internal void RegisterSecondTick(Action callback)
 		{
 			_onSecondTick += callback;

@@ -66,7 +66,7 @@ The Links view configures three routes synchronously:
 
 `<sample-scheme>` is derived from `Application.identifier`: it is lowercased; ASCII letters, digits, `+`, `.`, and `-` are retained; invalid runs collapse to `-`; and `gl-` is prefixed when necessary. The view displays the generated scheme for use with device tools.
 
-On a warm launch, the OS sends a link while the app is running. On a cold launch, the combined player creates `DeepLinkService` before scene transitions, buffers the startup URL, and opens the Links view automatically. Android builds receive a `VIEW` / `DEFAULT` / `BROWSABLE` filter and vibration permission. iOS builds receive an additive URL-scheme entry. The sample adds neither push notifications nor an Associated Domains entitlement.
+On a warm launch, the OS sends a link while the app is running. On a cold launch, the combined player creates `DeepLinkService` before scene transitions, buffers the startup URL, and opens the Links view automatically. In the exact ordered four-scene player prepared by **Build All**, the sample contributes its scheme through the temporary `MobileServicesConfig.DeepLinks` value; the package postprocessor then adds a semantic `VIEW` / `DEFAULT` / `BROWSABLE` Android filter and an additive iOS URL-scheme entry. Reordered or partial builds do not activate the sample overlay.
 
 Example device commands:
 
@@ -77,9 +77,9 @@ adb shell am start -W -a android.intent.action.VIEW -d "<sample-scheme>://promo/
 
 ## Supported player build
 
-Use **Tools > Mobile Samples Examples > Build All** from any sample view, or with no sample scene open. It snapshots the current effective global Build Settings or active overriding Build Profile, installs the four scenes in Overview-first order, and opens Unity's native Build Profiles window. Unity retains ownership of the target, output path, and final Build command.
+Use **Tools > Mobile Samples Examples > Build All** from any sample view, or with no sample scene open. It validates the single serialized `SceneAsset` catalog, snapshots the current effective global Build Settings or active overriding Build Profile, installs the four scenes in Overview-first order, and opens Unity's native Build Profiles window. Unity retains ownership of the target, output path, and final Build command.
 
-**Restore All** restores the captured scene list and enabled flags. The snapshot is session-only: it survives a domain reload but is unavailable after Unity closes. Restore before restarting Unity or deleting the imported sample. Build All never changes the persisted Mobile Services Config asset or `EditorPrefs`; its sample-scoped build preprocessor adds the combined native requirements only while Unity builds the canonical four-scene player. The menu commands and editor bridge disappear when the imported sample is deleted.
+**Restore All** restores the captured scene list and enabled flags. The snapshot is session-only: it survives a domain reload but is unavailable after Unity closes. Restore before restarting Unity or deleting the imported sample. Build All never changes the persisted Mobile Services Config asset or `EditorPrefs`; its sample-scoped build preprocessor adds the combined native requirements only while Unity builds the exact catalog order. The package postprocessor is the only native mutator. The menu commands and editor bridge disappear when the imported sample is deleted.
 
 ## On-device testing
 

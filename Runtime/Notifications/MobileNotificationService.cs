@@ -113,7 +113,9 @@ namespace GameLovers.MobileServices.Notifications
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
 		internal OperatingMode CurrentMode => !_disposed && _monoBehaviour != null ? _monoBehaviour.Mode : OperatingMode.NoQueue;
 
-		/// <summary>The channels passed to the constructor (Android default-channel-id resolution + Explorer display).</summary>
+		/// <summary>
+		/// The channels passed to the constructor (Android default-channel-id resolution + Explorer display).
+		/// </summary>
 		/// <remarks>Editor introspection accessor — not part of the public surface.</remarks>
 		internal IReadOnlyList<GameNotificationChannel> Channels => _channels;
 
@@ -217,7 +219,9 @@ namespace GameLovers.MobileServices.Notifications
 		}
 
 #if UNITY_EDITOR
-		/// <summary>Delivers a pending notification through the editor simulator without changing scheduling behavior.</summary>
+		/// <summary>
+		/// Delivers a pending notification through the editor simulator without changing scheduling behavior.
+		/// </summary>
 		internal bool TrySimulateDelivery(int notificationId)
 		{
 			ThrowIfDisposed();

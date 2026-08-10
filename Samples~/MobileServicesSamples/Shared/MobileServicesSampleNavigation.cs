@@ -180,7 +180,10 @@ namespace GameLovers.MobileServices.Samples
 
 	}
 
-	/// <summary>Provides predictable touch dragging for sample ScrollViews when the Device Simulator omits pressed-button flags.</summary>
+	/// <summary>
+	/// Provides predictable touch dragging for sample ScrollViews when the Device Simulator omits
+	/// pressed-button flags.
+	/// </summary>
 	internal sealed class MobileServicesSampleScrollController : IDisposable
 	{
 		private const float DragThreshold = 8f;

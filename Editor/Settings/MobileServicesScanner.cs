@@ -15,6 +15,37 @@ namespace GameLovers.MobileServices.Editor.Settings
 		public bool UsesNotifications;
 		public bool UsesDeepLinks;
 		public bool UsesNativeUiShare;
+
+		/// <summary>Returns advisory mismatches without changing the persisted config.</summary>
+		public IReadOnlyList<string> GetConfigurationWarnings(MobileServicesConfig config)
+		{
+			var warnings = new List<string>();
+			if (config == null) return warnings;
+			if (UsesNotifications && !config.Capabilities.PushNotifications && !config.AndroidManifest.PostNotifications)
+			{
+				warnings.Add("Notifications are referenced but Push Notifications and Android POST_NOTIFICATIONS are both disabled.");
+			}
+			if (UsesAtt && !config.Capabilities.AppTracking)
+			{
+				warnings.Add("App Tracking Transparency is referenced but Capabilities.AppTracking is disabled.");
+			}
+			if (UsesDeepLinks && config.DeepLinks.IosUrlSchemes.Count == 0 && config.DeepLinks.AndroidIntentFilters.Count == 0)
+			{
+				warnings.Add("Deep-link services are referenced but no native deep-link scheme or Android intent-filter is configured.");
+			}
+			if (UsesNativeUiShare && !config.AndroidManifest.IncludeShareQueriesBlock)
+			{
+				warnings.Add("Native UI sharing is referenced but Android share-package queries are disabled.");
+			}
+			foreach (var permission in ReferencedPermissions)
+			{
+				if (MobileServicesConfig.GetIosUsageKey(permission) != null && string.IsNullOrWhiteSpace(config.GetUsageDescriptionEn(permission)))
+				{
+					warnings.Add($"{permission} is referenced but has no English iOS usage description.");
+				}
+			}
+			return warnings;
+		}
 	}
 
 	/// <summary>

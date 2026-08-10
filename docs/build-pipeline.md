@@ -12,12 +12,13 @@ The Inspector (`MobileServicesConfigEditor`) shows:
 - **Usage descriptions (localized)** — `Permission Descriptions` is a list with one entry per `AppPermission`, and each holds a **per-locale list** of `(LocaleCode, UsageDescription)`. The `en` value is the base; add `fr`, `pt-BR`, … to localize. (Notifications has no iOS Info.plist key, so it's not emitted.)
 - **App Tracking (ATT) Description** — the per-locale `NSUserTrackingUsageDescription` list. Only marked missing when the App Tracking capability is enabled.
 - **Capabilities** — `Push Notifications`, `App Tracking`, `Associated Domains` (+ domain list). (Background audio is not here — use Unity's own **Player Settings > iOS > Behavior in Background = Custom > Audio**.)
-- **Android manifest** — `CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `READ_MEDIA_IMAGES`, `POST_NOTIFICATIONS`, share-chooser `<queries>` block.
+- **Android manifest** — `CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `READ_MEDIA_IMAGES`, `POST_NOTIFICATIONS`, share-chooser `<queries>` block, and semantic deep-link registrations (`Scheme`, optional `Host`, optional `PathPrefix`).
+- **Native deep links** — `DeepLinks.IosUrlSchemes` and `DeepLinks.AndroidIntentFilters` are deduplicated by semantic identity. Malformed rows fail before a build file is touched.
 - **Android dependencies** — `Include Play Review Dependency` toggle (**ON by default**) + editable `Play Review Coordinate` (default `com.google.android.play:review:2.0.2`). When on, the Play In-App Review library is auto-injected into the generated Gradle project so `NativeUiService.RequestReview()` works with zero manual setup.
 - **Build behaviour** — `Manage Native Build Manually` (**OFF by default**) — when ON, the package writes nothing to the iOS/Android build and skips the iOS usage-description validation. It's the single escape for teams that configure the native build (Xcode / Gradle) themselves. (This is *build* configuration — unrelated to render post-processing.)
 - **Tools** — `Scan project for used services` (reflection-based pre-fill of capability toggles), `Fill missing English descriptions with suggested copy`, `Generate iOS Privacy Nutrition Label draft`.
 
-Accessed in code via `MobileServicesConfig.Instance` (cached locator; returns a transient default if no asset exists, so build/tests never fail).
+Accessed in editor tooling via `MobileServicesConfig.Instance` (cached locator; it may return a transient default for convenience). Build callbacks use `TryGetPersistedConfig(out config)` and therefore perform no native work when no persisted config exists unless a sample or another explicit owner pushes a temporary context.
 
 ## Build postprocessor
 
@@ -25,7 +26,7 @@ Accessed in code via `MobileServicesConfig.Instance` (cached locator; returns a 
 
 ### Validation step (fail-fast)
 
-Reads the config asset + runs the project scanner. For each referenced permission that has an Info.plist key but an empty usage description, the postprocessor throws `BuildFailedException` listing every missing key, with a fix hint pointing at the config asset (and the `Fill missing English descriptions with suggested copy` button). The same applies to `NSUserTrackingUsageDescription` when App Tracking is enabled. To bypass validation entirely (you manage `Info.plist` yourself), enable `Manage Native Build Manually`.
+Resolves the unique persisted/effective config before scanning or file access. Missing config and `Manage Native Build Manually` are complete no-ops. Explicitly enabled malformed settings (duplicate permission/localization rows, missing English text for a configured iOS permission, incomplete enabled capabilities, malformed deep-link rows, or an invalid Maven coordinate) throw `BuildFailedException` before any native file is touched. Scanner/config mismatches are advisory warnings only; the explicit config remains authoritative. To bypass all package mutation and validation, enable `Manage Native Build Manually`.
 
 ### iOS injection step
 
@@ -33,7 +34,8 @@ After validation, the postprocessor mutates the post-build Xcode project:
 
 - **Info.plist** — writes every configured **base (`en`)** usage description string. When any non-`en` locale is configured, also writes `CFBundleLocalizations` (+ `CFBundleDevelopmentRegion`).
 - **Localized usage descriptions** — for every non-`en` `LocaleEntry`, writes a `<locale>.lproj/InfoPlist.strings` file (the platform-native format: `"NSCameraUsageDescription" = "…";`) and registers it on the main target so Xcode copies it into the app bundle. iOS then shows the description in the device language, falling back to the `Info.plist` base value. (The in-memory `PBXProject` is saved before `ProjectCapabilityManager` runs so the registration isn't clobbered.)
-- **Entitlements** — opens / creates `GameLoversMobileServices.entitlements` via `ProjectCapabilityManager` and adds Push Notifications / Associated Domains capabilities per the settings.
+- **URL schemes** — unions configured schemes into an existing `CFBundleURLTypes` owner (or creates the package-owned entry) without replacing other SDK declarations.
+- **Entitlements** — reuses an existing `CODE_SIGN_ENTITLEMENTS` path when one is configured and creates the deterministic package file only when none exists. Push Notifications and Associated Domains are merged into that file; existing domains are preserved.
 
 Idempotent — re-running against the same Xcode project produces no diff if the configured state already matches.
 
@@ -43,6 +45,8 @@ Android permissions and share queries are applied to the **generated Gradle proj
 
 The package no longer mutates `Assets/Plugins/Android/mainTemplate.xml` after the build. This matters because post-build edits to that template cannot affect the already-generated player. Consumers that manage a custom manifest manually can enable `Manage Native Build Manually`.
 
+Deep-link filters are merged by `(scheme, host, pathPrefix)` identity and are written only when the generated application manifest changes. The package requires one unambiguous Unity player activity when configured permissions, share queries, or deep links need a manifest mutation; failures name every candidate file.
+
 ### Android Gradle dependency step (Play In-App Review)
 
 `MobileServicesBuildPostprocessor` also implements `IPostGenerateGradleAndroidProject`. When `Include Play Review dependency` is on (the default), it injects `implementation '<coordinate>'` (default `com.google.android.play:review:2.0.2`) into the generated module `build.gradle` so `NativeUiService.RequestReview()` works on Android with zero manual setup.
@@ -51,9 +55,9 @@ The package no longer mutates `Assets/Plugins/Android/mainTemplate.xml` after th
 - **Editable**: repoint `PlayReviewDependencyCoordinate` to an internal mirror or a pinned/forced version to resolve a Gradle conflict.
 - **Opt-out**: turn `Include Play Review dependency` off for non-Play targets (Amazon / Huawei / sideload) and declare it yourself.
 
-### Deep Link Router sample hook
+### Deep Link Router sample requirements
 
-When the imported Links scene is present in the effective project build scenes, the bundle's editor assembly adds an Android `VIEW` intent filter with `DEFAULT` and `BROWSABLE` categories to the actual Unity activity. The iOS hook adds only an additive `CFBundleURLTypes` entry. No Push Notifications or Associated Domains entitlement is added for this sample. Deleting the sample bundle removes this hook; the package postprocessor contains no Deep Link sample path or type.
+The sample does not own a native build callback. For the exact ordered four-scene build prepared by **Build All**, its catalog facade adds one deterministic scheme derived from `PlayerSettings.applicationIdentifier` to the temporary `MobileServicesConfig.DeepLinks` value. The package postprocessor then performs the same additive iOS/Android merge as it does for a production config. Reordered, mixed, or partial enabled-scene builds do not activate the sample overlay.
 
 The custom scheme is deterministic: the lower-case application identifier is filtered to ASCII letters, digits, `+`, `.`, and `-`; invalid runs become `-`, `gl-` is prefixed when the result does not start with a letter, and an empty result falls back to `gamelovers-mobile-sample`. This makes the same application identifier produce the same scheme in Android and iOS exports.
 
@@ -61,7 +65,9 @@ The custom scheme is deterministic: the lower-case application identifier is fil
 
 After importing **Mobile Services Samples**, choose **Tools > Mobile Samples Examples > Build All**. The sample-owned command validates the four scenes, snapshots the effective global Build Settings or active overriding Build Profile in `SessionState`, installs the exact Overview-first scene sequence, then opens Unity's native Build Profiles window. Unity retains ownership of target selection, output location, and the final Build command.
 
-During a canonical four-scene player build, the sample preprocessor clones the effective config into a hidden in-memory object and applies the bundle's combined native requirements. The package postprocessor reads the clone while the build is active and falls back to the normal project config afterwards. Cleanup runs after the build and on a cancelled-build safety path. **Restore All** restores the captured scene list and enabled flags during the current Unity session. It never changes the persisted config asset or `EditorPrefs`; the session snapshot is unavailable after closing Unity.
+During a canonical four-scene player build, the sample preprocessor (cleanup callback order `2000`) clones the persisted config—or a neutral all-native-disabled transient when no persisted asset exists—into a hidden in-memory object and applies the bundle's combined native requirements. The package postprocessor (callback order `1000`) reads that clone while the build is active; outside the scope it resolves only the persisted asset. Cleanup runs after the build and on a cancelled-build safety path. **Restore All** restores the captured scene list and enabled flags during the current Unity session. It never changes the persisted config asset or `EditorPrefs`; the session snapshot is unavailable after closing Unity.
+
+The imported sample includes one `MobileServicesSampleBuildCatalog.asset` with serialized `SceneAsset` references. Type-based discovery requires exactly one catalog and validates four non-null entries, unique pages, exact `Overview → Haptics → Notifications → Links` ordering, and current paths obtained from `AssetDatabase.GetAssetPath`. The **Verify Scene Catalog** entry point emits a non-empty page/path/derived-GUID artifact for clean-host verification; no C# or shell lookup relies on hand-authored scene GUIDs or sample-relative scene path literals.
 
 ## Build mutation map & escape hatches
 

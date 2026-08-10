@@ -1,5 +1,6 @@
 using System;
 using GameLovers.MobileServices.Editor.NativeBuild;
+using GameLovers.MobileServices.Editor.Settings;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -26,9 +27,14 @@ namespace GameLovers.MobileServices.Samples.Editor.Build
 		private static void BuildAll()
 		{
 			if (!CanChangeBuildScenes()) return;
-			if (!MobileServicesSampleBuildCatalog.TryGetAllScenePaths(out var paths, out var missingPage))
+			if (!MobileServicesSampleBuildCatalog.TryGetOrderedScenePaths(out var paths, out var catalogError))
 			{
-				EditorUtility.DisplayDialog("Mobile Services samples", $"The {missingPage} scene could not be resolved. Reimport Mobile Services Samples from Package Manager.", "OK");
+				EditorUtility.DisplayDialog("Mobile Services samples", catalogError, "OK");
+				return;
+			}
+
+			if (!ConfirmNativeBuildOwnership())
+			{
 				return;
 			}
 
@@ -46,6 +52,35 @@ namespace GameLovers.MobileServices.Samples.Editor.Build
 
 			target.SetScenes(paths);
 			OpenNativeBuildWindow();
+		}
+
+		private static bool ConfirmNativeBuildOwnership()
+		{
+			MobileServicesConfig config;
+			try
+			{
+				if (!MobileServicesConfig.TryGetPersistedConfig(out config)) return true;
+			}
+			catch (InvalidOperationException exception)
+			{
+				EditorUtility.DisplayDialog("Mobile Services samples", exception.Message, "OK");
+				return false;
+			}
+			if (config.ManageNativeBuildManually)
+			{
+				return EditorUtility.DisplayDialog(
+					"Mobile Services samples",
+					"Manage Native Build Manually is enabled. The sample will not generate native permissions, capabilities, dependencies, or deep links automatically. Continue?",
+					"Continue",
+					"Cancel");
+			}
+			if (!config.TryValidate(out var validationError))
+			{
+				EditorUtility.DisplayDialog("Mobile Services samples", $"The persisted Mobile Services Config is invalid and Build All cannot change Build Settings:\n- {validationError}", "OK");
+				return false;
+			}
+
+			return true;
 		}
 
 		[MenuItem("Tools/Mobile Samples Examples/Build All", true)]
@@ -283,7 +318,7 @@ namespace GameLovers.MobileServices.Samples.Editor.Build
 		public void OnPreprocessBuild(BuildReport report)
 		{
 			Release();
-			if (!MobileServicesSampleBuildCatalog.ContainsAllSampleScenes(MobileServicesSampleBuildCommands.GetEffectiveScenes())) return;
+			if (!MobileServicesSampleBuildCatalog.MatchesCanonicalEnabledScenes(MobileServicesSampleBuildCommands.GetEffectiveScenes())) return;
 
 			_scope = MobileServicesBuildContext.Push("MobileServicesSamples.All", MobileServicesSampleBuildCatalog.ConfigureAll);
 			_releaseAfter = EditorApplication.timeSinceStartup + 1d;

@@ -417,7 +417,9 @@ namespace GameLovers.MobileServices.Notifications
             _platform?.DismissAllDisplayedNotifications();
         }
 
-        /// <summary>Registers an editor-only notification in the same pending collection used by runtime scheduling.</summary>
+        /// <summary>
+        /// Registers an editor-only notification in the same pending collection used by runtime scheduling.
+        /// </summary>
         internal PendingNotification RegisterPendingNotification(IGameNotification notification)
         {
             if (notification == null)
@@ -431,7 +433,9 @@ namespace GameLovers.MobileServices.Notifications
         }
 
 #if UNITY_EDITOR
-        /// <summary>Delivers one pending notification through the normal foreground callback path for editor simulation.</summary>
+        /// <summary>
+        /// Delivers one pending notification through the normal foreground callback path for editor simulation.
+        /// </summary>
         internal bool TrySimulateDelivery(int notificationId)
         {
             int deliveredIndex = PendingNotifications.FindIndex(

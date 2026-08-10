@@ -5,7 +5,8 @@ using System;
 namespace GameLovers.MobileServices.Notifications
 {
     /// <summary>
-    /// Represents a notification that was scheduled with <see cref="GameNotificationsMonoBehaviour.ScheduleNotification"/>.
+    /// Represents a notification that was scheduled with
+    /// <see cref="GameNotificationsMonoBehaviour.ScheduleNotification"/>.
     /// </summary>
     public class PendingNotification
     {

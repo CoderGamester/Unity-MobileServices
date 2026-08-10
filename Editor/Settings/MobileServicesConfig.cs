@@ -35,7 +35,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] public List<LocaleEntry> Entries = new List<LocaleEntry> { new LocaleEntry() };
 	}
 
-	/// <summary>Per-locale values for the App Tracking Transparency (<c>NSUserTrackingUsageDescription</c>) prompt.</summary>
+	/// <summary>
+	/// Per-locale values for the App Tracking Transparency
+	/// (<c>NSUserTrackingUsageDescription</c>) prompt.
+	/// </summary>
 	[Serializable]
 	public sealed class AttUsageRow
 	{
@@ -56,11 +59,17 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds the Associated Domains capability (uses <see cref="AssociatedDomainList"/>).</summary>
 		[SerializeField] public bool AssociatedDomains;
 
-		/// <summary>Associated-domain entries (e.g. <c>applinks:example.com</c>) when <see cref="AssociatedDomains"/> is on.</summary>
+		/// <summary>
+		/// Associated-domain entries (e.g. <c>applinks:example.com</c>) when
+		/// <see cref="AssociatedDomains"/> is on.
+		/// </summary>
 		[SerializeField] public List<string> AssociatedDomainList = new List<string>();
 	}
 
-	/// <summary>Android <c>&lt;uses-permission&gt;</c> / <c>&lt;queries&gt;</c> entries to inject into the manifest template.</summary>
+	/// <summary>
+	/// Android <c>&lt;uses-permission&gt;</c> / <c>&lt;queries&gt;</c> entries to inject into the
+	/// manifest template.
+	/// </summary>
 	[Serializable]
 	public sealed class AndroidManifestToggles
 	{
@@ -82,8 +91,138 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds <c>ACCESS_FINE_LOCATION</c>.</summary>
 		[SerializeField] public bool AccessFineLocation;
 
-		/// <summary>Adds the share-chooser <c>&lt;queries&gt;</c> block (Android 11+ visibility for share targets).</summary>
+		/// <summary>
+		/// Adds the share-chooser <c>&lt;queries&gt;</c> block (Android 11+ visibility for share targets).
+		/// </summary>
 		[SerializeField] public bool IncludeShareQueriesBlock;
+	}
+
+	/// <summary>One Android browsable deep-link registration.</summary>
+	[Serializable]
+	public sealed class AndroidDeepLinkRegistration
+	{
+		/// <summary>Required URI scheme.</summary>
+		[SerializeField] public string Scheme;
+
+		/// <summary>Optional host constraint.</summary>
+		[SerializeField] public string Host;
+
+		/// <summary>Optional path-prefix constraint.</summary>
+		[SerializeField] public string PathPrefix;
+	}
+
+	/// <summary>Native deep-link declarations shared by production builds and temporary sample overlays.</summary>
+	[Serializable]
+	public sealed class NativeDeepLinkSettings
+	{
+		/// <summary>iOS custom URL schemes.</summary>
+		[SerializeField] public List<string> IosUrlSchemes = new List<string>();
+
+		/// <summary>Android browsable intent-filter registrations.</summary>
+		[SerializeField] public List<AndroidDeepLinkRegistration> AndroidIntentFilters = new List<AndroidDeepLinkRegistration>();
+
+		private void OnEnable()
+		{
+			IosUrlSchemes ??= new List<string>();
+			AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
+		}
+
+		/// <summary>Adds an iOS scheme using case-insensitive set semantics.</summary>
+		public void AddIosUrlScheme(string scheme)
+		{
+			IosUrlSchemes ??= new List<string>();
+			scheme = Normalize(scheme);
+			if (string.IsNullOrEmpty(scheme)) return;
+			foreach (var existing in IosUrlSchemes)
+			{
+				if (string.Equals(existing?.Trim(), scheme, StringComparison.OrdinalIgnoreCase)) return;
+			}
+			IosUrlSchemes.Add(scheme);
+		}
+
+		/// <summary>Adds an Android registration using semantic set semantics.</summary>
+		public void AddAndroidIntentFilter(string scheme, string host = null, string pathPrefix = null)
+		{
+			AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
+			var registration = new AndroidDeepLinkRegistration
+			{
+				Scheme = Normalize(scheme),
+				Host = Normalize(host),
+				PathPrefix = Normalize(pathPrefix)
+			};
+			if (string.IsNullOrEmpty(registration.Scheme)) return;
+
+			foreach (var existing in AndroidIntentFilters)
+			{
+				if (existing == null) continue;
+				if (string.Equals(existing.Scheme?.Trim(), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals(existing.Host?.Trim(), registration.Host, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals(existing.PathPrefix?.Trim(), registration.PathPrefix, StringComparison.Ordinal))
+				{
+					return;
+				}
+			}
+			AndroidIntentFilters.Add(registration);
+		}
+
+		/// <summary>Appends malformed deep-link declarations to the supplied error collection.</summary>
+		internal void CollectValidationErrors(string prefix, List<string> errors)
+		{
+			if (IosUrlSchemes == null)
+			{
+				errors.Add($"{prefix}.IosUrlSchemes is null.");
+			}
+			else
+			{
+				for (var i = 0; i < IosUrlSchemes.Count; i++)
+				{
+					var scheme = IosUrlSchemes[i]?.Trim();
+					if (string.IsNullOrEmpty(scheme) || Uri.CheckSchemeName(scheme) == false)
+					{
+						errors.Add($"{prefix}.IosUrlSchemes[{i}] has an invalid URI scheme '{IosUrlSchemes[i]}'.");
+					}
+				}
+			}
+
+			if (AndroidIntentFilters == null)
+			{
+				errors.Add($"{prefix}.AndroidIntentFilters is null.");
+				return;
+			}
+			for (var i = 0; i < AndroidIntentFilters.Count; i++)
+			{
+				var entry = AndroidIntentFilters[i];
+				if (entry == null)
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}] is null.");
+					continue;
+				}
+				if (string.IsNullOrWhiteSpace(entry.Scheme) || Uri.CheckSchemeName(entry.Scheme.Trim()) == false)
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}].Scheme is invalid: '{entry.Scheme}'.");
+				}
+				if (!string.IsNullOrWhiteSpace(entry.Host) && ContainsIllegalHostCharacters(entry.Host))
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}].Host is invalid: '{entry.Host}'.");
+				}
+				if (!string.IsNullOrWhiteSpace(entry.PathPrefix) &&
+					(!entry.PathPrefix.Trim().StartsWith("/", StringComparison.Ordinal) || entry.PathPrefix.IndexOfAny(new[] { '?', '#' }) >= 0))
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}].PathPrefix must start with '/' and contain no query or fragment: '{entry.PathPrefix}'.");
+				}
+			}
+		}
+
+		private static string Normalize(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+
+		private static bool ContainsIllegalHostCharacters(string host)
+		{
+			foreach (var character in host.Trim())
+			{
+				if (char.IsWhiteSpace(character) || character == '/' || character == '?' || character == '#') return true;
+			}
+			return false;
+		}
 	}
 
 	/// <summary>
@@ -102,7 +241,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 	/// </remarks>
 	public sealed class MobileServicesConfig : ScriptableObject
 	{
-		/// <summary>Default/base locale code. Its value is written to the <c>Info.plist</c> root as the fallback.</summary>
+		/// <summary>
+		/// Default/base locale code. Its value is written to the <c>Info.plist</c> root as the fallback.
+		/// </summary>
 		public const string DefaultLocaleCode = "en";
 
 		/// <summary>Default Maven coordinate for the Play In-App Review library injected on Android builds.</summary>
@@ -115,14 +256,31 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private AttUsageRow _attUsageDescription = new AttUsageRow();
 		[SerializeField] private CapabilityToggles _capabilities = new CapabilityToggles();
 		[SerializeField] private AndroidManifestToggles _androidManifest = new AndroidManifestToggles();
+		[SerializeField] private NativeDeepLinkSettings _deepLinks = new NativeDeepLinkSettings();
 		[SerializeField] private bool _includePlayReviewDependency = true;
 		[SerializeField] private string _playReviewDependencyCoordinate = DefaultPlayReviewCoordinate;
 		[SerializeField] private bool _manageNativeBuildManually;
 
+		private void OnEnable()
+		{
+			_permissionDescriptions ??= new List<PermissionUsageRow>();
+			_attUsageDescription ??= new AttUsageRow();
+			_attUsageDescription.Entries ??= new List<LocaleEntry>();
+			_capabilities ??= new CapabilityToggles();
+			_capabilities.AssociatedDomainList ??= new List<string>();
+			_androidManifest ??= new AndroidManifestToggles();
+			_deepLinks ??= new NativeDeepLinkSettings();
+			_deepLinks.IosUrlSchemes ??= new List<string>();
+			_deepLinks.AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
+			_playReviewDependencyCoordinate ??= DefaultPlayReviewCoordinate;
+		}
+
 		/// <summary>
 		/// The single config for the project, located anywhere via <see cref="AssetDatabase.FindAssets(string)"/>.
-		/// If no asset exists yet, returns a transient in-memory instance carrying the defaults (so build /
-		/// test reads never throw) — create a persisted asset via the
+		/// If no asset exists yet, returns a transient in-memory instance carrying the defaults for editor
+		/// convenience only. Build callbacks use <see cref="TryGetPersistedConfig(out MobileServicesConfig)"/>
+		/// and remain a no-op until a persisted asset or an explicit temporary build context exists — create a
+		/// persisted asset via the
 		/// <c>Tools &gt; GameLovers &gt; Mobile Services &gt; Select Mobile Services Config</c> menu.
 		/// </summary>
 		public static MobileServicesConfig Instance
@@ -152,7 +310,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 			}
 		}
 
-		/// <summary>Per-permission usage description rows. Reads as read-only; mutate via the explicit helpers.</summary>
+		/// <summary>
+		/// Per-permission usage description rows. Reads as read-only; mutate via the explicit helpers.
+		/// </summary>
 		public IReadOnlyList<PermissionUsageRow> PermissionDescriptions => _permissionDescriptions;
 
 		/// <summary>ATT (`NSUserTrackingUsageDescription`) per-locale row.</summary>
@@ -161,8 +321,13 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>iOS capability toggles (Info.plist keys + entitlements) applied at build time.</summary>
 		public CapabilityToggles Capabilities => _capabilities;
 
-		/// <summary>Android manifest permission / queries toggles injected into the manifest template at build time.</summary>
+		/// <summary>
+		/// Android manifest permission / queries toggles injected into the manifest template at build time.
+		/// </summary>
 		public AndroidManifestToggles AndroidManifest => _androidManifest;
+
+		/// <summary>iOS URL scheme and Android intent-filter declarations applied at build time.</summary>
+		public NativeDeepLinkSettings DeepLinks => _deepLinks ??= new NativeDeepLinkSettings();
 
 		/// <summary>
 		/// When <c>true</c> (the default), the Android build postprocessor auto-injects the Play In-App
@@ -248,6 +413,147 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return created;
 		}
 
+		/// <summary>Loads the unique persisted config, returning false when no asset exists.</summary>
+		public static bool TryGetPersistedConfig(out MobileServicesConfig config)
+		{
+			var guids = AssetDatabase.FindAssets($"t:{nameof(MobileServicesConfig)}");
+			if (guids.Length == 0)
+			{
+				config = null;
+				return false;
+			}
+			if (guids.Length > 1)
+			{
+				var paths = new List<string>();
+				foreach (var guid in guids) paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+				throw new InvalidOperationException($"Multiple {nameof(MobileServicesConfig)} assets were found: {string.Join(", ", paths)}. Keep exactly one config asset.");
+			}
+
+			var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+			config = AssetDatabase.LoadAssetAtPath<MobileServicesConfig>(path);
+			if (config == null) throw new InvalidOperationException($"The Mobile Services config at '{path}' could not be loaded.");
+			return true;
+		}
+
+		/// <summary>Creates an unsaved configuration with every native requirement disabled.</summary>
+		internal static MobileServicesConfig CreateNeutralTransient()
+		{
+			var config = CreateInstance<MobileServicesConfig>();
+			config._includePlayReviewDependency = false;
+			config.hideFlags = HideFlags.HideAndDontSave;
+			return config;
+		}
+
+		/// <summary>Appends malformed explicitly configured values to the supplied error collection.</summary>
+		internal void CollectValidationErrors(List<string> errors)
+		{
+			if (errors == null) throw new ArgumentNullException(nameof(errors));
+			if (_permissionDescriptions == null)
+			{
+				errors.Add("PermissionDescriptions is null.");
+			}
+			else
+			{
+				var permissions = new HashSet<AppPermission>();
+				for (var rowIndex = 0; rowIndex < _permissionDescriptions.Count; rowIndex++)
+				{
+					var row = _permissionDescriptions[rowIndex];
+					if (row == null)
+					{
+						errors.Add($"PermissionDescriptions[{rowIndex}] is null.");
+						continue;
+					}
+					if (!permissions.Add(row.Permission)) errors.Add($"PermissionDescriptions contains duplicate permission '{row.Permission}'.");
+					CollectLocaleValidationErrors($"PermissionDescriptions[{rowIndex}].Entries", row.Entries, errors);
+					if (GetIosUsageKey(row.Permission) != null && string.IsNullOrWhiteSpace(GetLocaleEntry(row.Entries, DefaultLocaleCode)))
+					{
+						errors.Add($"PermissionDescriptions[{rowIndex}] for '{row.Permission}' has no English usage description.");
+					}
+				}
+			}
+			if (_attUsageDescription == null) errors.Add("AttUsageDescription is null.");
+			else CollectLocaleValidationErrors("AttUsageDescription.Entries", _attUsageDescription.Entries, errors);
+			if (_capabilities == null) errors.Add("Capabilities is null.");
+			else
+			{
+				if (_capabilities.AssociatedDomainList == null) errors.Add("Capabilities.AssociatedDomainList is null.");
+				else if (_capabilities.AssociatedDomains)
+				{
+					var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+					for (var i = 0; i < _capabilities.AssociatedDomainList.Count; i++)
+					{
+						var domain = _capabilities.AssociatedDomainList[i];
+						if (string.IsNullOrWhiteSpace(domain)) errors.Add($"Capabilities.AssociatedDomainList[{i}] is empty while AssociatedDomains is enabled.");
+						else if (!domains.Add(domain.Trim())) errors.Add($"Capabilities.AssociatedDomainList contains duplicate value '{domain}'.");
+					}
+				}
+			}
+			if (_androidManifest == null) errors.Add("AndroidManifest is null.");
+			if (_deepLinks == null) errors.Add("DeepLinks is null.");
+			if (_capabilities != null && _capabilities.AppTracking && string.IsNullOrWhiteSpace(GetAttUsageDescriptionEn()))
+			{
+				errors.Add("Capabilities.AppTracking is enabled but AttUsageDescription has no English value.");
+			}
+			if (_capabilities != null && _capabilities.AssociatedDomains && (_capabilities.AssociatedDomainList == null || _capabilities.AssociatedDomainList.Count == 0))
+			{
+				errors.Add("Capabilities.AssociatedDomains is enabled but AssociatedDomainList is empty.");
+			}
+			_deepLinks?.CollectValidationErrors(nameof(DeepLinks), errors);
+			if (_includePlayReviewDependency && !IsValidPlayReviewCoordinate(PlayReviewDependencyCoordinate))
+			{
+				errors.Add($"PlayReviewDependencyCoordinate is invalid: '{PlayReviewDependencyCoordinate}'.");
+			}
+		}
+
+		/// <summary>Validates explicitly enabled settings before a build or generated native file is touched.</summary>
+		public bool TryValidate(out string error)
+		{
+			var errors = new List<string>();
+			CollectValidationErrors(errors);
+			error = errors.Count == 0 ? null : string.Join("\n- ", errors);
+			return errors.Count == 0;
+		}
+
+		private static bool IsValidPlayReviewCoordinate(string coordinate)
+		{
+			if (string.IsNullOrWhiteSpace(coordinate)) return false;
+			var pieces = coordinate.Split(':');
+			return pieces.Length == 3 && Array.TrueForAll(pieces, piece => !string.IsNullOrWhiteSpace(piece));
+		}
+
+		private static void CollectLocaleValidationErrors(string prefix, List<LocaleEntry> entries, List<string> errors)
+		{
+			if (entries == null)
+			{
+				errors.Add($"{prefix} is null.");
+				return;
+			}
+
+			var locales = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			for (var i = 0; i < entries.Count; i++)
+			{
+				var entry = entries[i];
+				if (entry == null)
+				{
+					errors.Add($"{prefix}[{i}] is null.");
+					continue;
+				}
+				var locale = entry.LocaleCode?.Trim();
+				if (string.IsNullOrEmpty(locale))
+				{
+					errors.Add($"{prefix}[{i}].LocaleCode is empty.");
+				}
+				else if (!locales.Add(locale))
+				{
+					errors.Add($"{prefix} contains duplicate locale '{locale}'.");
+				}
+				if (!string.IsNullOrWhiteSpace(entry.UsageDescription) && string.IsNullOrEmpty(locale))
+				{
+					errors.Add($"{prefix}[{i}].UsageDescription has a value but LocaleCode is empty.");
+				}
+			}
+		}
+
 		/// <summary>
 		/// Returns a per-permission "Suggested copy" usage description. These follow Apple's review
 		/// guidelines (concrete, user-visible benefit) so the team isn't left to write the wording
@@ -327,7 +633,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return newRow;
 		}
 
-		/// <summary>Sets the usage description for <paramref name="permission"/> in <paramref name="locale"/>.</summary>
+		/// <summary>
+		/// Sets the usage description for <paramref name="permission"/> in <paramref name="locale"/>.
+		/// </summary>
 		public void SetUsageDescription(AppPermission permission, string locale, string text)
 		{
 			var row = GetOrAddRow(permission);
@@ -349,7 +657,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Sets the English ATT usage description. Convenience wrapper.</summary>
 		public void SetAttUsageDescriptionEn(string text) => SetAttUsageDescription(DefaultLocaleCode, text);
 
-		/// <summary>Reads the usage description for <paramref name="permission"/> in <paramref name="locale"/> (null if unset).</summary>
+		/// <summary>
+		/// Reads the usage description for <paramref name="permission"/> in
+		/// <paramref name="locale"/> (null if unset).
+		/// </summary>
 		public string GetUsageDescription(AppPermission permission, string locale)
 		{
 			foreach (var row in _permissionDescriptions)
@@ -378,11 +689,11 @@ namespace GameLovers.MobileServices.Editor.Settings
 		public IReadOnlyList<string> GetNonDefaultLocaleCodes()
 		{
 			var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-			foreach (var row in _permissionDescriptions)
+			foreach (var row in _permissionDescriptions ?? new List<PermissionUsageRow>())
 			{
-				CollectLocales(row.Entries, set);
+				if (row != null) CollectLocales(row.Entries, set);
 			}
-			CollectLocales(_attUsageDescription.Entries, set);
+			if (_attUsageDescription != null) CollectLocales(_attUsageDescription.Entries, set);
 			set.RemoveWhere(code => string.Equals(code, DefaultLocaleCode, StringComparison.OrdinalIgnoreCase));
 			return new List<string>(set);
 		}
@@ -422,22 +733,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		private static MobileServicesConfig FindAsset()
 		{
-			var guids = AssetDatabase.FindAssets($"t:{nameof(MobileServicesConfig)}");
-			if (guids.Length == 0)
-			{
-				return null;
-			}
-			if (guids.Length > 1)
-			{
-				Debug.LogWarning($"[GameLovers.MobileServices] Multiple {nameof(MobileServicesConfig)} assets found — using " +
-					$"'{AssetDatabase.GUIDToAssetPath(guids[0])}'. Keep a single config asset to avoid ambiguity.");
-			}
-			return AssetDatabase.LoadAssetAtPath<MobileServicesConfig>(AssetDatabase.GUIDToAssetPath(guids[0]));
+			return TryGetPersistedConfig(out var config) ? config : null;
 		}
 
 		private static void CollectLocales(List<LocaleEntry> entries, HashSet<string> set)
 		{
-			foreach (var entry in entries)
+			foreach (var entry in entries ?? new List<LocaleEntry>())
 			{
 				if (entry != null && !string.IsNullOrWhiteSpace(entry.LocaleCode) && !string.IsNullOrWhiteSpace(entry.UsageDescription))
 				{
@@ -448,9 +749,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		private static string GetLocaleEntry(List<LocaleEntry> entries, string locale)
 		{
-			foreach (var entry in entries)
+			foreach (var entry in entries ?? new List<LocaleEntry>())
 			{
-				if (string.Equals(entry.LocaleCode, locale, StringComparison.OrdinalIgnoreCase))
+				if (entry != null && string.Equals(entry.LocaleCode, locale, StringComparison.OrdinalIgnoreCase))
 				{
 					return entry.UsageDescription;
 				}

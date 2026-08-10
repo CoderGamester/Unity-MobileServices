@@ -13,7 +13,10 @@ namespace GameLovers.MobileServices.Device
 		/// <summary>Current battery charge in <c>[0, 1]</c>; <c>-1</c> if unknown.</summary>
 		float Level { get; }
 
-		/// <summary>Current charging status (<c>Charging</c>, <c>Discharging</c>, <c>NotCharging</c>, <c>Full</c>, <c>Unknown</c>).</summary>
+		/// <summary>
+		/// Current charging status (<c>Charging</c>, <c>Discharging</c>, <c>NotCharging</c>,
+		/// <c>Full</c>, <c>Unknown</c>).
+		/// </summary>
 		BatteryStatus Status { get; }
 
 		/// <summary>True when the OS reports its low-power / battery-saver mode is active.</summary>

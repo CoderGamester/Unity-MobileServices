@@ -27,7 +27,9 @@ namespace GameLovers.MobileServices
 		/// <summary>Cross-platform haptic feedback.</summary>
 		IHapticsService Haptics { get; }
 
-		/// <summary>Device sub-services (safe area, screen wake, battery, audio session, permissions, ATT, deep link).</summary>
+		/// <summary>
+		/// Device sub-services (safe area, screen wake, battery, audio session, permissions, ATT, deep link).
+		/// </summary>
 		IDeviceService Device { get; }
 	}
 

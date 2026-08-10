@@ -26,7 +26,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 	{
 		private HelpBox _statusBox;
 
-		/// <summary>Builds the config Inspector: per-locale description lists, settings, status, and helper tools.</summary>
+		/// <summary>
+		/// Builds the config Inspector: per-locale description lists, settings, status, and helper tools.
+		/// </summary>
 		public override VisualElement CreateInspectorGUI()
 		{
 			var config = (MobileServicesConfig)target;
@@ -58,6 +60,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 			root.Add(MakeSection("Android manifest"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_androidManifest"), "Android Manifest"));
+
+			root.Add(MakeSection("Native deep links"));
+			root.Add(new PropertyField(serializedObject.FindProperty("_deepLinks"), "Deep-link registrations"));
 
 			root.Add(MakeSection("Android dependencies"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
@@ -129,32 +134,14 @@ namespace GameLovers.MobileServices.Editor.Settings
 			var btn = new Button(() =>
 			{
 				var result = MobileServicesScanner.Scan();
-				var c = config.Capabilities;
-				if (result.UsesNotifications) c.PushNotifications = true;
-				if (result.UsesAtt) c.AppTracking = true;
-				if (result.UsesDeepLinks) c.AssociatedDomains = true;
-
-				var a = config.AndroidManifest;
-				foreach (var p in result.ReferencedPermissions)
+				var warnings = result.GetConfigurationWarnings(config);
+				if (warnings.Count == 0)
 				{
-					switch (p)
-					{
-						case AppPermission.Camera:               a.Camera = true; break;
-						case AppPermission.Microphone:           a.RecordAudio = true; break;
-						case AppPermission.LocationWhenInUse:
-						case AppPermission.LocationAlways:       a.AccessFineLocation = true; break;
-						case AppPermission.PhotoLibrary:
-						case AppPermission.PhotoLibraryAddOnly:  a.ReadMediaImages = true; break;
-						case AppPermission.Notifications:        a.PostNotifications = true; break;
-					}
+					Debug.Log("[GameLovers.MobileServices] Project scan complete — the explicit config covers the detected service references.");
+					return;
 				}
-				if (result.UsesNativeUiShare) a.IncludeShareQueriesBlock = true;
-
-				config.Persist();
-				serializedObject.Update();
-				UpdateStatus(config);
-				Debug.Log("[GameLovers.MobileServices] Project scan complete — capability toggles updated.");
-			}) { text = "Scan project for used services" };
+				Debug.LogWarning("[GameLovers.MobileServices] Project scan found configuration warnings:\n- " + string.Join("\n- ", warnings));
+			}) { text = "Scan project for configuration warnings" };
 			btn.style.marginTop = 2;
 			return btn;
 		}
