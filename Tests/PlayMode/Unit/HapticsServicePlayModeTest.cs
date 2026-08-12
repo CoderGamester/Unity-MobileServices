@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using GameLovers.MobileServices.Haptics;
 using GameLovers.MobileServices.Haptics.Internal;
 using NUnit.Framework;
@@ -98,6 +99,19 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.AreEqual(0.42f, _backend.LastIntensity, 1e-6f);
 		}
 
+		[Test]
+		// ADMIT: HapticsService.PlayCustom could start custom output without stopping an active loop.
+		// RCR: HapticsService.cs PlayCustom — `StopCurrentHaptic()` → `CancelPendingAutoStop()` → RED (StopCount expected 1 was 0).
+		public void PlayCustom_WhilePlaying_StopsPreviousBackendBeforeCustom()
+		{
+			_haptics.PlayPresetDuration(HapticPreset.Warning);
+
+			_haptics.PlayCustom(0.5f, 250f);
+
+			Assert.AreEqual(1, _backend.StopCount);
+			Assert.AreEqual("Loop,Stop,Custom", string.Join(",", _backend.Operations));
+		}
+
 		[UnityTest]
 		// ADMIT: destroying HapticsHost mid-countdown must not fire the auto-stop callback into a service
 		// whose host is gone.
@@ -149,21 +163,24 @@ namespace GameLoversEditor.MobileServices.Tests
 			public int StopCount;
 			public float LastIntensity;
 			public float LastDurationMs;
+			public List<string> Operations = new List<string>();
 
 			public bool IsSupported => IsSupportedValue;
 
-			public void PlayPresetOneShot(HapticPreset preset) { }
-			public void PlayPresetLoop(HapticPreset preset) { }
+			public void PlayPresetOneShot(HapticPreset preset) { Operations.Add("OneShot"); }
+			public void PlayPresetLoop(HapticPreset preset) { Operations.Add("Loop"); }
 
 			public void PlayCustom(float intensity01, float durationMs)
 			{
 				LastIntensity = intensity01;
 				LastDurationMs = durationMs;
+				Operations.Add("Custom");
 			}
 
 			public void Stop()
 			{
 				StopCount++;
+				Operations.Add("Stop");
 			}
 		}
 	}

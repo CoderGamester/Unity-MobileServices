@@ -90,7 +90,7 @@ namespace GameLovers.MobileServices.Haptics
 				return;
 			}
 
-			CancelPendingAutoStop();
+			StopCurrentHaptic();
 
 			if (duration == 0f)
 			{
@@ -120,7 +120,7 @@ namespace GameLovers.MobileServices.Haptics
 				return;
 			}
 
-			CancelPendingAutoStop();
+			StopCurrentHaptic();
 
 			intensity01 = Mathf.Clamp01(intensity01);
 			_backend.PlayCustom(intensity01, durationMs);
