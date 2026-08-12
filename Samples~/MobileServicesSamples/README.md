@@ -1,5 +1,7 @@
 # Mobile Services Samples
 
+> **Unity compatibility:** Minimum Unity version `6000.0`; reference streams are `6000.0.x`, `6000.3.x`, and `6000.5.x`. Mobile Services is pipeline-neutral. See the [package compatibility matrix](../../README.md#unity-compatibility).
+
 Import the single **Mobile Services Samples** entry from Package Manager. It is one sample player with four views connected by persistent bottom tabs: **Overview**, **Haptics**, **Notifications**, and **Links**.
 
 Set **Player Settings > Active Input Handling** to **Input System Package (New)** or **Both**, then open any of the four `.unity` scenes and enter Play Mode. Each scene remains independently playable, and the shared editor bridge makes tab navigation work without preparing Build Settings first. No GameObject wiring is required. Unity 6 InputForUI routes input directly to UI Toolkit, so runtime buttons, fields, scrolling, and tabs in the Game or Device Simulator view become interactive in Play Mode without a uGUI EventSystem.

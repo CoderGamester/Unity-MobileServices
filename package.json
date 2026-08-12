@@ -5,7 +5,7 @@
   "version": "1.0.1",
   "unity": "6000.0",
   "license": "MIT",
-  "description": "Mobile platform services for Unity: native UI (alerts/toasts), push notifications, and gesture detection (swipe/drag).",
+  "description": "Mobile platform services: local notifications, native UI, haptics, permissions, ATT, deep links, gestures, device helpers, and build/simulator tooling.",
   "type": "library",
   "dependencies": {
     "com.unity.mobile.notifications": "2.3.0",

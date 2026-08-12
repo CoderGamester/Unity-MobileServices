@@ -4,7 +4,7 @@
 
 ## 1. Package Overview
 - **Package**: `com.gamelovers.mobileservices`
-- **Unity**: Unity 6 only. Supported streams are 6000.5.x, 6000.3.x, and 6000.0.x. Validation editors are 6000.5.7f1 (primary), 6000.3.21f1, and 6000.0.81f1; other streams are unsupported/untested.
+- **Unity**: minimum 6000.0; compatibility reference streams 6000.0.x, 6000.3.x, and 6000.5.x. Reference editors: 6000.0.81f1, 6000.3.21f1, 6000.5.7f1 (primary). Do not call a stream validated without current matrix artifacts.
 - **Dependencies** (see `package.json`)
   - `com.unity.mobile.notifications` (**2.3.0**)
   - `com.unity.inputsystem` (**1.11.0**)
