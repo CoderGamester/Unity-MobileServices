@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using GameLovers.MobileServices.Haptics;
 using GameLovers.MobileServices.Haptics.Internal;
 using NUnit.Framework;
@@ -146,6 +147,22 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticsService.PlayPresetDuration could start a new output without stopping an active loop.
+		// RCR: HapticsService.cs PlayPresetDuration — `StopCurrentHaptic()` → `CancelPendingAutoStop()` → RED (StopCount expected 1 was 0).
+		public void PlayPresetDuration_WhilePlaying_StopsPreviousBackendBeforeNewPreset()
+		{
+			_haptics.PlayPresetDuration(HapticPreset.Warning);
+			_backend.Reset();
+
+			_haptics.PlayPreset(HapticPreset.Success);
+
+			Assert.AreEqual(1, _backend.StopCount);
+			Assert.AreEqual(1, _backend.OneShotCount);
+			Assert.AreEqual("Stop,OneShot", string.Join(",", _backend.Operations));
+			Assert.AreEqual(HapticPreset.Success, _backend.LastPreset);
+		}
+
+		[Test]
 		// ADMIT: HapticsService.PlayCustom could accept durationMs == 0 and schedule a zero-length haptic plus a host coroutine.
 		// RCR: HapticsService.cs PlayCustom — `durationMs <= 0f` → `durationMs < 0f` → RED (CustomCount expected 0 was 1).
 		public void PlayCustom_NonPositiveDuration_NoOp()
@@ -197,6 +214,7 @@ namespace GameLoversEditor.MobileServices.Tests
 			public HapticPreset LastPreset;
 			public float LastIntensity;
 			public float LastDurationMs;
+			public List<string> Operations = new List<string>();
 
 			public bool IsSupported => IsSupportedValue;
 
@@ -204,12 +222,14 @@ namespace GameLoversEditor.MobileServices.Tests
 			{
 				OneShotCount++;
 				LastPreset = preset;
+				Operations.Add("OneShot");
 			}
 
 			public void PlayPresetLoop(HapticPreset preset)
 			{
 				LoopCount++;
 				LastPreset = preset;
+				Operations.Add("Loop");
 			}
 
 			public void PlayCustom(float intensity01, float durationMs)
@@ -217,11 +237,13 @@ namespace GameLoversEditor.MobileServices.Tests
 				CustomCount++;
 				LastIntensity = intensity01;
 				LastDurationMs = durationMs;
+				Operations.Add("Custom");
 			}
 
 			public void Stop()
 			{
 				StopCount++;
+				Operations.Add("Stop");
 			}
 
 			public void Reset()
@@ -233,6 +255,7 @@ namespace GameLoversEditor.MobileServices.Tests
 				LastPreset = HapticPreset.None;
 				LastIntensity = 0f;
 				LastDurationMs = 0f;
+				Operations.Clear();
 			}
 		}
 	}
