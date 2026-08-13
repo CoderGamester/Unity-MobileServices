@@ -1,3 +1,5 @@
+using UnityEngine;
+
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.NativeUi
 {
@@ -14,6 +16,14 @@ namespace GameLovers.MobileServices.NativeUi
 
 		/// <inheritdoc cref="NativeUiService.ShowAlertPopUp(bool,bool,string,string,AlertButton[])"/>
 		void ShowAlertPopUp(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons);
+
+		/// <inheritdoc cref="NativeUiService.ShowAlertPopUpAsync(bool,bool,string,string,AlertButton[])"/>
+		Awaitable<int> ShowAlertPopUpAsync(
 			bool isAlertSheet,
 			bool isDismissible,
 			string title,
@@ -51,6 +61,15 @@ namespace GameLovers.MobileServices.NativeUi
 			string message,
 			params AlertButton[] buttons)
 			=> NativeUiService.ShowAlertPopUp(isAlertSheet, isDismissible, title, message, buttons);
+
+		/// <inheritdoc />
+		public Awaitable<int> ShowAlertPopUpAsync(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons)
+			=> NativeUiService.ShowAlertPopUpAsync(isAlertSheet, isDismissible, title, message, buttons);
 
 		/// <inheritdoc />
 		public void DismissAlertPopUp() => NativeUiService.DismissAlertPopUp();

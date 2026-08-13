@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 #if UNITY_ANDROID
 using System.Collections.Generic;
 #endif
@@ -34,6 +33,9 @@ namespace GameLovers.MobileServices.NativeUi
 	/// </summary>
 	public static class NativeUiService
 	{
+		private static readonly object _alertCompletionLock = new object();
+		private static AwaitableCompletionSource<int> _currentAlertCompletion;
+
 #if UNITY_IOS
 		/// <summary>Native iOS callback signature; the button is identified by its text.</summary>
 		internal delegate void AlertButtonDelegate(string buttonText);
@@ -69,8 +71,8 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <remarks>
 		/// A non-dismissible alert must use alert style, not action-sheet style. Alerts support one
 		/// to three buttons with unique labels and styles so the same descriptors map safely on iOS
-		/// and Android. Call this API from Unity's main thread; button callbacks return to its captured
-		/// synchronization context before invocation.
+		/// and Android. Call this API from Unity's main thread; button callbacks return there before
+		/// invocation.
 		/// </remarks>
 		public static void ShowAlertPopUp(
 			bool isAlertSheet,
@@ -80,42 +82,31 @@ namespace GameLovers.MobileServices.NativeUi
 			params AlertButton[] buttons)
 		{
 			ValidateAlert(isAlertSheet, isDismissible, buttons);
-			buttons = MarshalButtonCallbacks(buttons);
+			ObserveLegacyAlert(BeginAlert(isAlertSheet, isDismissible, title, message, buttons));
+		}
 
-#if UNITY_EDITOR
-			if (EditorShowAlertOverride != null)
-			{
-				EditorShowAlertOverride.Invoke(isAlertSheet, isDismissible, title, message, buttons);
-			}
-			else
-			{
-				Debug.Log($"Show Alert Pop Up is not available in the editor and was triggered with: {title} - {message}");
-			}
-#elif UNITY_IOS
-			_currentButtons = buttons;
-
-			var buttonsText = new string[buttons.Length];
-			var buttonsStyle = new int[buttons.Length];
-
-			for (var i = 0; i < buttons.Length; i++)
-			{
-				buttonsText[i] = buttons[i].Text;
-				buttonsStyle[i] = (int) buttons[i].Style;
-			}
-
-			AlertMessage(
-				isAlertSheet,
-				title,
-				message,
-				buttonsText,
-				buttonsStyle,
-				buttons.Length,
-				AlertButtonCallback);
-#elif UNITY_ANDROID
-			ShowAlertAndroid(isDismissible, title, message, buttons);
-#else
-			throw new SystemException("Show an alert Pop Up is only available for iOS and Android platforms");
-#endif
+		/// <summary>
+		/// Shows an alert and completes with the selected button index on Unity's main thread.
+		/// </summary>
+		/// <remarks>
+		/// Call from Unity's main thread and await the returned value once. Existing button callbacks
+		/// still run before the result is returned. Dismissing or replacing the alert cancels the await.
+		/// </remarks>
+		/// <param name="isAlertSheet">Whether iOS presents an action sheet instead of an alert.</param>
+		/// <param name="isDismissible">Whether the alert can close without selecting a button.</param>
+		/// <param name="title">Alert title.</param>
+		/// <param name="message">Alert message.</param>
+		/// <param name="buttons">Ordered alert actions.</param>
+		/// <returns>An awaitable containing the selected zero-based button index.</returns>
+		public static Awaitable<int> ShowAlertPopUpAsync(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons)
+		{
+			ValidateAlert(isAlertSheet, isDismissible, buttons);
+			return BeginAlert(isAlertSheet, isDismissible, title, message, buttons);
 		}
 
 		/// <summary>
@@ -154,6 +145,7 @@ namespace GameLovers.MobileServices.NativeUi
 		/// </summary>
 		public static void DismissAlertPopUp()
 		{
+			CancelCurrentAlert();
 #if UNITY_EDITOR
 			EditorDismissAlertOverride?.Invoke();
 #elif UNITY_IOS
@@ -219,44 +211,157 @@ namespace GameLovers.MobileServices.NativeUi
 #endif
 		}
 
-		/// <summary>
-		/// Wraps a callback so a foreign platform thread posts it to the context captured by the caller.
-		/// </summary>
-		internal static Action MarshalCallbackToContext(
-			Action callback,
-			SynchronizationContext context,
-			int sourceThreadId)
+		private static AlertButton[] BuildSelectionButtons(AlertButton[] buttons, Action<int> onSelected)
 		{
-			if (callback == null)
+			var selectionButtons = new AlertButton[buttons.Length];
+			for (var i = 0; i < buttons.Length; i++)
 			{
-				return null;
+				int buttonIndex = i;
+				selectionButtons[i] = buttons[i];
+				selectionButtons[i].Callback = () => onSelected(buttonIndex);
 			}
 
-			return () =>
+			return selectionButtons;
+		}
+
+		private static Awaitable<int> BeginAlert(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			AlertButton[] buttons)
+		{
+			var completionSource = new AwaitableCompletionSource<int>();
+			ReplaceCurrentAlert(completionSource);
+			AlertButton[] selectionButtons = BuildSelectionButtons(
+				buttons,
+				index => CompleteAlert(completionSource, index));
+
+			try
 			{
-				if (Thread.CurrentThread.ManagedThreadId == sourceThreadId || context == null)
+				ShowAlertPopUpCore(isAlertSheet, isDismissible, title, message, selectionButtons);
+			}
+			catch
+			{
+				ClearCurrentAlert(completionSource);
+				throw;
+			}
+
+			return CompleteAlertAsync(completionSource, buttons);
+		}
+
+		private static async Awaitable<int> CompleteAlertAsync(
+			AwaitableCompletionSource<int> completionSource,
+			AlertButton[] buttons)
+		{
+			int selectedIndex = await completionSource.Awaitable;
+			await Awaitable.MainThreadAsync();
+			buttons[selectedIndex].Callback?.Invoke();
+			return selectedIndex;
+		}
+
+		private static void ShowAlertPopUpCore(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			AlertButton[] buttons)
+		{
+#if UNITY_EDITOR
+			if (EditorShowAlertOverride != null)
+			{
+				EditorShowAlertOverride.Invoke(isAlertSheet, isDismissible, title, message, buttons);
+			}
+			else
+			{
+				Debug.Log($"Show Alert Pop Up is not available in the editor and was triggered with: {title} - {message}");
+			}
+#elif UNITY_IOS
+			_currentButtons = buttons;
+
+			var buttonsText = new string[buttons.Length];
+			var buttonsStyle = new int[buttons.Length];
+
+			for (var i = 0; i < buttons.Length; i++)
+			{
+				buttonsText[i] = buttons[i].Text;
+				buttonsStyle[i] = (int)buttons[i].Style;
+			}
+
+			AlertMessage(
+				isAlertSheet,
+				title,
+				message,
+				buttonsText,
+				buttonsStyle,
+				buttons.Length,
+				AlertButtonCallback);
+#elif UNITY_ANDROID
+			ShowAlertAndroid(isDismissible, title, message, buttons);
+#else
+			throw new SystemException("Show an alert Pop Up is only available for iOS and Android platforms");
+#endif
+		}
+
+		private static async void ObserveLegacyAlert(Awaitable<int> alert)
+		{
+			try
+			{
+				await alert;
+			}
+			catch (OperationCanceledException)
+			{
+			}
+		}
+
+		private static void ReplaceCurrentAlert(AwaitableCompletionSource<int> completionSource)
+		{
+			AwaitableCompletionSource<int> previous;
+			lock (_alertCompletionLock)
+			{
+				previous = _currentAlertCompletion;
+				_currentAlertCompletion = completionSource;
+			}
+
+			previous?.TrySetCanceled();
+		}
+
+		private static void CompleteAlert(AwaitableCompletionSource<int> completionSource, int selectedIndex)
+		{
+			lock (_alertCompletionLock)
+			{
+				if (_currentAlertCompletion != completionSource)
 				{
-					callback();
 					return;
 				}
 
-				context.Post(_ => callback(), null);
-			};
-		}
-
-		private static AlertButton[] MarshalButtonCallbacks(AlertButton[] buttons)
-		{
-			var context = SynchronizationContext.Current;
-			int sourceThreadId = Thread.CurrentThread.ManagedThreadId;
-			var marshalledButtons = new AlertButton[buttons.Length];
-			for (var i = 0; i < buttons.Length; i++)
-			{
-				marshalledButtons[i] = buttons[i];
-				marshalledButtons[i].Callback =
-					MarshalCallbackToContext(buttons[i].Callback, context, sourceThreadId);
+				_currentAlertCompletion = null;
 			}
 
-			return marshalledButtons;
+			completionSource.TrySetResult(selectedIndex);
+		}
+
+		private static void ClearCurrentAlert(AwaitableCompletionSource<int> completionSource)
+		{
+			lock (_alertCompletionLock)
+			{
+				if (_currentAlertCompletion == completionSource)
+				{
+					_currentAlertCompletion = null;
+				}
+			}
+		}
+
+		private static void CancelCurrentAlert()
+		{
+			AwaitableCompletionSource<int> completionSource;
+			lock (_alertCompletionLock)
+			{
+				completionSource = _currentAlertCompletion;
+				_currentAlertCompletion = null;
+			}
+
+			completionSource?.TrySetCanceled();
 		}
 
 		private static void ValidateAlert(bool isAlertSheet, bool isDismissible, AlertButton[] buttons)

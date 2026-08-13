@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using GameLovers.MobileServices.NativeUi;
 using NUnit.Framework;
 using UnityEngine.TestTools;
@@ -27,6 +26,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TearDown]
 		public void Cleanup()
 		{
+			NativeUiService.DismissAlertPopUp();
 			NativeUiService.EditorShowAlertOverride = _showAlertOverride;
 			NativeUiService.EditorDismissAlertOverride = _dismissAlertOverride;
 		}
@@ -96,25 +96,23 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
-		// ADMIT: NativeUiService.MarshalCallbackToContext could invoke an Android UI-thread callback before returning to Unity's context.
-		// RCR: NativeUiService.cs MarshalCallbackToContext — replace `context.Post(...)` with `callback()` → RED (callback ran before context drain). 2026-08-13
-		public void MarshalCallbackToContext_ForeignThread_PostsBeforeInvoking()
+		// ADMIT: NativeUiService.DismissAlertPopUp could leave an async alert awaiting forever.
+		// RCR: NativeUiService.cs DismissAlertPopUp — remove `CancelCurrentAlert()` → RED (awaiter incomplete). 2026-08-14
+		public void DismissAlertPopUp_AsyncAlert_CancelsAwait()
 		{
-			var context = new RecordingSynchronizationContext();
-			int callbackCount = 0;
-			Action callback = NativeUiService.MarshalCallbackToContext(
-				() => callbackCount++,
-				context,
-				Thread.CurrentThread.ManagedThreadId);
-			var thread = new Thread(callback.Invoke);
+			NativeUiService.EditorShowAlertOverride = (_, _, _, _, _) => { };
+			Awaitable<int> operation = NativeUiService.ShowAlertPopUpAsync(
+				false,
+				true,
+				"T",
+				"M",
+				new AlertButton { Text = "OK", Style = AlertButtonStyle.Default });
+			var awaiter = operation.GetAwaiter();
 
-			thread.Start();
-			thread.Join();
+			NativeUiService.DismissAlertPopUp();
 
-			Assert.AreEqual(0, callbackCount);
-			Assert.AreEqual(1, context.PostCount);
-			context.ExecutePostedCallback();
-			Assert.AreEqual(1, callbackCount);
+			Assert.IsTrue(awaiter.IsCompleted);
+			Assert.Throws<OperationCanceledException>(() => awaiter.GetResult());
 		}
 
 		[Test]
@@ -157,24 +155,5 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(() => NativeUiService.Share("hi"));
 		}
 
-		private sealed class RecordingSynchronizationContext : SynchronizationContext
-		{
-			private SendOrPostCallback _callback;
-			private object _state;
-
-			public int PostCount { get; private set; }
-
-			public override void Post(SendOrPostCallback callback, object state)
-			{
-				PostCount++;
-				_callback = callback;
-				_state = state;
-			}
-
-			public void ExecutePostedCallback()
-			{
-				_callback(_state);
-			}
-		}
 	}
 }

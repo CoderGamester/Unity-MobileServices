@@ -29,6 +29,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TearDown]
 		public void Cleanup()
 		{
+			NativeUiService.DismissAlertPopUp();
 			NativeUiService.EditorShowAlertOverride = _showAlertOverride;
 			NativeUiService.EditorDismissAlertOverride = _dismissAlertOverride;
 		}
@@ -45,6 +46,25 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			_instance.ShowAlertPopUp(false, "T", "M",
 				new AlertButton { Text = "OK", Style = AlertButtonStyle.Default });
+		}
+
+		[Test]
+		// ADMIT: NativeUiServiceInstance.ShowAlertPopUpAsync could fail to forward the selected button result.
+		// RCR: INativeUiService.cs NativeUiServiceInstance.ShowAlertPopUpAsync — return a never-completed Awaitable → RED (awaiter incomplete). 2026-08-14
+		public void ShowAlertPopUpAsync_ForwardsSelectedIndex()
+		{
+			NativeUiService.EditorShowAlertOverride = (_, _, _, _, buttons) => buttons[0].Callback();
+
+			Awaitable<int> operation = _instance.ShowAlertPopUpAsync(
+				false,
+				true,
+				"T",
+				"M",
+				new AlertButton { Text = "OK", Style = AlertButtonStyle.Default });
+			var awaiter = operation.GetAwaiter();
+
+			Assert.IsTrue(awaiter.IsCompleted);
+			Assert.AreEqual(0, awaiter.GetResult());
 		}
 
 		[Test]

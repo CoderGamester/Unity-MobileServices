@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**New**:
+- Added `ShowAlertPopUpAsync`, which returns the selected button index through Unity's `Awaitable` API.
+
 **Fixed**:
-- Alert button callbacks now return to Unity's captured synchronization context before invoking consumer code.
+- Alert button callbacks now return through `Awaitable.MainThreadAsync` before invoking consumer code.
 
 ## [1.1.0] - 2026-08-13
 
