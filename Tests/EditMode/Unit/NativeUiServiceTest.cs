@@ -26,6 +26,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TearDown]
 		public void Cleanup()
 		{
+			NativeUiService.DismissAlertPopUp();
 			NativeUiService.EditorShowAlertOverride = _showAlertOverride;
 			NativeUiService.EditorDismissAlertOverride = _dismissAlertOverride;
 		}
@@ -92,6 +93,26 @@ namespace GameLoversEditor.MobileServices.Tests
 			NativeUiService.DismissAlertPopUp();
 
 			Assert.AreEqual(1, callbackCount);
+		}
+
+		[Test]
+		// ADMIT: NativeUiService.DismissAlertPopUp could leave an async alert awaiting forever.
+		// RCR: NativeUiService.cs DismissAlertPopUp — remove `CancelCurrentAlert()` → RED (awaiter incomplete). 2026-08-14
+		public void DismissAlertPopUp_AsyncAlert_CancelsAwait()
+		{
+			NativeUiService.EditorShowAlertOverride = (_, _, _, _, _) => { };
+			Awaitable<int> operation = NativeUiService.ShowAlertPopUpAsync(
+				false,
+				true,
+				"T",
+				"M",
+				new AlertButton { Text = "OK", Style = AlertButtonStyle.Default });
+			var awaiter = operation.GetAwaiter();
+
+			NativeUiService.DismissAlertPopUp();
+
+			Assert.IsTrue(awaiter.IsCompleted);
+			Assert.Throws<OperationCanceledException>(() => awaiter.GetResult());
 		}
 
 		[Test]

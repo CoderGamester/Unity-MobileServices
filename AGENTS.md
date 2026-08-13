@@ -19,7 +19,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 
 ## Runtime invariants
 
-- Native alerts accept one to three buttons with unique text and unique `AlertButtonStyle` values. A non-dismissible alert cannot be an action sheet because iOS retains outside-tap dismissal for that presentation style.
+- Native alerts accept one to three buttons with unique text and unique `AlertButtonStyle` values. A non-dismissible alert cannot be an action sheet because iOS retains outside-tap dismissal for that presentation style. `ShowAlertPopUpAsync` is the preferred API; it returns the selected index through one pooled `Awaitable`, while legacy callbacks switch through `Awaitable.MainThreadAsync`. Dismissing or replacing an async alert cancels its await.
 - `RequestReview()` is fire-and-forget. The OS may suppress the prompt and provides no “shown” result; do not invent success callbacks or a store-URL fallback. Android Play review depends on the configured Play Core review artifact, which the native-build postprocessor injects unless explicitly disabled.
 - `MobileNotificationService` owns its `NotificationService` GameObject. Disposal is idempotent, releases only owned resources, and public operations depending on the host throw `ObjectDisposedException` afterward. Shared validation and lifecycle behavior stay outside platform conditionals.
 - Android notification scheduling requires a registered default channel. Queue modes hand pending work to the OS on background transitions.

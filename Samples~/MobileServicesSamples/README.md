@@ -27,6 +27,8 @@ The Overview view covers package areas that are not duplicated by the focused vi
 
 The live device card reports battery, low-power, keep-awake, ATT, and safe-area state on separate lines. The Editor and Device Simulator use safe no-op or mock implementations where an operating-system feature is unavailable.
 
+The Overview alert controls keep the callback overload so their activity log can demonstrate legacy integration. For new consumer flows that need the selected zero-based button index, prefer `NativeUiService.ShowAlertPopUpAsync`; dismissal or replacement cancels its `Awaitable<int>`.
+
 ## Haptics
 
 The Haptics view exposes every preset—`Selection`, `Success`, `Warning`, `Error`, and the five impact presets—with three duration modes:

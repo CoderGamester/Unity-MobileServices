@@ -22,6 +22,19 @@ NativeUiService.RequestReview();
 NativeUiService.Share(text: "Check out my high score!", url: "https://example.com/game");
 ```
 
+## Async alerts (preferred)
+
+```csharp
+int selectedButton = await NativeUiService.ShowAlertPopUpAsync(
+    isAlertSheet: false,
+    isDismissible: false,
+    title: "Connection Lost",
+    message: "Please check your connection and try again.",
+    new AlertButton { Text = "Reconnect", Style = AlertButtonStyle.Default });
+```
+
+The returned `Awaitable<int>` completes on Unity's main thread with the selected zero-based button index. Await it exactly once because Unity pools `Awaitable` instances. Existing `AlertButton.Callback` actions still run before completion; omit them when the caller handles the returned index. Programmatic dismissal or replacement cancels the pending await.
+
 ## Instance API
 
 For mock-friendly consumer code:
@@ -45,6 +58,8 @@ public enum AlertButtonStyle
 ```
 
 Alerts accept one to three buttons. Labels and styles must each be unique within an alert: iOS matches callbacks by button text, while Android maps the three styles onto its three native button slots.
+
+Call alert APIs from Unity's main thread. Legacy `AlertButton.Callback` actions switch through `Awaitable.MainThreadAsync` before invoking consumer code, including Android callbacks originating on the OS UI thread.
 
 The overload without `isDismissible` preserves the original dismissible behavior. Set `isDismissible: false` for blocking alerts that must remain until the user selects a button; non-dismissible action sheets are rejected because iOS action sheets can be dismissed outside the sheet.
 

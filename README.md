@@ -32,7 +32,7 @@ Use Mobile Services to isolate platform-specific behavior behind Unity-friendly 
 ```json
 {
   "dependencies": {
-    "com.gamelovers.mobileservices": "https://github.com/CoderGamester/Unity-MobileServices.git#1.0.1"
+    "com.gamelovers.mobileservices": "https://github.com/CoderGamester/Unity-MobileServices.git#1.2.0"
   }
 }
 ```
@@ -79,7 +79,7 @@ Use the specific subsystem namespaces—`Notifications`, `Haptics`, `NativeUi`, 
 | Gestures | Gesture controller for explicit gesture input ownership |
 | Editor tooling | Device Simulator integration and build helpers |
 
-Runtime alert calls render an interactive platform-shaped mock in the Game view even when the Device Simulator window is closed. The editor simulator is for exercising application paths; it is not a substitute for device permission, notification-delivery, review, or native-build validation.
+Runtime alert calls render an interactive platform-shaped mock in the Game view even when the Device Simulator window is closed. Prefer `ShowAlertPopUpAsync` for a selected-index result on Unity's main thread; legacy callbacks also switch through Unity's `Awaitable` scheduler. The editor simulator is for exercising application paths; it is not a substitute for device permission, notification-delivery, review, or native-build validation.
 
 ## Sample and support
 
