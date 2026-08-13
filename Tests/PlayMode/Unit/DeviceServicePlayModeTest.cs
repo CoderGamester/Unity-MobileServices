@@ -29,7 +29,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		public void DefaultCtor_WiresAllSubServices_NonNull()
 		{
 			Assert.IsNotNull(_service.SafeArea);
-			Assert.IsNotNull(_service.ScreenWake);
 			Assert.IsNotNull(_service.Battery);
 			Assert.IsNotNull(_service.AudioSession);
 			Assert.IsNotNull(_service.Permissions);

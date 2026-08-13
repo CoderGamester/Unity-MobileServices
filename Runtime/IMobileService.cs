@@ -28,7 +28,7 @@ namespace GameLovers.MobileServices
 		IHapticsService Haptics { get; }
 
 		/// <summary>
-		/// Device sub-services (safe area, screen wake, battery, audio session, permissions, ATT, deep link).
+		/// Device sub-services (safe area, battery, audio session, permissions, ATT, deep link).
 		/// </summary>
 		IDeviceService Device { get; }
 	}

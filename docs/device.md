@@ -1,6 +1,6 @@
 # Device
 
-`IDeviceService` is an umbrella facade aggregating seven independently mockable sub-services. Each child interface is also independently registerable for testing.
+`IDeviceService` is an umbrella facade aggregating six independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless screen-wake control is available directly on `DeviceService`.
 
 ```csharp
 IDeviceService device = new DeviceService();
@@ -8,7 +8,7 @@ IDeviceService device = new DeviceService();
 device.Battery.OnLowPowerModeChanged += () =>
     Debug.Log($"LPM -> {device.Battery.IsLowPowerMode}");
 
-device.ScreenWake.KeepAwake = true;
+DeviceService.KeepAwake = true;
 device.AudioSession.ConfigureForPlayback();
 
 var camera = await device.Permissions.RequestAsync(AppPermission.Camera);
@@ -22,7 +22,6 @@ device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 | Property | Interface | What it does |
 |----------|-----------|--------------|
 | `SafeArea` | `ISafeAreaService` | `Screen.safeArea` with change events. Pairs with `SafeAreaContainer` UI Toolkit element. |
-| `ScreenWake` | `IScreenWakeService` | `Screen.sleepTimeout` toggle. Idempotent. |
 | `Battery` | `IBatteryService` | Level + status + low-power-mode events (iOS `NSProcessInfoPowerStateDidChangeNotification`, Android `PowerManager.isPowerSaveMode`). |
 | `AudioSession` | `IIosAudioSessionService` | iOS `AVAudioSession` category override (silent-switch). No-op on Android / Editor. |
 | `Permissions` | `IPermissionsService` | Unified iOS+Android runtime permissions. Task-based async. Multi-permission overload. |
@@ -30,6 +29,17 @@ device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 | `DeepLink` | `IDeepLinkService` | `Application.deepLinkActivated` wrapper with cold-start link queueing. |
 
 Additionally, an `IDeepLinkRouter` / `DeepLinkRouter` layered on `IDeepLinkService` provides path-pattern routing — see below.
+
+## Screen wake
+
+`DeviceService.KeepAwake` is static sugar over Unity's `Screen.sleepTimeout`:
+
+```csharp
+DeviceService.KeepAwake = true;  // SleepTimeout.NeverSleep
+DeviceService.KeepAwake = false; // SleepTimeout.SystemSetting
+```
+
+Because the setting is process-wide, it is not part of the injectable `IDeviceService` child graph.
 
 ## Shared host
 

@@ -208,7 +208,7 @@ symbol appears anywhere in the causal chain behind the assertion.
   - `EditorHapticsBackend`, `NoOpHapticsBackend`
   - `ActiveGesture`, `SwipeInput`, `TapInput` (gesture math)
   - `PendingNotification`, `EditorGameNotification`, `GameNotificationChannel`, `OperatingMode`
-  - `ScreenWakeService`, `IosAudioSessionService`, `PermissionsService` (Editor short-circuits to `Granted`), `AttService` (Editor short-circuits to `Authorized`)
+  - `DeviceService.KeepAwake`, `IosAudioSessionService`, `PermissionsService` (Editor short-circuits to `Granted`), `AttService` (Editor short-circuits to `Authorized`)
   - `DeviceService` injection ctor (with NSubstitute mocks)
   - `DeepLinkService` cold-start-absent path (Editor `Application.absoluteURL` is empty)
   - `SafeAreaContainer` (UI Toolkit `VisualElement`, no host needed)

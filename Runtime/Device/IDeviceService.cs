@@ -2,17 +2,15 @@
 namespace GameLovers.MobileServices.Device
 {
 	/// <summary>
-	/// Umbrella facade aggregating every device-touching service in the package. Use as a single
-	/// DI registration to expose the full Device subsystem; each child interface is also
-	/// independently registerable for testing/mocking.
+	/// Umbrella facade aggregating the stateful, injectable device services in the package. Use as
+	/// a single DI registration to expose the Device subsystem; each child interface is also
+	/// independently registerable for testing/mocking. Stateless global conveniences are exposed
+	/// directly by <see cref="DeviceService"/>.
 	/// </summary>
 	public interface IDeviceService
 	{
 		/// <summary>Display safe-area events (notch, dynamic island, orientation).</summary>
 		ISafeAreaService SafeArea { get; }
-
-		/// <summary>Toggle <c>Screen.sleepTimeout</c> (keep the screen awake).</summary>
-		IScreenWakeService ScreenWake { get; }
 
 		/// <summary>Battery level / status / low-power-mode awareness.</summary>
 		IBatteryService Battery { get; }

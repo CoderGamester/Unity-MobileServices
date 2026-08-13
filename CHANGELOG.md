@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Changed**:
 - Declared Unity 6000.0 as the package minimum and documented 6000.0.x, 6000.3.x, and 6000.5.x as compatibility reference streams.
+- Moved the keep-awake convenience API to the static `DeviceService.KeepAwake` property and removed the redundant `IScreenWakeService` / `ScreenWakeService` child service.
 
 ## [1.0.1] - 2026-08-12
 
