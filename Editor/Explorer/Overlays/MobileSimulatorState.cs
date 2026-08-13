@@ -48,6 +48,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		public string Title;
 		public string Message;
 		public bool IsActionSheet;
+		public bool IsDismissible = true;
 		public List<SimulatedAlertButton> Buttons = new List<SimulatedAlertButton>();
 	}
 

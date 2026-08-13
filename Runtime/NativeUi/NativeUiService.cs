@@ -1,4 +1,7 @@
 using System;
+#if UNITY_ANDROID
+using System.Collections.Generic;
+#endif
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
@@ -35,13 +38,14 @@ namespace GameLovers.MobileServices.NativeUi
 		internal delegate void AlertButtonDelegate(string buttonText);
 
 		private static AlertButton[] _currentButtons;
+#elif UNITY_ANDROID
+		private static readonly List<AndroidJavaProxy> _currentAndroidCallbacks = new List<AndroidJavaProxy>();
+		private static AndroidJavaObject _currentAndroidAlert;
 #endif
 
 #if UNITY_EDITOR
-		// Editor-only override hook consumed by EditorPlatformSimulator so the Device Simulator can model
-		// the real "shown when requested" review flow in the editor (mirroring the Permissions / ATT
-		// EditorRequest*Override hooks). When set, RequestReview routes here instead of logging; when
-		// unset, the editor branch keeps its plain Debug.Log no-op. Player builds carry none of this.
+		internal static Action<bool, bool, string, string, AlertButton[]> EditorShowAlertOverride;
+		internal static Action EditorDismissAlertOverride;
 		internal static System.Action EditorRequestReviewOverride;
 #endif
 
@@ -55,11 +59,37 @@ namespace GameLovers.MobileServices.NativeUi
 		/// Thrown if the current platform is not iOS nor Android
 		/// </exception>
 		public static void ShowAlertPopUp(bool isAlertSheet, string title, string message, params AlertButton[] buttons)
+			=> ShowAlertPopUp(isAlertSheet, true, title, message, buttons);
+
+		/// <summary>
+		/// Shows an alert native OS message popup and controls whether it can be dismissed without
+		/// choosing a button.
+		/// </summary>
+		/// <remarks>
+		/// A non-dismissible alert must use alert style, not action-sheet style. Alerts support one
+		/// to three buttons with unique labels and styles so the same descriptors map safely on iOS
+		/// and Android.
+		/// </remarks>
+		public static void ShowAlertPopUp(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons)
 		{
+			ValidateAlert(isAlertSheet, isDismissible, buttons);
+
 #if UNITY_EDITOR
-			Debug.Log($"Show Alert Pop Up is not available in the editor and was triggered with: {title} - {message}");
+			if (EditorShowAlertOverride != null)
+			{
+				EditorShowAlertOverride.Invoke(isAlertSheet, isDismissible, title, message, buttons);
+			}
+			else
+			{
+				Debug.Log($"Show Alert Pop Up is not available in the editor and was triggered with: {title} - {message}");
+			}
 #elif UNITY_IOS
-			_currentButtons = buttons ?? throw new ArgumentException("The buttons count must be higher than zero");
+			_currentButtons = buttons;
 
 			var buttonsText = new string[buttons.Length];
 			var buttonsStyle = new int[buttons.Length];
@@ -70,24 +100,16 @@ namespace GameLovers.MobileServices.NativeUi
 				buttonsStyle[i] = (int) buttons[i].Style;
 			}
 
-			AlertMessage(isAlertSheet, title, message, buttonsText, buttonsStyle, buttons.Length, AlertButtonCallback);
+			AlertMessage(
+				isAlertSheet,
+				title,
+				message,
+				buttonsText,
+				buttonsStyle,
+				buttons.Length,
+				AlertButtonCallback);
 #elif UNITY_ANDROID
-			using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-			using (var unityActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-			using (var alertDialogBuilder = new AndroidJavaObject("android.app.AlertDialog$Builder", unityActivity))
-			using (var alertDialog = alertDialogBuilder.Call<AndroidJavaObject>("create"))
-			{
-				alertDialog.Call("setTitle", title);
-				alertDialog.Call("setMessage", message);
-
-				for (var i = 0; i < buttons.Length; i++)
-				{
-					alertDialog.Call("setButton", ConvertToAndroidStyle(buttons[i].Style),
-						buttons[i].Text, new AndroidButtonCallback(buttons[i].Callback));
-				}
-
-				alertDialog.Call("show");
-			}
+			ShowAlertAndroid(isDismissible, title, message, buttons);
 #else
 			throw new SystemException("Show an alert Pop Up is only available for iOS and Android platforms");
 #endif
@@ -121,6 +143,21 @@ namespace GameLovers.MobileServices.NativeUi
 			}
 #else
 			throw new SystemException("Show a Toast message is only available for iOS and Android platforms");
+#endif
+		}
+
+		/// <summary>
+		/// Dismisses the currently presented alert without invoking a button callback.
+		/// </summary>
+		public static void DismissAlertPopUp()
+		{
+#if UNITY_EDITOR
+			EditorDismissAlertOverride?.Invoke();
+#elif UNITY_IOS
+			_currentButtons = null;
+			DismissAlert();
+#elif UNITY_ANDROID
+			DismissAlertAndroid();
 #endif
 		}
 
@@ -179,7 +216,113 @@ namespace GameLovers.MobileServices.NativeUi
 #endif
 		}
 
+		private static void ValidateAlert(bool isAlertSheet, bool isDismissible, AlertButton[] buttons)
+		{
+			if (!isDismissible && isAlertSheet)
+			{
+				throw new ArgumentException("A non-dismissible alert cannot use action-sheet style.", nameof(isAlertSheet));
+			}
+			if (buttons == null || buttons.Length == 0 || buttons.Length > 3)
+			{
+				throw new ArgumentException("Alerts require between one and three buttons.", nameof(buttons));
+			}
+
+			for (var i = 0; i < buttons.Length; i++)
+			{
+				if (string.IsNullOrWhiteSpace(buttons[i].Text))
+				{
+					throw new ArgumentException("Alert button text cannot be empty.", nameof(buttons));
+				}
+
+				for (var j = i + 1; j < buttons.Length; j++)
+				{
+					if (buttons[i].Text == buttons[j].Text)
+					{
+						throw new ArgumentException("Alert button text must be unique.", nameof(buttons));
+					}
+					if (buttons[i].Style == buttons[j].Style)
+					{
+						throw new ArgumentException("Alert button styles must be unique.", nameof(buttons));
+					}
+				}
+			}
+		}
+
 #if UNITY_ANDROID
+		private static void DismissAlertAndroid()
+		{
+			using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+			var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+			activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
+			{
+				using (activity)
+				DismissCurrentAndroidAlert();
+			}));
+		}
+
+		private static void ShowAlertAndroid(
+			bool isDismissible,
+			string title,
+			string message,
+			AlertButton[] buttons)
+		{
+			using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+			var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+			activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
+			{
+				using (activity)
+				using (var alertDialogBuilder = new AndroidJavaObject("android.app.AlertDialog$Builder", activity))
+				{
+					DismissCurrentAndroidAlert();
+
+					var alertDialog = alertDialogBuilder.Call<AndroidJavaObject>("create");
+					_currentAndroidAlert = alertDialog;
+					alertDialog.Call("setTitle", title);
+					alertDialog.Call("setMessage", message);
+					alertDialog.Call("setCancelable", isDismissible);
+					alertDialog.Call("setCanceledOnTouchOutside", isDismissible);
+
+					for (var i = 0; i < buttons.Length; i++)
+					{
+						var callback = new AndroidButtonCallback(buttons[i].Callback);
+						_currentAndroidCallbacks.Add(callback);
+						alertDialog.Call(
+							"setButton",
+							ConvertToAndroidStyle(buttons[i].Style),
+							buttons[i].Text,
+							callback);
+					}
+
+					var dismissCallback = new AndroidDismissCallback();
+					_currentAndroidCallbacks.Add(dismissCallback);
+					alertDialog.Call("setOnDismissListener", dismissCallback);
+					alertDialog.Call("show");
+				}
+			}));
+		}
+
+		private static void DismissCurrentAndroidAlert()
+		{
+			var alert = _currentAndroidAlert;
+			_currentAndroidAlert = null;
+			_currentAndroidCallbacks.Clear();
+			if (alert == null)
+			{
+				return;
+			}
+
+			alert.Call("dismiss");
+			alert.Dispose();
+		}
+
+		private static void ReleaseCurrentAndroidAlert()
+		{
+			var alert = _currentAndroidAlert;
+			_currentAndroidAlert = null;
+			_currentAndroidCallbacks.Clear();
+			alert?.Dispose();
+		}
+
 		private static void RequestReviewAndroid()
 		{
 			try
@@ -285,6 +428,9 @@ namespace GameLovers.MobileServices.NativeUi
 		private static extern void AlertMessage(bool isSheet, string title, string message, string[] buttonsText,
 			int[] buttonsStyle, int buttonsLength, AlertButtonDelegate alertButtonCallback);
 
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversDismissAlert")]
+		private static extern void DismissAlert();
+
 		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversToastMessage")]
 		private static extern void ToastMessage(string message, bool isLongDuration);
 
@@ -297,12 +443,14 @@ namespace GameLovers.MobileServices.NativeUi
 		[AOT.MonoPInvokeCallback(typeof(AlertButtonDelegate))]
 		private static void AlertButtonCallback(string buttonText)
 		{
-			if (_currentButtons == null)
+			var buttons = _currentButtons;
+			_currentButtons = null;
+			if (buttons == null)
 			{
 				return;
 			}
 
-			foreach (var button in _currentButtons)
+			foreach (var button in buttons)
 			{
 				if (button.Text == buttonText)
 				{
@@ -326,7 +474,20 @@ namespace GameLovers.MobileServices.NativeUi
 			{
 				dialog.Call("dismiss");
 
-				_callback();
+				_callback?.Invoke();
+			}
+		}
+
+		private class AndroidDismissCallback : AndroidJavaProxy
+		{
+			public AndroidDismissCallback() : base("android.content.DialogInterface$OnDismissListener")
+			{
+			}
+
+			// ReSharper disable once InconsistentNaming
+			public void onDismiss(AndroidJavaObject dialog)
+			{
+				ReleaseCurrentAndroidAlert();
 			}
 		}
 

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using GameLovers.MobileServices.NativeUi;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,14 +13,13 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 	/// device's <c>Screen.*</c> values.
 	/// </summary>
 	/// <remarks>
-	/// <para>The overlay is alive whenever the Device Simulator plugin panel is open (edit OR play
-	/// mode) so a designer can fire a mock from the panel and see it inside the simulated phone
-	/// without entering play mode. A single idempotent <see cref="RefreshLifecycle"/> drives spawn /
-	/// teardown.</para>
+	/// <para>The overlay is alive whenever the Device Simulator plugin panel is open or a runtime
+	/// alert is visible, including a plain Game view with no simulator window. A single idempotent
+	/// <see cref="RefreshLifecycle"/> drives spawn / teardown.</para>
 	/// <para>The overlay renders inside Unity's runtime UIToolkit panel - <see cref="UIDocument"/>
 	/// is <c>[ExecuteAlways]</c>, so its panel paints into the Game / Device Simulator view in edit
-	/// mode too. Interaction inside the mock is unreliable in the edit-mode Game view, so dismissal
-	/// is driven from the plugin panel; the overlay is treated as display-only.</para>
+	/// mode too. Runtime play-mode alerts are interactive; edit-mode panel previews retain their
+	/// panel-owned dismissal controls.</para>
 	/// <para>The <see cref="PanelSettings"/> instance is constructed programmatically (rather than
 	/// shipped as a <c>.asset</c>) to keep the setup editor-only by construction.</para>
 	/// </remarks>
@@ -34,14 +35,17 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		private static OverlayController _controller;
 		private static PanelSettings _panelSettings;
 		private static bool _pluginActive;
+		private static bool _standaloneAlertActive;
 
-		private static bool ShouldBeAlive => _pluginActive;
+		private static bool ShouldBeAlive => _pluginActive || _standaloneAlertActive;
 
 		static MobileSimulatorRuntimeOverlay()
 		{
 			// Re-evaluate across play-mode transitions so the host's DontDestroyOnLoad / teardown is
 			// applied correctly when the panel is open while entering or exiting play mode.
 			EditorApplication.playModeStateChanged += _ => RefreshLifecycle();
+			NativeUiService.EditorShowAlertOverride = ShowAlert;
+			NativeUiService.EditorDismissAlertOverride = DismissAlert;
 		}
 
 		/// <summary>
@@ -52,6 +56,51 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		internal static void NotifyPluginActive(bool active)
 		{
 			_pluginActive = active;
+			RefreshLifecycle();
+		}
+
+		/// <summary>Paints one runtime-requested alert through the Editor simulator overlay.</summary>
+		internal static void ShowAlert(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			AlertButton[] buttons)
+		{
+			_standaloneAlertActive = true;
+			EnsureSpawned();
+
+			var simulatedButtons = new List<SimulatedAlertButton>(buttons.Length);
+			foreach (var button in buttons)
+			{
+				simulatedButtons.Add(new SimulatedAlertButton
+				{
+					Text = button.Text,
+					Style = (SimulatedAlertButtonStyle)button.Style,
+					OnClicked = button.Callback,
+				});
+			}
+
+			MobileSimulatorState.PushAlert(new SimulatedAlertSpec
+			{
+				Title = title,
+				Message = message,
+				IsActionSheet = isAlertSheet,
+				IsDismissible = isDismissible,
+				Buttons = simulatedButtons,
+			});
+		}
+
+		/// <summary>Dismisses the active Editor alert without invoking an action.</summary>
+		internal static void DismissAlert()
+		{
+			if (_controller != null)
+			{
+				MobileSimulatorState.PushDismissAll();
+				return;
+			}
+
+			_standaloneAlertActive = false;
 			RefreshLifecycle();
 		}
 
@@ -323,7 +372,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			{
 				ClearStage();
 				ShowStage();
-				_stage.Add(MockBuilders.BuildAlert(MobileSimulatorState.Platform, spec, ClearStage));
+				_stage.Add(MockBuilders.BuildAlert(MobileSimulatorState.Platform, spec, DismissAlert));
 			}
 
 			private void OnToast(SimulatedToastSpec spec)
@@ -385,7 +434,14 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 			private void OnDismissAll()
 			{
+				DismissAlert();
+			}
+
+			private void DismissAlert()
+			{
 				ClearStage();
+				_standaloneAlertActive = false;
+				EditorApplication.delayCall += RefreshLifecycle;
 			}
 
 			private void ShowStage()

@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**New**:
+- Added non-dismissible alerts for blocking application flows and programmatic alert dismissal without invoking a button callback.
+- Runtime alert calls now render an interactive platform-shaped mock in the Editor Game view without requiring the Device Simulator window.
+
 **Changed**:
 - Declared Unity 6000.0 as the package minimum and documented 6000.0.x, 6000.3.x, and 6000.5.x as compatibility reference streams.
 - Moved the keep-awake convenience API to the static `DeviceService.KeepAwake` property and removed the redundant `IScreenWakeService` / `ScreenWakeService` child service.
+- Alerts now require one to three buttons with unique labels and styles so iOS and Android resolve the same action.
+
+**Fixed**:
+- Android alerts are created and shown on the Android UI thread, retain callback proxies until dismissal, and tolerate buttons with no callback.
 
 ## [1.0.1] - 2026-08-12
 

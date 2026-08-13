@@ -9,6 +9,8 @@ NSString *ToNSString(char* string) {
 
 typedef void (*AlertButtonCallback)(const char * str);
 
+static UIAlertController *GameLoversCurrentAlert;
+
 void _GameLoversAlertMessage (bool isSheet, char* title, char* message, char* buttonsText[], int buttonsStyle[], int buttonsLength, AlertButtonCallback buttonCallback)
 {
     UIAlertControllerStyle style = isSheet ? UIAlertControllerStyleActionSheet : UIAlertControllerStyleAlert;
@@ -17,16 +19,35 @@ void _GameLoversAlertMessage (bool isSheet, char* title, char* message, char* bu
     for (int i = 0; i < buttonsLength; i++)
     {
         NSString *buttonText = ToNSString(buttonsText[i]);
-        int index = i;
         UIAlertAction * button = [UIAlertAction actionWithTitle:buttonText style:(UIAlertActionStyle)buttonsStyle[i] handler:^(UIAlertAction * action)
         {
+            GameLoversCurrentAlert = nil;
             buttonCallback((char*)[buttonText UTF8String]);
         }];
         [alert addAction:button];
     }
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        [UnityGetGLViewController() presentViewController:alert animated:YES completion:nil];
+        void (^presentAlert)(void) = ^{
+            GameLoversCurrentAlert = alert;
+            [UnityGetGLViewController() presentViewController:alert animated:YES completion:nil];
+        };
+        if (GameLoversCurrentAlert != nil)
+        {
+            [GameLoversCurrentAlert dismissViewControllerAnimated:NO completion:presentAlert];
+        }
+        else
+        {
+            presentAlert();
+        }
+    });
+}
+
+void _GameLoversDismissAlert(void)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [GameLoversCurrentAlert dismissViewControllerAnimated:YES completion:nil];
+        GameLoversCurrentAlert = nil;
     });
 }
 

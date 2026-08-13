@@ -136,6 +136,8 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorRequestAsyncOverride = RequestPermissionAsync;
 			AttService.EditorCurrentStatusOverride = ReadAttStore();
 			AttService.EditorRequestAsyncOverride = RequestAttAsync;
+			NativeUiService.EditorShowAlertOverride = MobileSimulatorRuntimeOverlay.ShowAlert;
+			NativeUiService.EditorDismissAlertOverride = MobileSimulatorRuntimeOverlay.DismissAlert;
 			// Review is fire-and-forget (no OS success callback) — the same RequestReview() the game
 			// calls drives the overlay mock in edit + play mode, mirroring the Permissions / ATT hooks.
 			NativeUiService.EditorRequestReviewOverride = () => MobileSimulatorState.PushReview();
@@ -155,6 +157,8 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			AttService.EditorCurrentStatusOverride = null;
 			AttService.EditorRequestResultOverride = null;
 			AttService.EditorRequestAsyncOverride = null;
+			NativeUiService.EditorShowAlertOverride = MobileSimulatorRuntimeOverlay.ShowAlert;
+			NativeUiService.EditorDismissAlertOverride = MobileSimulatorRuntimeOverlay.DismissAlert;
 			NativeUiService.EditorRequestReviewOverride = null;
 			_pendingPermissionResolvers.Clear();
 			_pendingAttResolver = null;

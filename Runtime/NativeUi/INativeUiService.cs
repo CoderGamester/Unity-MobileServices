@@ -12,6 +12,17 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc cref="NativeUiService.ShowAlertPopUp(bool,string,string,AlertButton[])"/>
 		void ShowAlertPopUp(bool isAlertSheet, string title, string message, params AlertButton[] buttons);
 
+		/// <inheritdoc cref="NativeUiService.ShowAlertPopUp(bool,bool,string,string,AlertButton[])"/>
+		void ShowAlertPopUp(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons);
+
+		/// <inheritdoc cref="NativeUiService.DismissAlertPopUp"/>
+		void DismissAlertPopUp();
+
 		/// <inheritdoc cref="NativeUiService.ShowToastMessage(string,bool)"/>
 		void ShowToastMessage(string message, bool isLongDuration);
 
@@ -31,6 +42,18 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc />
 		public void ShowAlertPopUp(bool isAlertSheet, string title, string message, params AlertButton[] buttons)
 			=> NativeUiService.ShowAlertPopUp(isAlertSheet, title, message, buttons);
+
+		/// <inheritdoc />
+		public void ShowAlertPopUp(
+			bool isAlertSheet,
+			bool isDismissible,
+			string title,
+			string message,
+			params AlertButton[] buttons)
+			=> NativeUiService.ShowAlertPopUp(isAlertSheet, isDismissible, title, message, buttons);
+
+		/// <inheritdoc />
+		public void DismissAlertPopUp() => NativeUiService.DismissAlertPopUp();
 
 		/// <inheritdoc />
 		public void ShowToastMessage(string message, bool isLongDuration)
