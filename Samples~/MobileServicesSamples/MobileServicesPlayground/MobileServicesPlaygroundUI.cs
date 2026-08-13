@@ -52,7 +52,7 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 					new SampleStatusEntry("Battery level", batteryLevel),
 					new SampleStatusEntry("Battery status", _device.Battery.Status),
 					new SampleStatusEntry("Low-power mode", SampleStatusFormatter.YesNo(_device.Battery.IsLowPowerMode)),
-					new SampleStatusEntry("Keep awake", SampleStatusFormatter.YesNo(_device.ScreenWake.KeepAwake)),
+					new SampleStatusEntry("Keep awake", SampleStatusFormatter.YesNo(DeviceService.KeepAwake)),
 					new SampleStatusEntry("ATT status", _device.Att.CurrentStatus));
 			}
 			if (_safeAreaStatus != null)
@@ -149,8 +149,8 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			});
 			root.Q<Button>("keep-awake")?.RegisterCallback<ClickEvent>(_ =>
 			{
-				_device.ScreenWake.KeepAwake = !_device.ScreenWake.KeepAwake;
-				Log($"Keep awake: {_device.ScreenWake.KeepAwake}");
+				DeviceService.KeepAwake = !DeviceService.KeepAwake;
+				Log($"Keep awake: {DeviceService.KeepAwake}");
 			});
 			root.Q<Button>("audio-session")?.RegisterCallback<ClickEvent>(_ =>
 			{

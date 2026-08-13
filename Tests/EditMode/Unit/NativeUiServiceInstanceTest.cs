@@ -1,3 +1,4 @@
+using System;
 using GameLovers.MobileServices.NativeUi;
 using NUnit.Framework;
 using UnityEngine;
@@ -9,14 +10,27 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class NativeUiServiceInstanceTest
 	{
 		private NativeUiServiceInstance _instance;
+		private Action<bool, bool, string, string, AlertButton[]> _showAlertOverride;
+		private Action _dismissAlertOverride;
 
 		[SetUp]
 		public void Init()
 		{
+			_showAlertOverride = NativeUiService.EditorShowAlertOverride;
+			_dismissAlertOverride = NativeUiService.EditorDismissAlertOverride;
+			NativeUiService.EditorShowAlertOverride = null;
+			NativeUiService.EditorDismissAlertOverride = null;
 			// Process-wide static the Device Simulator installs and never clears on its own; without
 			// this, RequestReview would route to the simulator mock instead of the editor no-op log.
 			NativeUiService.EditorRequestReviewOverride = null;
 			_instance = new NativeUiServiceInstance();
+		}
+
+		[TearDown]
+		public void Cleanup()
+		{
+			NativeUiService.EditorShowAlertOverride = _showAlertOverride;
+			NativeUiService.EditorDismissAlertOverride = _dismissAlertOverride;
 		}
 
 		[Test]
@@ -31,6 +45,19 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			_instance.ShowAlertPopUp(false, "T", "M",
 				new AlertButton { Text = "OK", Style = AlertButtonStyle.Default });
+		}
+
+		[Test]
+		// ADMIT: NativeUiServiceInstance.DismissAlertPopUp must forward to the static service.
+		// RCR: INativeUiService.cs NativeUiServiceInstance.DismissAlertPopUp — replace the expression body with `{ }` → RED (callback count remains zero). 2026-08-13
+		public void DismissAlertPopUp_ForwardsToStaticService()
+		{
+			var callbackCount = 0;
+			NativeUiService.EditorDismissAlertOverride = () => callbackCount++;
+
+			_instance.DismissAlertPopUp();
+
+			Assert.AreEqual(1, callbackCount);
 		}
 
 		[Test]

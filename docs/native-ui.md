@@ -7,12 +7,15 @@ Static `NativeUiService` + instance-based `INativeUiService` wrapper. iOS bridge
 ```csharp
 NativeUiService.ShowAlertPopUp(
     isAlertSheet: false,
+    isDismissible: false,
     title: "Delete Save?",
     message: "This action cannot be undone.",
     new AlertButton { Text = "Cancel", Style = AlertButtonStyle.Cancel },
     new AlertButton { Text = "Delete", Style = AlertButtonStyle.Destructive, Callback = OnDeleteConfirmed });
 
 NativeUiService.ShowToastMessage("Item Collected!", isLongDuration: false);
+
+NativeUiService.DismissAlertPopUp();
 
 NativeUiService.RequestReview();
 
@@ -41,7 +44,11 @@ public enum AlertButtonStyle
 }
 ```
 
-The `AlertButton.Callback` action fires when the user taps that button. Callbacks are matched **by button text** on iOS — keep button texts unique within a single alert to avoid ambiguous matches.
+Alerts accept one to three buttons. Labels and styles must each be unique within an alert: iOS matches callbacks by button text, while Android maps the three styles onto its three native button slots.
+
+The overload without `isDismissible` preserves the original dismissible behavior. Set `isDismissible: false` for blocking alerts that must remain until the user selects a button; non-dismissible action sheets are rejected because iOS action sheets can be dismissed outside the sheet.
+
+`DismissAlertPopUp()` closes the active alert without invoking an action. Showing a new alert replaces the current one.
 
 ## Review prompt
 
@@ -68,6 +75,6 @@ Any combination of `text` / `url` / `imagePath` may be supplied. `imagePath` mus
 
 ## Editor & unsupported platforms
 
-In `UNITY_EDITOR`, every method logs to console and returns. On unsupported platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops.
+In `UNITY_EDITOR`, alerts render through the in-Game-view simulator overlay and invoke their real button callbacks. The other methods log to console and return unless their Device Simulator override is engaged. On unsupported player platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops.
 
-The [Device Simulator panel](explorer.md) renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor (edit or play mode) without device builds.
+The [Device Simulator panel](explorer.md) selects the platform skin and renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor without device builds. Alerts also render in a plain Game view when the panel is closed.

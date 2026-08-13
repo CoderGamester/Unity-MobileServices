@@ -60,8 +60,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			{
 				var btn = new Button(() =>
 				{
-					btnSpec.OnClicked?.Invoke();
 					dismissCallback?.Invoke();
+					btnSpec.OnClicked?.Invoke();
 				}) { text = btnSpec.Text };
 				btn.AddToClassList("mock-card-button");
 				switch (btnSpec.Style)
