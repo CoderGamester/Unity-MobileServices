@@ -46,6 +46,8 @@ public enum AlertButtonStyle
 
 Alerts accept one to three buttons. Labels and styles must each be unique within an alert: iOS matches callbacks by button text, while Android maps the three styles onto its three native button slots.
 
+Call `ShowAlertPopUp` from Unity's main thread. Every `AlertButton.Callback` returns to the synchronization context captured by that call before it invokes consumer code, including Android callbacks originating on the OS UI thread.
+
 The overload without `isDismissible` preserves the original dismissible behavior. Set `isDismissible: false` for blocking alerts that must remain until the user selects a button; non-dismissible action sheets are rejected because iOS action sheets can be dismissed outside the sheet.
 
 `DismissAlertPopUp()` closes the active alert without invoking an action. Showing a new alert replaces the current one.

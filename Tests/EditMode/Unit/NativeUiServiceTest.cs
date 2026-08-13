@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using GameLovers.MobileServices.NativeUi;
 using NUnit.Framework;
 using UnityEngine.TestTools;
@@ -95,6 +96,28 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NativeUiService.MarshalCallbackToContext could invoke an Android UI-thread callback before returning to Unity's context.
+		// RCR: NativeUiService.cs MarshalCallbackToContext — replace `context.Post(...)` with `callback()` → RED (callback ran before context drain). 2026-08-13
+		public void MarshalCallbackToContext_ForeignThread_PostsBeforeInvoking()
+		{
+			var context = new RecordingSynchronizationContext();
+			int callbackCount = 0;
+			Action callback = NativeUiService.MarshalCallbackToContext(
+				() => callbackCount++,
+				context,
+				Thread.CurrentThread.ManagedThreadId);
+			var thread = new Thread(callback.Invoke);
+
+			thread.Start();
+			thread.Join();
+
+			Assert.AreEqual(0, callbackCount);
+			Assert.AreEqual(1, context.PostCount);
+			context.ExecutePostedCallback();
+			Assert.AreEqual(1, callbackCount);
+		}
+
+		[Test]
 		// ADMIT: NativeUiService.ShowToastMessage could change the Editor diagnostic that stands in for the native toast.
 		// RCR: NativeUiService.cs ShowToastMessage — editor log text `Show Toast message` → `Show Toast msg` → RED (LogAssert expected message not received).
 		public void ShowToastMessage_InEditor_LogsAndDoesNotThrow()
@@ -134,5 +157,24 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(() => NativeUiService.Share("hi"));
 		}
 
+		private sealed class RecordingSynchronizationContext : SynchronizationContext
+		{
+			private SendOrPostCallback _callback;
+			private object _state;
+
+			public int PostCount { get; private set; }
+
+			public override void Post(SendOrPostCallback callback, object state)
+			{
+				PostCount++;
+				_callback = callback;
+				_state = state;
+			}
+
+			public void ExecutePostedCallback()
+			{
+				_callback(_state);
+			}
+		}
 	}
 }

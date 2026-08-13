@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 #if UNITY_ANDROID
 using System.Collections.Generic;
 #endif
@@ -68,7 +69,8 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <remarks>
 		/// A non-dismissible alert must use alert style, not action-sheet style. Alerts support one
 		/// to three buttons with unique labels and styles so the same descriptors map safely on iOS
-		/// and Android.
+		/// and Android. Call this API from Unity's main thread; button callbacks return to its captured
+		/// synchronization context before invocation.
 		/// </remarks>
 		public static void ShowAlertPopUp(
 			bool isAlertSheet,
@@ -78,6 +80,7 @@ namespace GameLovers.MobileServices.NativeUi
 			params AlertButton[] buttons)
 		{
 			ValidateAlert(isAlertSheet, isDismissible, buttons);
+			buttons = MarshalButtonCallbacks(buttons);
 
 #if UNITY_EDITOR
 			if (EditorShowAlertOverride != null)
@@ -214,6 +217,46 @@ namespace GameLovers.MobileServices.NativeUi
 #elif UNITY_ANDROID
 			ShareAndroid(text, url, imagePath, title);
 #endif
+		}
+
+		/// <summary>
+		/// Wraps a callback so a foreign platform thread posts it to the context captured by the caller.
+		/// </summary>
+		internal static Action MarshalCallbackToContext(
+			Action callback,
+			SynchronizationContext context,
+			int sourceThreadId)
+		{
+			if (callback == null)
+			{
+				return null;
+			}
+
+			return () =>
+			{
+				if (Thread.CurrentThread.ManagedThreadId == sourceThreadId || context == null)
+				{
+					callback();
+					return;
+				}
+
+				context.Post(_ => callback(), null);
+			};
+		}
+
+		private static AlertButton[] MarshalButtonCallbacks(AlertButton[] buttons)
+		{
+			var context = SynchronizationContext.Current;
+			int sourceThreadId = Thread.CurrentThread.ManagedThreadId;
+			var marshalledButtons = new AlertButton[buttons.Length];
+			for (var i = 0; i < buttons.Length; i++)
+			{
+				marshalledButtons[i] = buttons[i];
+				marshalledButtons[i].Callback =
+					MarshalCallbackToContext(buttons[i].Callback, context, sourceThreadId);
+			}
+
+			return marshalledButtons;
 		}
 
 		private static void ValidateAlert(bool isAlertSheet, bool isDismissible, AlertButton[] buttons)
