@@ -71,6 +71,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 			root.Add(MakeSection("Build behaviour"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_manageNativeBuildManually"), "Manage Native Build Manually"));
 
+			root.Add(MakeSection("Editor diagnostics"));
+			root.Add(new PropertyField(serializedObject.FindProperty("_enableHapticsDebugLogs"), "Enable Haptics Debug Logs"));
+
 			root.Add(MakeSection("Tools"));
 			root.Add(BuildScanButton(config));
 			root.Add(BuildSuggestCopyButton(config));

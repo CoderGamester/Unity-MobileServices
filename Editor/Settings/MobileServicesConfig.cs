@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameLovers.MobileServices.Device;
+using GameLovers.MobileServices.Haptics.Internal;
 using UnityEditor;
 using UnityEngine;
 
@@ -257,6 +258,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private CapabilityToggles _capabilities = new CapabilityToggles();
 		[SerializeField] private AndroidManifestToggles _androidManifest = new AndroidManifestToggles();
 		[SerializeField] private NativeDeepLinkSettings _deepLinks = new NativeDeepLinkSettings();
+		[Tooltip("Logs Editor haptics play and stop calls to the Unity console. Disabled by default.")]
+		[SerializeField] private bool _enableHapticsDebugLogs;
 		[SerializeField] private bool _includePlayReviewDependency = true;
 		[SerializeField] private string _playReviewDependencyCoordinate = DefaultPlayReviewCoordinate;
 		[SerializeField] private bool _manageNativeBuildManually;
@@ -273,6 +276,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_deepLinks.IosUrlSchemes ??= new List<string>();
 			_deepLinks.AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			_playReviewDependencyCoordinate ??= DefaultPlayReviewCoordinate;
+			ApplyEditorRuntimeSettings();
+		}
+
+		private void OnValidate()
+		{
+			ApplyEditorRuntimeSettings();
 		}
 
 		/// <summary>
@@ -328,6 +337,18 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		/// <summary>iOS URL scheme and Android intent-filter declarations applied at build time.</summary>
 		public NativeDeepLinkSettings DeepLinks => _deepLinks ??= new NativeDeepLinkSettings();
+
+		/// <summary>Whether Editor haptics calls write diagnostic messages to the Unity console.</summary>
+		public bool EnableHapticsDebugLogs
+		{
+			get => _enableHapticsDebugLogs;
+			set
+			{
+				_enableHapticsDebugLogs = value;
+				ApplyEditorRuntimeSettings();
+				Persist();
+			}
+		}
 
 		/// <summary>
 		/// When <c>true</c> (the default), the Android build postprocessor auto-injects the Play In-App
@@ -736,6 +757,11 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return TryGetPersistedConfig(out var config) ? config : null;
 		}
 
+		private void ApplyEditorRuntimeSettings()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = _enableHapticsDebugLogs;
+		}
+
 		private static void CollectLocales(List<LocaleEntry> entries, HashSet<string> set)
 		{
 			foreach (var entry in entries ?? new List<LocaleEntry>())
@@ -770,6 +796,21 @@ namespace GameLovers.MobileServices.Editor.Settings
 				}
 			}
 			entries.Add(new LocaleEntry { LocaleCode = locale, UsageDescription = text });
+		}
+	}
+
+	/// <summary>Restores Mobile Services Editor runtime settings after Unity reloads the package assemblies.</summary>
+	[InitializeOnLoad]
+	internal static class MobileServicesConfigInitializer
+	{
+		static MobileServicesConfigInitializer()
+		{
+			EditorApplication.delayCall += Apply;
+		}
+
+		private static void Apply()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = MobileServicesConfig.Instance.EnableHapticsDebugLogs;
 		}
 	}
 }

@@ -77,7 +77,7 @@ Use the specific subsystem namespaces—`Notifications`, `Haptics`, `NativeUi`, 
 | Haptics | Presets, custom output, and bounded loops |
 | Device | Permissions, ATT, deep links, safe-area and device helpers |
 | Gestures | Gesture controller for explicit gesture input ownership |
-| Editor tooling | Device Simulator integration and build helpers |
+| Editor tooling | Device Simulator integration, optional haptics diagnostics, and build helpers |
 
 Runtime alert calls render an interactive platform-shaped mock in the Game view even when the Device Simulator window is closed. Prefer `ShowAlertPopUpAsync` for a selected-index result on Unity's main thread; legacy callbacks also switch through Unity's `Awaitable` scheduler. The editor simulator is for exercising application paths; it is not a substitute for device permission, notification-delivery, review, or native-build validation.
 

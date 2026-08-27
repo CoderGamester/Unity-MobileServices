@@ -62,7 +62,7 @@ Always finite; `durationMs <= 0` is a no-op. Intensity is clamped to `[0, 1]`. O
 |----------|---------|
 | iOS | `IosHapticsBackend` — UIKit `UIImpactFeedbackGenerator` / `UINotificationFeedbackGenerator` / `UISelectionFeedbackGenerator`. Looping via `NSTimer`. |
 | Android | `AndroidHapticsBackend` — pure JNI `Vibrator.vibrate(VibrationEffect)`. Requires API 26 (Android 8.0)+. |
-| Editor | `EditorHapticsBackend` — logs only. |
+| Editor | `EditorHapticsBackend` — no native output; optional console diagnostics. |
 | Other (Standalone, WebGL) | `NoOpHapticsBackend` — `IsSupported = false`. |
 
 The backend is selected at construction by `CreateDefaultBackend()`. Tests construct `HapticsService` with the internal injection constructor + a `FakeHapticsBackend`.
@@ -77,9 +77,14 @@ Internal accessors on `HapticsService` (visible to the Editor assembly via `Inte
 
 These power the Device Simulator panel's **Haptics** status read-out.
 
-## Editor testing on a real device
+## Editor diagnostics and real-device testing
 
-In the editor, the `EditorHapticsBackend` only logs. To test haptic feel on a paired phone:
+The Editor backend is silent by default so frequent haptics do not overwhelm the Console. To inspect every
+play and stop call, open **Tools > GameLovers > Mobile Services > Select Mobile Services Config** and enable
+**Editor diagnostics > Enable Haptics Debug Logs**. This team-shared setting affects only the Editor and is
+never included in player builds.
+
+To test haptic feel on a paired phone:
 
 1. Use Unity Remote (haptics will NOT fire through Unity Remote — it only relays input/display).
 2. Or deploy a debug build to the device for the iteration loop. The `HapticsPalette` sample is designed for this loop.
