@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **New**:
 - Added an `Enable Haptics Debug Logs` Mobile Services Config toggle; Editor haptics logs are disabled by default.
 
+**Fixed**:
+- Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
+
 ## [1.2.0] - 2026-08-14
 
 **New**:

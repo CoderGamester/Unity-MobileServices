@@ -473,17 +473,21 @@ namespace GameLovers.MobileServices.NativeUi
 
 		private static void RequestReviewAndroid()
 		{
+			AndroidJavaObject activity = null;
+			AndroidJavaObject manager = null;
 			try
 			{
 				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
 				using var managerFactory = new AndroidJavaClass("com.google.android.play.core.review.ReviewManagerFactory");
-				using var manager = managerFactory.CallStatic<AndroidJavaObject>("create", activity);
+				manager = managerFactory.CallStatic<AndroidJavaObject>("create", activity);
 				using var requestTask = manager.Call<AndroidJavaObject>("requestReviewFlow");
 				requestTask.Call<AndroidJavaObject>("addOnCompleteListener", new ReviewFlowListener(activity, manager));
 			}
 			catch (Exception e)
 			{
+				manager?.Dispose();
+				activity?.Dispose();
 				Debug.LogError($"[GameLovers.MobileServices] RequestReview failed: {e.Message}. " +
 					"Ensure 'com.google.android.play:review' is on the gradle classpath.");
 			}
@@ -566,6 +570,11 @@ namespace GameLovers.MobileServices.NativeUi
 				catch (Exception e)
 				{
 					Debug.LogError($"[GameLovers.MobileServices] launchReviewFlow failed: {e.Message}");
+				}
+				finally
+				{
+					_manager?.Dispose();
+					_activity?.Dispose();
 				}
 			}
 		}
