@@ -3,6 +3,7 @@ using GameLovers.MobileServices.Device;
 using GameLovers.MobileServices.Device.Internal;
 using NUnit.Framework;
 using UnityEngine;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace

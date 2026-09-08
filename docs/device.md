@@ -114,6 +114,8 @@ Literal segments match exactly (case-insensitive); `:name` segments capture into
 
 ## Safe Area
 
+Safe-area coordinates follow Unity's selected Device Simulator profile through `UnityEngine.Device.Screen`; an explicit `EditorPlatformSimulator` safe-area override takes precedence.
+
 `SafeAreaContainer` is a companion UI Toolkit `VisualElement` that pads itself to the safe area:
 
 ```csharp

@@ -3,6 +3,7 @@ using System.Collections;
 using GameLovers.MobileServices.Device;
 using NUnit.Framework;
 using UnityEngine;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 

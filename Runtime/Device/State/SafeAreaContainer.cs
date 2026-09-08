@@ -1,4 +1,5 @@
 using UnityEngine;
+using Screen = UnityEngine.Device.Screen;
 using UnityEngine.UIElements;
 
 // ReSharper disable once CheckNamespace

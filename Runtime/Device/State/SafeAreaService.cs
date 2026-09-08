@@ -1,6 +1,7 @@
 using System;
 using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
+using Screen = UnityEngine.Device.Screen;
 
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Device

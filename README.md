@@ -68,6 +68,8 @@ IDisposable ownedNotifications = notifications;
 
 Use the specific subsystem namespaces—`Notifications`, `Haptics`, `NativeUi`, and `Device`—rather than assuming one umbrella import exposes every type.
 
+Safe-area coordinates follow Unity's selected Device Simulator profile through `UnityEngine.Device.Screen`; an explicit `EditorPlatformSimulator` safe-area override takes precedence.
+
 ## Services
 
 | Area | Provides |
