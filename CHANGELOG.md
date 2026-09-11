@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Fixed**:
 - Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
+- Vendored NSubstitute 4.2.2 with Castle.Core 4.4.0 and System.Threading.Tasks.Extensions 4.3.0 under `Tests/EditMode/Plugins/` so the EditMode suite compiles and loads in Unity; 5.x stays unloadable because Castle.Core 5.1.1 references `System.Diagnostics.EventLog`, which Unity cannot resolve.
 
 **Removed**:
 - Removed `ISafeAreaService`, `SafeAreaService`, and the `SafeAreaContainer` UI Toolkit element; `IDeviceService` no longer exposes a `SafeArea` child and `EditorPlatformSimulator` no longer exposes safe-area overrides. For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).

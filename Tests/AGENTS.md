@@ -73,6 +73,7 @@ Benchmarks use the inverted check: removing the workload from the measured body 
 - Use namespace `GameLoversEditor.MobileServices.Tests` and the existing namespace-suppression comment.
 - Use singular `{Subject}Test`; add `PlayMode` when the same subject also has an EditMode fixture.
 - Prefer NSubstitute for simple EditMode interfaces, hand-written fakes for sequence-sensitive backends, and real MonoBehaviour stubs in PlayMode.
+- EditMode NSubstitute resolves to the binaries vendored under `Tests/EditMode/Plugins/` (NSubstitute 4.2.2, BSD-3-Clause per its nuspec license URL; Castle.Core 4.4.0 Apache-2.0 and the dotnet library texts vendored alongside). Stay on 4.x: Castle.Core 5.1.1 references `System.Diagnostics.EventLog`, which Unity cannot resolve, so the 5.x set fails plugin validation.
 - No private reflection. Use public/internal surfaces exposed through `InternalsVisibleTo`; omit platform state that cannot be fabricated honestly.
 - Disposable service tests separately cover owned-resource release, idempotent disposal, and post-disposal operations. Shared-global acquisitions require two-owner lifecycle coverage.
 
