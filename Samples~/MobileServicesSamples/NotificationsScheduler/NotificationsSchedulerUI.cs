@@ -82,8 +82,6 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 
 			_boundRoot?.UnregisterCallback<ClickEvent>(OnButtonClick, TrickleDown.TrickleDown);
 			_boundRoot = root;
-			var safeArea = root as SafeAreaContainer ?? root.Q<SafeAreaContainer>();
-			safeArea?.SetSafeAreaService(_device.SafeArea);
 			BindClickHaptics(root);
 			_status = status;
 			_log = root.Q<Label>("log");

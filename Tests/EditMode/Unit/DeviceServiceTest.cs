@@ -15,11 +15,9 @@ namespace GameLoversEditor.MobileServices.Tests
 		// that satisfies both the umbrella's interface contract AND the IDisposable check inside
 		// DeviceService.Dispose. The DeviceService ctor accepts the parent interface; the more-
 		// derived disposable variant is implicitly convertible to it.
-		public interface ISafeAreaServiceDisposable : ISafeAreaService, IDisposable { }
 		public interface IBatteryServiceDisposable  : IBatteryService,  IDisposable { }
 		public interface IDeepLinkServiceDisposable : IDeepLinkService, IDisposable { }
 
-		private ISafeAreaServiceDisposable _safeArea;
 		private IBatteryServiceDisposable _battery;
 		private IIosAudioSessionService _audioSession;
 		private IPermissionsService _permissions;
@@ -31,7 +29,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		public void Init()
 		{
 			_originalSleepTimeout = Screen.sleepTimeout;
-			_safeArea = Substitute.For<ISafeAreaServiceDisposable>();
 			_battery = Substitute.For<IBatteryServiceDisposable>();
 			_audioSession = Substitute.For<IIosAudioSessionService>();
 			_permissions = Substitute.For<IPermissionsService>();
@@ -47,18 +44,16 @@ namespace GameLoversEditor.MobileServices.Tests
 
 		[Test]
 		// ADMIT: DeviceService's injection ctor could store something other than the supplied instance on a child property.
-		// RCR: DeviceService.cs DeviceService(6-arg) — `Att = att` → `Att = new AttService()` → RED (AreSame fails on Att).
+		// RCR: DeviceService.cs DeviceService(5-arg) — `Att = att` → `Att = new AttService()` → RED (AreSame fails on Att).
 		public void InjectionCtor_StoresEachChildOnMatchingProperty()
 		{
 			var service = new DeviceService(
-				_safeArea,
 				_battery,
 				_audioSession,
 				_permissions,
 				_att,
 				_deepLink);
 
-			Assert.AreSame(_safeArea, service.SafeArea);
 			Assert.AreSame(_battery, service.Battery);
 			Assert.AreSame(_audioSession, service.AudioSession);
 			Assert.AreSame(_permissions, service.Permissions);
@@ -72,7 +67,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		public void Dispose_DisposesDisposableChildren_OnlyOnce()
 		{
 			var service = new DeviceService(
-				_safeArea,
 				_battery,
 				_audioSession,
 				_permissions,
@@ -81,22 +75,19 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			service.Dispose();
 
-			_safeArea.Received(1).Dispose();
 			_battery.Received(1).Dispose();
 			_deepLink.Received(1).Dispose();
 		}
 
 		[Test]
 		// ADMIT: DeviceService.Dispose could hard-cast children to IDisposable and throw for a non-disposable implementation.
-		// RCR: DeviceService.cs Dispose — `(SafeArea as IDisposable)?.Dispose()` → `((IDisposable) SafeArea).Dispose()` → RED (InvalidCastException where none expected).
+		// RCR: DeviceService.cs Dispose — `(Battery as IDisposable)?.Dispose()` → `((IDisposable) Battery).Dispose()` → RED (InvalidCastException where none expected).
 		public void Dispose_NonDisposableChildren_NoThrow()
 		{
-			var nonDisposableSafeArea = Substitute.For<ISafeAreaService>();
 			var nonDisposableBattery = Substitute.For<IBatteryService>();
 			var nonDisposableDeepLink = Substitute.For<IDeepLinkService>();
 
 			var service = new DeviceService(
-				nonDisposableSafeArea,
 				nonDisposableBattery,
 				_audioSession,
 				_permissions,

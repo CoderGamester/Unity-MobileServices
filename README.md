@@ -68,7 +68,7 @@ IDisposable ownedNotifications = notifications;
 
 Use the specific subsystem namespaces—`Notifications`, `Haptics`, `NativeUi`, and `Device`—rather than assuming one umbrella import exposes every type.
 
-Safe-area coordinates follow Unity's selected Device Simulator profile through `UnityEngine.Device.Screen`; an explicit `EditorPlatformSimulator` safe-area override takes precedence.
+For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).
 
 ## Services
 
@@ -77,7 +77,7 @@ Safe-area coordinates follow Unity's selected Device Simulator profile through `
 | Native UI | Dismissible or blocking alerts, action sheets, toasts, review requests, and sharing |
 | Notifications | Local notification channels, scheduling, and management |
 | Haptics | Presets, custom output, and bounded loops |
-| Device | Permissions, ATT, deep links, safe-area and device helpers |
+| Device | Permissions, ATT, deep links, and device helpers |
 | Gestures | Gesture controller for explicit gesture input ownership |
 | Editor tooling | Device Simulator integration, optional haptics diagnostics, and build helpers |
 

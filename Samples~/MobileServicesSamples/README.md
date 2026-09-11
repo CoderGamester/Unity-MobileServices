@@ -10,7 +10,7 @@ Every enabled control provides hover, press, focus, and disabled feedback. Ordin
 
 | View | Open this scene | Focus |
 |---|---|---|
-| [Overview](#overview) | `MobileServicesPlayground/MobileServicesPlayground.unity` | Native UI, permissions, ATT, device and safe-area state, gestures, and activity logging. |
+| [Overview](#overview) | `MobileServicesPlayground/MobileServicesPlayground.unity` | Native UI, permissions, ATT, device state, gestures, and activity logging. |
 | [Haptics](#haptics) | `HapticsPalette/HapticsPalette.unity` | All nine presets, playback modes, custom intensity and duration, and sequence record/replay. |
 | [Notifications](#notifications) | `NotificationsScheduler/NotificationsScheduler.unity` | Fixed channels, permission state, operating modes, scheduling, cancellation, pending rows, and simulated delivery. |
 | [Links](#links) | `DeepLinkRouter/DeepLinkRouter.unity` | Route patterns, captured parameters, raw and unmatched links, and warm/cold launch behavior. |
@@ -22,12 +22,10 @@ The Overview view covers package areas that are not duplicated by the focused vi
 - native alert, action sheet, toast, review, and share flows;
 - synchronous checks and asynchronous requests for every `AppPermission`;
 - ATT authorization, keep-awake, and iOS audio-session configuration;
-- safe-area and device status;
+- device status;
 - `GestureController` tap and swipe logs.
 
-Safe-area coordinates follow Unity's selected Device Simulator profile through `UnityEngine.Device.Screen`; an explicit `EditorPlatformSimulator` safe-area override takes precedence.
-
-The live device card reports battery, low-power, keep-awake, ATT, and safe-area state on separate lines. The Editor and Device Simulator use safe no-op or mock implementations where an operating-system feature is unavailable.
+The live device card reports battery, low-power, keep-awake, and ATT state on separate lines. The Editor and Device Simulator use safe no-op or mock implementations where an operating-system feature is unavailable.
 
 The Overview alert controls keep the callback overload so their activity log can demonstrate legacy integration. For new consumer flows that need the selected zero-based button index, prefer `NativeUiService.ShowAlertPopUpAsync`; dismissal or replacement cancels its `Awaitable<int>`.
 

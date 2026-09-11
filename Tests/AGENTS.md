@@ -79,7 +79,7 @@ Benchmarks use the inverted check: removing the workload from the measured body 
 ## Cleanup
 
 - Dispose services before resetting their hosts. Reset `DeviceServicesHost`, `HapticsHost`, permission/ATT receivers, and notification hosts touched by the fixture.
-- Reset every process-wide Editor override installed by the test, including permission, ATT, battery, safe-area, native-alert, and review hooks. Never rely on another fixture's cleanup.
+- Reset every process-wide Editor override installed by the test, including permission, ATT, battery, native-alert, and review hooks. Never rely on another fixture's cleanup.
 - Simulator adapters unregister the exact running-service target they registered; a parallel throwaway instance is not acceptable test coverage.
 
 ## Verification

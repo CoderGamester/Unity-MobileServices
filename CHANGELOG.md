@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Fixed**:
 - Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
-- Safe-area services and UI Toolkit containers use the selected Unity Device Simulator profile when no explicit Editor override is active.
+
+**Removed**:
+- Removed `ISafeAreaService`, `SafeAreaService`, and the `SafeAreaContainer` UI Toolkit element; `IDeviceService` no longer exposes a `SafeArea` child and `EditorPlatformSimulator` no longer exposes safe-area overrides. For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).
 
 ## [1.2.0] - 2026-08-14
 

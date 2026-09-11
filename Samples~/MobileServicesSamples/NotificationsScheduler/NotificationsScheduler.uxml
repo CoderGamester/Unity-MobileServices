@@ -1,7 +1,7 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:mobile="GameLovers.MobileServices.Device">
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="NotificationsScheduler.uss" />
     <Style src="../Shared/MobileServicesSampleNavigation.uss" />
-    <mobile:SafeAreaContainer name="root" class="sample-root">
+    <ui:VisualElement name="root" class="sample-root">
         <ui:VisualElement class="sample-layout">
         <ui:ScrollView class="sample-scroll">
             <ui:VisualElement class="sample-hero"><ui:Label text="Notifications Scheduler" class="sample-title" /><ui:Label text="Check permission, choose a channel and operating mode, then schedule and inspect notification delivery." class="sample-subtitle" /></ui:VisualElement>
@@ -13,5 +13,5 @@
         </ui:ScrollView>
         <ui:VisualElement name="sample-navigation" class="sample-navigation sample-navigation-host" />
         </ui:VisualElement>
-    </mobile:SafeAreaContainer>
+    </ui:VisualElement>
 </ui:UXML>

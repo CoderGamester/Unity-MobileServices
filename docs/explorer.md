@@ -29,7 +29,7 @@ The header carries an **Editor Simulator** master-switch toggle: it enables/disa
 
 - **Alive while the panel is open** — the plugin calls `MobileSimulatorRuntimeOverlay.NotifyPluginActive(true/false)` on create / destroy, so its controller exists exactly while the Device Simulator panel is open, in **edit mode and play mode**. `UIDocument` is `[ExecuteAlways]`, so it paints in the edit-mode Game view too. During Play Mode it is attached only while a mock is visible, preventing an empty overlay panel from swallowing the sample's pointer input. Fire a mock from the panel without entering play mode and it renders immediately.
 - **Display-only in edit mode** — runtime-panel pointer input is unreliable in the edit-mode Game view, so the mock's own buttons are not relied upon; dismissal is driven from the panel's per-section dismiss buttons (**Dismiss all UIs** / **Dismiss Banner**).
-- **Composes with Unity's Device Simulator** — pick "iPhone 15 Pro" in the Device Simulator, and the mocks render at the right scale and safe-area inset for that device.
+- **Composes with Unity's Device Simulator** — pick "iPhone 15 Pro" in the Device Simulator, and the mocks render at the right scale for that device.
 
 The same mock payloads — alerts, action sheets, toasts, share sheets, review prompts, heads-up banners, permission / ATT dialogs — are built by `MockBuilders` and skinned by the three USS files (`MobileSimulator.Common.uss` / `.iOS.uss` / `.Android.uss`); the root element toggles `platform-ios` / `platform-android` so USS rules can scope on either. Notification banners from the scheduler use the editor-only simulation bridge and retain the sample service as the source of truth.
 
@@ -44,8 +44,6 @@ For code-driven tests / scripted automation, `GameLovers.MobileServices.Editor.S
 ```csharp
 EditorPlatformSimulator.Engage();   // install the OS-faithful Permission / ATT overrides
 EditorPlatformSimulator.SetIosLowPowerMode(true, batteryService);
-EditorPlatformSimulator.SetSafeArea(new Rect(0, 100, w, h-200), safeAreaService);
-EditorPlatformSimulator.ClearSafeAreaOverride(safeAreaService);
 EditorPlatformSimulator.SimulateDeepLink(new Uri("myapp://promo/x"), deepLinkService);
 
 // Permissions / ATT model the real OS lifecycle: set the persisted decision (the "Settings"
@@ -70,7 +68,7 @@ Out of scope (deliberate):
 
 - **Audio proxy for haptics** (low-frequency oscillator burst per preset).
 
-The envelope graph is the calibration cue for haptics; designers iterate haptic feel on a paired device through the `HapticsPalette` sample. Device-frame overlays (iPhone 15 Pro / Pixel 8 cutout outlines, safe-area inset, `Application.platform` spoofing) are handled by Unity's Device Simulator natively — this package composes with it rather than reimplementing it.
+The envelope graph is the calibration cue for haptics; designers iterate haptic feel on a paired device through the `HapticsPalette` sample. Device-frame overlays (iPhone 15 Pro / Pixel 8 cutout outlines, `Application.platform` spoofing) are handled by Unity's Device Simulator natively — this package composes with it rather than reimplementing it.
 
 ## Comparison with Unity's Device Simulator
 
@@ -78,8 +76,8 @@ Unity's built-in **Device Simulator** and this package's tooling are **complemen
 
 ### What Unity's Device Simulator does (and does well)
 
-- Wraps the Game view in a device frame (~30 device profiles) with the correct screen aspect, notch / dynamic island cutout, and safe-area inset.
-- Overrides Unity-level APIs to match the chosen device: `Screen.safeArea`, `Screen.dpi`, `Screen.width/height`, `Screen.orientation`, `Application.platform`, `SystemInfo.deviceModel`, etc.
+- Wraps the Game view in a device frame (~30 device profiles) with the correct screen aspect and notch / dynamic island cutout.
+- Overrides Unity-level APIs to match the chosen device: screen geometry, `Screen.dpi`, `Screen.width/height`, `Screen.orientation`, `Application.platform`, `SystemInfo.deviceModel`, etc.
 - Triggers `#if UNITY_IOS` / `#if UNITY_ANDROID` runtime branches by spoofing `Application.platform`.
 - Mouse-as-touch input, orientation flip, foreground/background pause toggles.
 
@@ -109,10 +107,9 @@ A few pieces of `EditorPlatformSimulator` overlap with Unity's Device Simulator.
 
 | Feature | Unity Device Simulator | Why this package still ships it |
 |---------|------------------------|--------------------------------|
-| `EditorPlatformSimulator.SetSafeArea` | Richer (real device-accurate cutouts via device picker) | Programmatic API — drives `SafeAreaService.OnSafeAreaChanged` deterministically from unit tests |
 | `EditorPlatformSimulator.SetIosLowPowerMode` | "Low Battery" toggle in newer versions | Programmatic — fires `BatteryService.OnLowPowerModeChanged` for tests |
 
-If your iteration loop is interactive (designer-paired phone or just clicking around), Unity's Device Simulator wins for safe-area / platform / device-frame work. If your iteration loop is scripted (CI tests, automated previews), the `EditorPlatformSimulator` API is the path. Use both — they don't conflict.
+If your iteration loop is interactive (designer-paired phone or just clicking around), Unity's Device Simulator wins for platform / device-frame work. If your iteration loop is scripted (CI tests, automated previews), the `EditorPlatformSimulator` API is the path. Use both — they don't conflict.
 
 ## Recommended workflow
 

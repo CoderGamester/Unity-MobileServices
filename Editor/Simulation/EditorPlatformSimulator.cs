@@ -12,7 +12,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Editor.Simulation
 {
 	/// <summary>
-	/// Editor-only façade for driving platform state (battery, connectivity, safe area, deep links,
+	/// Editor-only façade for driving platform state (battery, connectivity, deep links,
 	/// permissions, ATT) from edit-mode tests and the Device Simulator panel. See
 	/// <c>docs/explorer.md</c> for the comparison with Unity's Device Simulator.
 	/// </summary>
@@ -54,36 +54,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 				foreach (var s in services)
 				{
 					s?.SimulateLowPowerModeChanged();
-				}
-			}
-		}
-
-		/// <summary>
-		/// Pushes a safe-area override that <see cref="SafeAreaService"/> will report on its next
-		/// <c>LateUpdate</c> diff. Each service you pass is forced to diff immediately so the
-		/// Explorer surfaces the change without waiting for the host's poll.
-		/// </summary>
-		public static void SetSafeArea(Rect safeArea, params SafeAreaService[] services)
-		{
-			SafeAreaService.EditorSafeAreaOverride = safeArea;
-			if (services != null)
-			{
-				foreach (var s in services)
-				{
-					s?.SimulateSafeAreaChanged();
-				}
-			}
-		}
-
-		/// <summary>Clears the safe-area override and restores the live <c>Screen.safeArea</c> read.</summary>
-		public static void ClearSafeAreaOverride(params SafeAreaService[] services)
-		{
-			SafeAreaService.EditorSafeAreaOverride = null;
-			if (services != null)
-			{
-				foreach (var s in services)
-				{
-					s?.SimulateSafeAreaChanged();
 				}
 			}
 		}

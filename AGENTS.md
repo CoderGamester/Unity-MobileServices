@@ -5,7 +5,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Scope
 
 - Package: `com.gamelovers.mobileservices`; minimum Unity version and dependencies are authoritative in `package.json`.
-- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (safe area, battery, audio session, permissions, ATT, and deep links).
+- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (battery, audio session, permissions, ATT, and deep links).
 - Consumers must enable the Input System or Both. The gesture contract uses EnhancedTouch.
 - This package is render-pipeline-neutral and has no dependency on GameLovers Services.
 
@@ -28,7 +28,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - `DeviceServicesHost` is the shared polling host. Do not create per-service update GameObjects when the host can own the callback.
 - The first `DeepLinkService` subscriber receives a pending cold-start link once. Construct the service early; event names are not persistent state.
 - ATT returning `Authorized` outside iOS means “not applicable,” not an observed user decision.
-- Permission, ATT, battery, safe-area, native-alert, and review Editor overrides are process-wide statics. Simulator code must install and remove them symmetrically; tests must reset overrides they touch.
+- Permission, ATT, battery, native-alert, and review Editor overrides are process-wide statics. Simulator code must install and remove them symmetrically; tests must reset overrides they touch.
 - The iOS location permission bridge retains each `CLLocationManager` delegate until authorization changes and removes it only after callback dispatch. Do not simplify the static delegate-retention collection into a local lifetime.
 - Android Photos and Notifications permissions use API-33 runtime permissions (`READ_MEDIA_IMAGES` and `POST_NOTIFICATIONS`) and short-circuit as granted on older APIs. Keep runtime checks and generated manifest entries aligned.
 

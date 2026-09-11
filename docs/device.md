@@ -1,6 +1,6 @@
 # Device
 
-`IDeviceService` is an umbrella facade aggregating six independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless screen-wake control is available directly on `DeviceService`.
+`IDeviceService` is an umbrella facade aggregating five independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless screen-wake control is available directly on `DeviceService`.
 
 ```csharp
 IDeviceService device = new DeviceService();
@@ -21,7 +21,6 @@ device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 
 | Property | Interface | What it does |
 |----------|-----------|--------------|
-| `SafeArea` | `ISafeAreaService` | `Screen.safeArea` with change events. Pairs with `SafeAreaContainer` UI Toolkit element. |
 | `Battery` | `IBatteryService` | Level + status + low-power-mode events (iOS `NSProcessInfoPowerStateDidChangeNotification`, Android `PowerManager.isPowerSaveMode`). |
 | `AudioSession` | `IIosAudioSessionService` | iOS `AVAudioSession` category override (silent-switch). No-op on Android / Editor. |
 | `Permissions` | `IPermissionsService` | Unified iOS+Android runtime permissions. Task-based async. Multi-permission overload. |
@@ -112,27 +111,4 @@ router.MapRoute("/settings", (uri, p) => OpenSettings());
 
 Literal segments match exactly (case-insensitive); `:name` segments capture into the params dict. Routes are checked in registration order — first match wins. The router subscribes once to `OnLinkActivated` at construction.
 
-## Safe Area
-
-Safe-area coordinates follow Unity's selected Device Simulator profile through `UnityEngine.Device.Screen`; an explicit `EditorPlatformSimulator` safe-area override takes precedence.
-
-`SafeAreaContainer` is a companion UI Toolkit `VisualElement` that pads itself to the safe area:
-
-```csharp
-var container = new SafeAreaContainer(device.SafeArea);
-rootVisualElement.Add(container);
-```
-
-For UXML usage, construct via the default constructor and call `SetSafeAreaService` once the service is available:
-
-```xml
-<ui:UXML xmlns:gl="GameLovers.MobileServices.Device">
-    <gl:SafeAreaContainer>
-        <!-- content -->
-    </gl:SafeAreaContainer>
-</ui:UXML>
-```
-
-```csharp
-rootVisualElement.Q<SafeAreaContainer>().SetSafeAreaService(device.SafeArea);
-```
+For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).

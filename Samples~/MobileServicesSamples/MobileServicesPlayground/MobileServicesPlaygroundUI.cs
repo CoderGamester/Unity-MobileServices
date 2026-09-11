@@ -22,7 +22,6 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 		private VisualElement _boundRoot;
 		private Label _log;
 		private Label _deviceStatus;
-		private Label _safeAreaStatus;
 		private readonly List<string> _logEntries = new List<string>();
 
 		private void Awake()
@@ -54,10 +53,6 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 					new SampleStatusEntry("Low-power mode", SampleStatusFormatter.YesNo(_device.Battery.IsLowPowerMode)),
 					new SampleStatusEntry("Keep awake", SampleStatusFormatter.YesNo(DeviceService.KeepAwake)),
 					new SampleStatusEntry("ATT status", _device.Att.CurrentStatus));
-			}
-			if (_safeAreaStatus != null)
-			{
-				_safeAreaStatus.text = SampleStatusFormatter.Format(new SampleStatusEntry("Safe area", _device.SafeArea.SafeArea));
 			}
 		}
 
@@ -91,9 +86,6 @@ namespace GameLovers.MobileServices.Samples.MobileServicesPlayground
 			_boundRoot = root;
 			_log = root.Q<Label>("log");
 			_deviceStatus = deviceStatus;
-			_safeAreaStatus = root.Q<Label>("safe-area-status");
-			var safeArea = root as SafeAreaContainer ?? root.Q<SafeAreaContainer>();
-			safeArea?.SetSafeAreaService(_device.SafeArea);
 			BindClickHaptics(root);
 			BindButtons(root);
 			BindPermissions(root);

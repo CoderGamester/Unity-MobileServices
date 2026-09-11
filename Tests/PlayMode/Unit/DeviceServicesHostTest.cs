@@ -33,7 +33,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[UnityTest]
-		// ADMIT: DeviceServicesHost.LateUpdate could stop fanning out to its per-frame subscribers, freezing SafeAreaService.
+		// ADMIT: DeviceServicesHost.LateUpdate could stop fanning out to its per-frame subscribers, freezing per-frame polls.
 		// RCR: DeviceServicesHost.cs LateUpdate — drop `_onLateUpdate?.Invoke()` → RED (callCount 0, expected >= 2).
 		public IEnumerator RegisterLateUpdate_FiresEachLateUpdateFrame()
 		{

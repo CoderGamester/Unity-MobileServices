@@ -9,9 +9,6 @@ namespace GameLovers.MobileServices.Device
 	/// </summary>
 	public interface IDeviceService
 	{
-		/// <summary>Display safe-area events (notch, dynamic island, orientation).</summary>
-		ISafeAreaService SafeArea { get; }
-
 		/// <summary>Battery level / status / low-power-mode awareness.</summary>
 		IBatteryService Battery { get; }
 
