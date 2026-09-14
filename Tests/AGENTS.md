@@ -29,11 +29,12 @@ Fixtures under `Smoke/` are exempt from A1/A2 and may assert construction/bootst
 
 Every new or strengthened behavioral test must be observed failing once against a plausible production mutation before commit:
 
-1. Run the new test against normal production code and observe GREEN.
+1. Run the new test against normal production code and observe GREEN. The harness prints `baseline green: N test cases`; that line is the fixture count, not a reason to run it again.
 2. Preserve the exact working patch or use an isolated worktree; then apply the A2 mutation. Never restore a dirty file from `HEAD`.
 3. Run the smallest attributable filter. RED must come from the intended assertion with a diagnostic failure, not a compile error or unrelated `NullReferenceException`.
-4. Restore the saved production state, confirm the mutation is gone without losing other edits, and observe GREEN again.
+4. Restore the saved production state, confirm the mutation is gone without losing other edits, and observe GREEN again as one re-run of the same filtered probe.
 5. Record the observation on the test using `file + symbol`, never a line number.
+6. Correcting an existing `ADMIT`/`RCR` line is itself a claim about production: read the symbol it names, re-run the mutation when the claim is about RED, and run `python3 Tools/rcr-anchor-check.py` before committing.
 
 Use this compact form, targeting four lines and never exceeding six:
 
