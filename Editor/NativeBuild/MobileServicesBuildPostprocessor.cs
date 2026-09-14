@@ -29,7 +29,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 	{
 #if UNITY_ANDROID
 		private const string PlayReviewArtifactKey = "com.google.android.play:review";
-		private static readonly XNamespace AndroidNamespace = "http://schemas.android.com/apk/res/android";
+		private static readonly XNamespace _androidNamespace = "http://schemas.android.com/apk/res/android";
 #endif
 
 		/// <inheritdoc />
@@ -434,7 +434,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			foreach (var permission in GetConfiguredAndroidPermissions(settings.AndroidManifest))
 			{
 				if (root.Elements(root.Name.Namespace + "uses-permission").Any(element => string.Equals(GetAndroidAttribute(element, "name"), permission, StringComparison.Ordinal))) continue;
-				root.AddFirst(new XElement(root.Name.Namespace + "uses-permission", new XAttribute(AndroidNamespace + "name", permission)));
+				root.AddFirst(new XElement(root.Name.Namespace + "uses-permission", new XAttribute(_androidNamespace + "name", permission)));
 				changed = true;
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
@@ -468,25 +468,25 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			if (queries.Elements(ns + "intent").Any(intent =>
 				intent.Elements(ns + "action").Any(action => string.Equals(GetAndroidAttribute(action, "name"), "android.intent.action.SEND", StringComparison.Ordinal)) &&
 				intent.Elements(ns + "data").Any(data => string.Equals(GetAndroidAttribute(data, "mimeType"), "*/*", StringComparison.Ordinal)))) return false;
-			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(AndroidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(AndroidNamespace + "mimeType", "*/*"))));
+			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(_androidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(_androidNamespace + "mimeType", "*/*"))));
 			return true;
 		}
 
 		private static bool AddAndroidIntentFilterIfMissing(XElement activity, AndroidDeepLinkRegistration registration)
 		{
 			var ns = activity.Name.Namespace;
-			var name = AndroidNamespace + "name";
+			var name = _androidNamespace + "name";
 			var matches = activity.Elements(ns + "intent-filter").Any(filter =>
 				filter.Elements(ns + "action").Any(action => string.Equals((string)action.Attribute(name), "android.intent.action.VIEW", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.DEFAULT", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.BROWSABLE", StringComparison.Ordinal)) &&
-				filter.Elements(ns + "data").Any(data => string.Equals((string)data.Attribute(AndroidNamespace + "scheme"), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
-					string.Equals((string)data.Attribute(AndroidNamespace + "host") ?? string.Empty, registration.Host ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
-					string.Equals((string)data.Attribute(AndroidNamespace + "pathPrefix") ?? string.Empty, registration.PathPrefix ?? string.Empty, StringComparison.Ordinal)));
+				filter.Elements(ns + "data").Any(data => string.Equals((string)data.Attribute(_androidNamespace + "scheme"), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals((string)data.Attribute(_androidNamespace + "host") ?? string.Empty, registration.Host ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals((string)data.Attribute(_androidNamespace + "pathPrefix") ?? string.Empty, registration.PathPrefix ?? string.Empty, StringComparison.Ordinal)));
 			if (matches) return false;
-			var data = new XElement(ns + "data", new XAttribute(AndroidNamespace + "scheme", registration.Scheme));
-			if (!string.IsNullOrEmpty(registration.Host)) data.Add(new XAttribute(AndroidNamespace + "host", registration.Host));
-			if (!string.IsNullOrEmpty(registration.PathPrefix)) data.Add(new XAttribute(AndroidNamespace + "pathPrefix", registration.PathPrefix));
+			var data = new XElement(ns + "data", new XAttribute(_androidNamespace + "scheme", registration.Scheme));
+			if (!string.IsNullOrEmpty(registration.Host)) data.Add(new XAttribute(_androidNamespace + "host", registration.Host));
+			if (!string.IsNullOrEmpty(registration.PathPrefix)) data.Add(new XAttribute(_androidNamespace + "pathPrefix", registration.PathPrefix));
 			activity.Add(new XElement(ns + "intent-filter", new XElement(ns + "action", new XAttribute(name, "android.intent.action.VIEW")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.DEFAULT")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.BROWSABLE")), data));
 			return true;
 		}
@@ -500,7 +500,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private static bool IsUnityPlayerActivity(string activityName) => !string.IsNullOrEmpty(activityName) &&
 			(activityName.EndsWith(".UnityPlayerActivity", StringComparison.Ordinal) || activityName.EndsWith(".UnityPlayerGameActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerGameActivity", StringComparison.Ordinal));
 
-		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(AndroidNamespace + localName)?.Value;
+		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(_androidNamespace + localName)?.Value;
 
 		private static string FindModuleBuildGradle(string path, string[] gradleFiles)
 		{

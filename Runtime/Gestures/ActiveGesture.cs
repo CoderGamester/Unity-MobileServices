@@ -59,7 +59,7 @@ namespace GameLovers.MobileServices.Gestures
         public float TravelDistance;
 
         // Accumulated sum of all normalized movement vectors.
-        private Vector2 accumulatedNormalized;
+        private Vector2 _accumulatedNormalized;
 
         public ActiveGesture(int inputId, Vector2 startPosition, double startTime)
         {
@@ -68,7 +68,7 @@ namespace GameLovers.MobileServices.Gestures
             EndPosition = StartPosition = startPosition;
             Samples = 1;
             SwipeDirectionSameness = 1;
-            accumulatedNormalized = Vector2.zero;
+            _accumulatedNormalized = Vector2.zero;
         }
 
         /// <summary>
@@ -98,9 +98,9 @@ namespace GameLovers.MobileServices.Gestures
             PreviousPosition = EndPosition;
             EndPosition = position;
 
-            accumulatedNormalized += toNewPosition;
+            _accumulatedNormalized += toNewPosition;
 
-            SwipeDirectionSameness = Vector2.Dot(toNewEndPosition, accumulatedNormalized / (Samples - 1));
+            SwipeDirectionSameness = Vector2.Dot(toNewEndPosition, _accumulatedNormalized / (Samples - 1));
 
             TravelDistance += distanceMoved;
         }

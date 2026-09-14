@@ -12,12 +12,12 @@ namespace GameLovers.MobileServices.Notifications
     /// </summary>
     public class AndroidGameNotification : IGameNotification
     {
-        private AndroidNotification internalNotification;
+        private AndroidNotification _internalNotification;
 
         /// <summary>
         /// Gets the internal notification object used by the mobile notifications system.
         /// </summary>
-        public AndroidNotification InternalNotification => internalNotification;
+        public AndroidNotification InternalNotification => _internalNotification;
 
         /// <inheritdoc />
         /// <summary>
@@ -26,10 +26,10 @@ namespace GameLovers.MobileServices.Notifications
         public int? Id { get; set; }
 
         /// <inheritdoc />
-        public string Title { get => InternalNotification.Title; set => internalNotification.Title = value; }
+        public string Title { get => InternalNotification.Title; set => _internalNotification.Title = value; }
 
         /// <inheritdoc />
-        public string Body { get => InternalNotification.Text; set => internalNotification.Text = value; }
+        public string Body { get => InternalNotification.Text; set => _internalNotification.Text = value; }
 
         /// <summary>
         /// Does nothing on Android.
@@ -47,22 +47,22 @@ namespace GameLovers.MobileServices.Notifications
         /// <inheritdoc />
         public int? BadgeNumber
         {
-            get => internalNotification.Number != -1 ? internalNotification.Number : (int?)null;
-            set => internalNotification.Number = value ?? -1;
+            get => _internalNotification.Number != -1 ? _internalNotification.Number : (int?)null;
+            set => _internalNotification.Number = value ?? -1;
         }
 
         /// <inheritdoc />
         public bool ShouldAutoCancel
         {
             get => InternalNotification.ShouldAutoCancel;
-            set => internalNotification.ShouldAutoCancel = value;
+            set => _internalNotification.ShouldAutoCancel = value;
         }
 
         /// <inheritdoc />
         public DateTime? DeliveryTime
         {
             get => InternalNotification.FireTime;
-            set => internalNotification.FireTime = value ?? throw new ArgumentNullException(nameof(value));
+            set => _internalNotification.FireTime = value ?? throw new ArgumentNullException(nameof(value));
         }
 
         /// <summary>
@@ -74,20 +74,20 @@ namespace GameLovers.MobileServices.Notifications
         public bool Scheduled { get; private set; }
 
         /// <inheritdoc />
-        public string SmallIcon { get => InternalNotification.SmallIcon; set => internalNotification.SmallIcon = value; }
+        public string SmallIcon { get => InternalNotification.SmallIcon; set => _internalNotification.SmallIcon = value; }
 
         /// <inheritdoc />
-        public string LargeIcon { get => InternalNotification.LargeIcon; set => internalNotification.LargeIcon = value; }
+        public string LargeIcon { get => InternalNotification.LargeIcon; set => _internalNotification.LargeIcon = value; }
 
         public AndroidGameNotification()
         {
-            internalNotification = new AndroidNotification();
+            _internalNotification = new AndroidNotification();
         }
 
         internal AndroidGameNotification(AndroidNotification deliveredNotification, int deliveredId,
                                          string deliveredChannel)
         {
-            internalNotification = deliveredNotification;
+            _internalNotification = deliveredNotification;
             Id = deliveredId;
             DeliveredChannel = deliveredChannel;
         }

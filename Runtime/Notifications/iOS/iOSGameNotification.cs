@@ -13,12 +13,12 @@ namespace GameLovers.MobileServices.Notifications
     /// </summary>
     public class iOSGameNotification : IGameNotification
     {
-        private readonly iOSNotification internalNotification;
+        private readonly iOSNotification _internalNotification;
 
         /// <summary>
         /// Gets the internal notification object used by the mobile notifications system.
         /// </summary>
-        public iOSNotification InternalNotification => internalNotification;
+        public iOSNotification InternalNotification => _internalNotification;
 
         /// <inheritdoc />
         /// <remarks>
@@ -29,7 +29,7 @@ namespace GameLovers.MobileServices.Notifications
         {
             get
             {
-                if (!int.TryParse(internalNotification.Identifier, out int value))
+                if (!int.TryParse(_internalNotification.Identifier, out int value))
                 {
                     Debug.LogWarning("Internal iOS notification's identifier isn't a number.");
                     return null;
@@ -44,18 +44,18 @@ namespace GameLovers.MobileServices.Notifications
                     throw new ArgumentNullException(nameof(value));
                 }
 
-                internalNotification.Identifier = value.Value.ToString();
+                _internalNotification.Identifier = value.Value.ToString();
             }
         }
 
         /// <inheritdoc />
-        public string Title { get => internalNotification.Title; set => internalNotification.Title = value; }
+        public string Title { get => _internalNotification.Title; set => _internalNotification.Title = value; }
 
         /// <inheritdoc />
-        public string Body { get => internalNotification.Body; set => internalNotification.Body = value; }
+        public string Body { get => _internalNotification.Body; set => _internalNotification.Body = value; }
 
         /// <inheritdoc />
-        public string Subtitle { get => internalNotification.Subtitle; set => internalNotification.Subtitle = value; }
+        public string Subtitle { get => _internalNotification.Subtitle; set => _internalNotification.Subtitle = value; }
 
         /// <inheritdoc />
         /// <remarks>
@@ -67,8 +67,8 @@ namespace GameLovers.MobileServices.Notifications
         /// <inheritdoc />
         public int? BadgeNumber
         {
-            get => internalNotification.Badge != -1 ? internalNotification.Badge : (int?)null;
-            set => internalNotification.Badge = value ?? -1;
+            get => _internalNotification.Badge != -1 ? _internalNotification.Badge : (int?)null;
+            set => _internalNotification.Badge = value ?? -1;
         }
 
         /// <inheritdoc />
@@ -90,7 +90,7 @@ namespace GameLovers.MobileServices.Notifications
         {
             get
             {
-                if (!(internalNotification.Trigger is iOSNotificationCalendarTrigger calendarTrigger))
+                if (!(_internalNotification.Trigger is iOSNotificationCalendarTrigger calendarTrigger))
                 {
                     return null;
                 }
@@ -118,7 +118,7 @@ namespace GameLovers.MobileServices.Notifications
 
                 DateTime date = value.Value.ToLocalTime();
 
-                internalNotification.Trigger = new iOSNotificationCalendarTrigger
+                _internalNotification.Trigger = new iOSNotificationCalendarTrigger
                 {
                     Year = date.Year,
                     Month = date.Month,
@@ -135,8 +135,8 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public string CategoryIdentifier
         {
-            get => internalNotification.CategoryIdentifier;
-            set => internalNotification.CategoryIdentifier = value;
+            get => _internalNotification.CategoryIdentifier;
+            set => _internalNotification.CategoryIdentifier = value;
         }
 
         /// <summary>
@@ -151,15 +151,15 @@ namespace GameLovers.MobileServices.Notifications
 
         public iOSGameNotification()
         {
-            internalNotification = new iOSNotification
+            _internalNotification = new iOSNotification
             {
                 ShowInForeground = true // Deliver in foreground by default
             };
         }
 
-        internal iOSGameNotification(iOSNotification internalNotification)
+        internal iOSGameNotification(iOSNotification _internalNotification)
         {
-            this.internalNotification = internalNotification;
+            this._internalNotification = _internalNotification;
         }
 
         /// <summary>
