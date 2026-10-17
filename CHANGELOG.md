@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an `Enable Haptics Debug Logs` Mobile Services Config toggle; Editor haptics logs are disabled by default.
 
 **Fixed**:
+- Declared the iOS framework dependencies of the native bridges (`Permissions.m`: CoreLocation and Photos; `NativeUi.m`: StoreKit) in their plugin import settings, so generated Xcode projects link them and `UnityFramework` no longer fails with undefined `CLLocationManager`, `PHPhotoLibrary` and `SKStoreReviewController` symbols.
 - Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
 - Vendored NSubstitute 4.2.2 with Castle.Core 4.4.0 and System.Threading.Tasks.Extensions 4.3.0 under `Tests/EditMode/Plugins/` so the EditMode suite compiles and loads in Unity; 5.x stays unloadable because Castle.Core 5.1.1 references `System.Diagnostics.EventLog`, which Unity cannot resolve.
 

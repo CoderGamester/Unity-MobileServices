@@ -2,7 +2,7 @@ fileFormatVersion: 2
 guid: f75285768bb8048ce83a504d68d9ea72
 PluginImporter:
   externalObjects: {}
-  serializedVersion: 2
+  serializedVersion: 3
   iconMap: {}
   executionOrder: {}
   defineConstraints: []
@@ -11,25 +11,18 @@ PluginImporter:
   isExplicitlyReferenced: 0
   validateReferences: 1
   platformData:
-  - first:
-      Any: 
-    second:
+    Any:
       enabled: 0
       settings: {}
-  - first:
-      Editor: Editor
-    second:
+    Editor:
       enabled: 0
       settings:
         DefaultValueInitialized: true
-  - first:
-      iPhone: iOS
-    second:
+    iOS:
       enabled: 1
-      settings: {}
-  - first:
-      tvOS: tvOS
-    second:
+      settings:
+        FrameworkDependencies: StoreKit;
+    tvOS:
       enabled: 1
       settings: {}
   userData: 

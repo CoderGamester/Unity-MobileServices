@@ -1,2 +1,33 @@
 fileFormatVersion: 2
 guid: 13fd05a91c602491a95d0e2c2a105ffe
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 3
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 1
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+    Any:
+      enabled: 0
+      settings: {}
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    VisionOS:
+      enabled: 1
+      settings: {}
+    iOS:
+      enabled: 1
+      settings:
+        FrameworkDependencies: CoreLocation;Photos;
+    tvOS:
+      enabled: 1
+      settings: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
