@@ -6,6 +6,8 @@ All Mobile Services editor tooling lives inside **Unity's Device Simulator** (`W
 
 Open `Window > General > Device Simulator`, pick a device profile, and the **Mobile Services** panel appears automatically in the Control Panel (`UnityEditor.DeviceSimulation.DeviceSimulatorPlugin` — Unity auto-discovers it; no menu item, no enable flow). The platform skin auto-syncs from the selected device profile (it reads `Application.platform`, which the Device Simulator spoofs for iOS / Android picks), so there is no platform toggle to keep in sync.
 
+![The Mobile Services panel in the Device Simulator, with a native alert mock shown inside the simulated iPhone](images/device-simulator-panel.png)
+
 | Foldout | What it surfaces / drives |
 |---------|---------------------------|
 | **Native UI** | Alert (modal + sheet), toast (short/long), share. Title/message/text fields author the mock; buttons push the platform-shaped mock to the overlay AND call the real `NativeUiService` static methods (no-op in editor). The Action Sheet button greys out on Android (no native sheet idiom). |
