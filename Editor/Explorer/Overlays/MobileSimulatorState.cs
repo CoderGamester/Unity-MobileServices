@@ -75,6 +75,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 		public string Title;
 		public string Body;
 		public string SubTitle;
+		public Action OnTapped; // Optional: raised when the player taps the banner.
 	}
 
 	/// <summary>Payload for a simulated permission or ATT prompt, including the callback that resolves it.</summary>

@@ -2,6 +2,7 @@ using System;
 #if UNITY_ANDROID
 using System.Collections.Generic;
 #endif
+using System.IO;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
@@ -33,6 +34,11 @@ namespace GameLovers.MobileServices.NativeUi
 	/// </summary>
 	public static class NativeUiService
 	{
+		/// <summary>Authority suffix of the package FileProvider the Android build postprocessor declares.</summary>
+		internal const string AndroidShareProviderAuthoritySuffix = ".gamelovers.fileprovider";
+
+		private const string ScreenshotFileName = "gamelovers-share-screenshot.png";
+
 		private static readonly object _alertCompletionLock = new object();
 		private static AwaitableCompletionSource<int> _currentAlertCompletion;
 
@@ -198,6 +204,8 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <paramref name="url"/>, and <paramref name="imagePath"/> may be supplied; nulls are skipped.
 		/// <paramref name="imagePath"/> must be an absolute filesystem path. <paramref name="title"/> is
 		/// used as the chooser title (Android) and is ignored on iOS.
+		/// On Android, sharing an image needs the package FileProvider that the Mobile Services Config's
+		/// <c>Include Share FileProvider</c> toggle declares; without it only the text is shared.
 		/// On Editor / unsupported platforms this is a safe no-op.
 		/// </summary>
 		public static void Share(string text, string url = null, string imagePath = null, string title = null)
@@ -209,6 +217,44 @@ namespace GameLovers.MobileServices.NativeUi
 #elif UNITY_ANDROID
 			ShareAndroid(text, url, imagePath, title);
 #endif
+		}
+
+		/// <summary>
+		/// Captures the current frame and opens the OS share sheet with it. Any of <paramref name="text"/>,
+		/// <paramref name="url"/> and <paramref name="title"/> may be null. The capture happens at the end of the
+		/// frame, so it includes everything the player currently sees.
+		/// </summary>
+		public static async Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null)
+		{
+			await Awaitable.EndOfFrameAsync();
+			var texture = ScreenCapture.CaptureScreenshotAsTexture();
+			string path;
+			try
+			{
+				path = Path.Combine(Application.temporaryCachePath, ScreenshotFileName);
+				File.WriteAllBytes(path, texture.EncodeToPNG());
+			}
+			finally
+			{
+				UnityEngine.Object.Destroy(texture);
+			}
+
+			Share(text, url, path, title);
+		}
+
+		/// <summary>The MIME type for a shared image file, falling back to any image type.</summary>
+		internal static string GetImageMimeType(string imagePath)
+		{
+			var extension = Path.GetExtension(imagePath ?? string.Empty).ToLowerInvariant();
+			switch (extension)
+			{
+				case ".png": return "image/png";
+				case ".jpg":
+				case ".jpeg": return "image/jpeg";
+				case ".gif": return "image/gif";
+				case ".webp": return "image/webp";
+				default: return "image/*";
+			}
 		}
 
 		private static AlertButton[] BuildSelectionButtons(AlertButton[] buttons, Action<int> onSelected)
@@ -504,20 +550,8 @@ namespace GameLovers.MobileServices.NativeUi
 
 				intent.Call<AndroidJavaObject>("setAction", intentClass.GetStatic<string>("ACTION_SEND"));
 
-				var hasImage = !string.IsNullOrEmpty(imagePath);
-				if (hasImage)
-				{
-					intent.Call<AndroidJavaObject>("setType", "image/*");
-					using var uriClass = new AndroidJavaClass("android.net.Uri");
-					using var fileClass = new AndroidJavaObject("java.io.File", imagePath);
-					using var imageUri = uriClass.CallStatic<AndroidJavaObject>("fromFile", fileClass);
-					intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_STREAM"), imageUri);
-					intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_GRANT_READ_URI_PERMISSION"));
-				}
-				else
-				{
-					intent.Call<AndroidJavaObject>("setType", "text/plain");
-				}
+				var hasImage = !string.IsNullOrEmpty(imagePath) && TryAttachShareImage(activity, intent, intentClass, imagePath);
+				intent.Call<AndroidJavaObject>("setType", hasImage ? GetImageMimeType(imagePath) : "text/plain");
 
 				var combinedText = string.IsNullOrEmpty(url) ? text : (string.IsNullOrEmpty(text) ? url : text + " " + url);
 				if (!string.IsNullOrEmpty(combinedText))
@@ -531,6 +565,27 @@ namespace GameLovers.MobileServices.NativeUi
 			catch (Exception e)
 			{
 				Debug.LogError($"[GameLovers.MobileServices] Share failed: {e.Message}");
+			}
+		}
+
+		// Android 7+ rejects file:// URIs, so the image travels through the package FileProvider.
+		private static bool TryAttachShareImage(AndroidJavaObject activity, AndroidJavaObject intent, AndroidJavaClass intentClass, string imagePath)
+		{
+			try
+			{
+				var authority = activity.Call<string>("getPackageName") + AndroidShareProviderAuthoritySuffix;
+				using var file = new AndroidJavaObject("java.io.File", imagePath);
+				using var providerClass = new AndroidJavaClass("androidx.core.content.FileProvider");
+				using var imageUri = providerClass.CallStatic<AndroidJavaObject>("getUriForFile", activity, authority, file);
+				intent.Call<AndroidJavaObject>("putExtra", intentClass.GetStatic<string>("EXTRA_STREAM"), imageUri);
+				intent.Call<AndroidJavaObject>("addFlags", intentClass.GetStatic<int>("FLAG_GRANT_READ_URI_PERMISSION"));
+				return true;
+			}
+			catch (Exception e)
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] Sharing the image failed ({e.Message}); sharing the text only. " +
+					"Turn on 'Include Share FileProvider' in the Mobile Services Config and rebuild.");
+				return false;
 			}
 		}
 

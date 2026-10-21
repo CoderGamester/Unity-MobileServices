@@ -24,6 +24,18 @@ namespace GameLovers.MobileServices.Notifications
 		event Action<PendingNotification> OnLocalNotificationExpiredEvent;
 
 		/// <summary>
+		/// Event fired when the player opens a notification while the application is running or when it returns to
+		/// the foreground. The notification that started the application is read with
+		/// <see cref="TryGetLaunchNotification"/> instead. Read <see cref="IGameNotification.Data"/> to route the tap,
+		/// for example into a deep-link router.
+		/// </summary>
+		/// <remarks>
+		/// Opens are detected when the application gains focus. A later notification that reuses the id of the last
+		/// opened one is not reported again, so leave the id unset or unique.
+		/// </remarks>
+		event Action<PendingNotification> OnNotificationOpened;
+
+		/// <summary>
 		/// The queueing / delivery <see cref="OperatingMode"/> for the service. Defaults to
 		/// <see cref="OperatingMode.NoQueue"/>. Settable at runtime; the new value takes effect on the
 		/// next <see cref="ScheduleNotification"/> call and the next foreground/background transition.
@@ -34,6 +46,13 @@ namespace GameLovers.MobileServices.Notifications
 		/// Gets a collection of notifications that are scheduled or queued.
 		/// </summary>
 		IReadOnlyList<PendingNotification> PendingNotifications { get; }
+
+		/// <summary>
+		/// Gets the notification the player opened to start the application.
+		/// </summary>
+		/// <param name="notification">The launching notification, or null when the application was not started from one.</param>
+		/// <returns>True when the application was started by opening a notification.</returns>
+		bool TryGetLaunchNotification(out PendingNotification notification);
 
 		/// <summary>
 		/// Create a new instance of a <see cref="IGameNotification"/> for this platform.
@@ -83,6 +102,8 @@ namespace GameLovers.MobileServices.Notifications
 		public event Action<PendingNotification> OnLocalNotificationDeliveredEvent;
 		/// <inheritdoc />
 		public event Action<PendingNotification> OnLocalNotificationExpiredEvent;
+		/// <inheritdoc />
+		public event Action<PendingNotification> OnNotificationOpened;
 
 		/// <inheritdoc />
 		public IReadOnlyList<PendingNotification> PendingNotifications
@@ -127,9 +148,18 @@ namespace GameLovers.MobileServices.Notifications
 			// assigning the event's backing field here would snapshot it while still null and never see a subscriber.
 			_monoBehaviour.OnLocalNotificationDelivered = notification => OnLocalNotificationDeliveredEvent?.Invoke(notification);
 			_monoBehaviour.OnLocalNotificationExpired = notification => OnLocalNotificationExpiredEvent?.Invoke(notification);
+			_monoBehaviour.OnNotificationOpened = notification => OnNotificationOpened?.Invoke(notification);
 
 			_monoBehaviour.Initialize(_channels);
 			UnityEngine.Object.DontDestroyOnLoad(_monoBehaviour);
+		}
+
+		/// <inheritdoc />
+		public bool TryGetLaunchNotification(out PendingNotification notification)
+		{
+			ThrowIfDisposed();
+			notification = _monoBehaviour.LaunchNotification;
+			return notification != null;
 		}
 
 		/// <inheritdoc />
@@ -202,6 +232,7 @@ namespace GameLovers.MobileServices.Notifications
 			_disposed = true;
 			OnLocalNotificationDeliveredEvent = null;
 			OnLocalNotificationExpiredEvent = null;
+			OnNotificationOpened = null;
 
 			if (_monoBehaviour == null)
 			{
@@ -226,6 +257,15 @@ namespace GameLovers.MobileServices.Notifications
 		{
 			ThrowIfDisposed();
 			return _monoBehaviour.TrySimulateDelivery(notificationId);
+		}
+
+		/// <summary>
+		/// Reports a notification as opened through the editor simulator.
+		/// </summary>
+		internal void SimulateOpen(IGameNotification notification)
+		{
+			ThrowIfDisposed();
+			_monoBehaviour.SimulateOpen(notification);
 		}
 #endif
 

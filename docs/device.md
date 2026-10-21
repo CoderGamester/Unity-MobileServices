@@ -1,6 +1,6 @@
 # Device
 
-`IDeviceService` is an umbrella facade aggregating five independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless screen-wake control is available directly on `DeviceService`.
+`IDeviceService` is an umbrella facade aggregating six independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless conveniences (screen wake, opening OS Settings, opening the store page) are available directly on `DeviceService`.
 
 ```csharp
 IDeviceService device = new DeviceService();
@@ -26,6 +26,7 @@ device.DeepLink.OnLinkActivated += uri => Debug.Log($"Deep link: {uri}");
 | `Permissions` | `IPermissionsService` | Unified iOS+Android runtime permissions. Task-based async. Multi-permission overload. |
 | `Att` | `IAttService` | iOS App Tracking Transparency. Direct `ATTrackingManager` bridge — no `com.unity.ads.ios-support` dependency. |
 | `DeepLink` | `IDeepLinkService` | `Application.deepLinkActivated` wrapper with cold-start link queueing. |
+| `BackgroundTasks` | `IBackgroundTaskService` | Extra execution time when the app moves to the background (iOS); pass-through on Android. |
 
 Additionally, an `IDeepLinkRouter` / `DeepLinkRouter` layered on `IDeepLinkService` provides path-pattern routing — see below.
 
@@ -39,6 +40,30 @@ DeviceService.KeepAwake = false; // SleepTimeout.SystemSetting
 ```
 
 Because the setting is process-wide, it is not part of the injectable `IDeviceService` child graph.
+
+## Store page and Settings
+
+```csharp
+DeviceService.OpenStorePage(iosAppId: "123456789");                 // App Store / Google Play page
+DeviceService.OpenStorePage("123456789", writeReview: true);        // iOS write-review sheet
+DeviceService.OpenAppSettings();                                    // this app's OS Settings page
+```
+
+`OpenStorePage` builds an `https://apps.apple.com/app/id...` or `https://play.google.com/store/apps/details?id=...` link and opens it with `Application.OpenURL`, so the store app handles it when installed. On iOS the numeric App Store id is required (with or without an `id` prefix); on Android `androidPackage` defaults to `Application.identifier`. Android has no review deep link, so `writeReview` opens the store page there. In the Editor it logs the link instead of opening it. This is a link, not the in-app review prompt: use `NativeUiService.RequestReview()` for that.
+
+## Background tasks
+
+```csharp
+using var task = device.BackgroundTasks.Begin("upload-save", onExpiring: () => cancel.Cancel());
+await Task.Run(() => UploadSave(cancel.Token));   // runs off the main thread
+```
+
+`IBackgroundTaskService.Begin(name, onExpiring)` asks iOS for extra execution time (roughly 30 seconds) when the app moves to the background and returns a `BackgroundTaskHandle`. Dispose the handle as soon as the work finishes; leaving it open past the limit lets the system terminate the app.
+
+- **Run the work off the main thread.** Unity's main loop is paused while backgrounded, so `Awaitable` and other main-thread continuations do not resume until the player returns. Use a thread-pool task or native I/O.
+- `onExpiring` is raised on the main thread from the system's expiration handler, immediately before the task ends. Keep it to setting a flag or cancelling a token.
+- The handle's `IsExpired`, `IsActive` and `RemainingTime` are readable from any thread, so the protected work can poll `IsExpired`. `RemainingTime` is `TimeSpan.MaxValue` in the foreground.
+- **Android and Editor:** the handle is a pass-through (always active, unlimited). Android keeps the process alive for a short grace period but offers no per-task extension; use a foreground service or WorkManager outside this package for long work.
 
 ## Shared host
 
@@ -130,5 +155,7 @@ router.MapRoute("/settings", (uri, p) => OpenSettings());
 ```
 
 Literal segments match exactly (case-insensitive); `:name` segments capture into the params dict. Routes are checked in registration order — first match wins. The router subscribes once to `OnLinkActivated` at construction.
+
+Notification taps can feed the same router: attach a deep-link URI with `NotificationBuilder.Data(...)` and call `router.TryDispatch(new Uri(opened.Notification.Data))` from `OnNotificationOpened` — see [notifications.md](notifications.md).
 
 For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).

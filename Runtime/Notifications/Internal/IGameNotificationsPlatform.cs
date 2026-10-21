@@ -46,6 +46,12 @@ namespace GameLovers.MobileServices.Notifications
         void DismissAllDisplayedNotifications();
 
         /// <summary>
+        /// Gets the notification the player most recently opened, or null when none was opened. The platforms keep
+        /// returning the same notification until another is opened, so callers must de-duplicate.
+        /// </summary>
+        IGameNotification GetLastOpenedNotification();
+
+        /// <summary>
         /// Performs any initialization or processing necessary on foregrounding the application.
         /// </summary>
         void OnForeground();

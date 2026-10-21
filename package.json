@@ -9,7 +9,9 @@
   "type": "library",
   "dependencies": {
     "com.unity.mobile.notifications": "2.3.0",
-    "com.unity.inputsystem": "1.11.0"
+    "com.unity.inputsystem": "1.11.0",
+    "com.unity.modules.imageconversion": "1.0.0",
+    "com.unity.modules.screencapture": "1.0.0"
   },
   "samples": [
     {

@@ -90,6 +90,13 @@ namespace GameLovers.MobileServices.Notifications
             iOSNotificationCenter.RemoveAllDeliveredNotifications();
         }
 
+        /// <inheritdoc />
+        public IGameNotification GetLastOpenedNotification()
+        {
+            var notification = iOSNotificationCenter.GetLastRespondedNotification();
+            return notification == null ? null : new iOSGameNotification(notification);
+        }
+
         /// <summary>
         /// Clears badge count.
         /// </summary>

@@ -149,6 +149,9 @@ namespace GameLovers.MobileServices.Notifications
         /// </summary>
         public string LargeIcon { get => null; set {} }
 
+        /// <inheritdoc />
+        public string Data { get => _internalNotification.Data; set => _internalNotification.Data = value; }
+
         public iOSGameNotification()
         {
             _internalNotification = new iOSNotification

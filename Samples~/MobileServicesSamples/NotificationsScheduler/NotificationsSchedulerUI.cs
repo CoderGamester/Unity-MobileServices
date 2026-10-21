@@ -48,6 +48,11 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 			EnsureRuntimeDependencies();
 			_service.OnLocalNotificationDeliveredEvent += OnNotificationDelivered;
 			_service.OnLocalNotificationExpiredEvent += OnNotificationExpired;
+			_service.OnNotificationOpened += OnNotificationOpened;
+			if (_service.TryGetLaunchNotification(out var launch))
+			{
+				Log($"Started from notification: {launch.Notification.Title}");
+			}
 			EnsureUiBound();
 		}
 
@@ -65,6 +70,7 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 			{
 				service.OnLocalNotificationDeliveredEvent -= OnNotificationDelivered;
 				service.OnLocalNotificationExpiredEvent -= OnNotificationExpired;
+				service.OnNotificationOpened -= OnNotificationOpened;
 			}
 			(service as IDisposable)?.Dispose();
 			(_device as IDisposable)?.Dispose();
@@ -144,6 +150,7 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 			notification.Body = reschedule ? "This notification is marked for rescheduling." : "This notification is a one-shot.";
 			notification.Channel = _channel?.value ?? _selectedChannel;
 			notification.DeliveryTime = DateTime.Now.Add(delay);
+			notification.Data = "gamelovers-sample://notification";
 			var pending = _service.ScheduleNotification(notification);
 			pending.Reschedule = reschedule;
 			RefreshPending();
@@ -222,6 +229,9 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler
 
 		private void OnNotificationExpired(PendingNotification notification) =>
 			Log($"Expired: {notification.Notification.Title}");
+
+		private void OnNotificationOpened(PendingNotification notification) =>
+			Log($"Opened: {notification.Notification.Title} ({notification.Notification.Data})");
 
 	}
 }

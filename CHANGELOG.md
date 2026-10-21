@@ -10,9 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **New**:
 - Added an `Enable Haptics Debug Logs` Mobile Services Config toggle; Editor haptics logs are disabled by default.
 - **Permissions**: Added `PermissionStatus.Limited` for partial access (selected photos, provisional notifications, approximate location, foreground-only location) and `DeviceService.OpenAppSettings()` to send the player to the OS Settings page after a denial.
+- **Native UI**: Added `ShareScreenshotAsync` to share the current frame, and Android image sharing now works on Android 7+ through a package FileProvider enabled by the new `Include Share FileProvider` config toggle.
+- **Notifications**: Added `IGameNotification.Data` and `NotificationBuilder.Data` for a payload such as a deep-link URI, `INotificationService.OnNotificationOpened` for taps while the app runs, and `TryGetLaunchNotification` for the notification that started the app.
+- **Device**: Added `DeviceService.OpenStorePage` for the App Store or Google Play page, and `IDeviceService.BackgroundTasks` (`IBackgroundTaskService`) to finish short work when the app moves to the background on iOS.
+- **Deep Links**: Android intent-filter registrations can set `AutoVerify` so https links open as verified App Links.
 - **Mobile Services Config**: The Inspector is grouped by feature, and each section lists the native build entries it adds. New Android manifest toggles cover coarse and background location and legacy storage access.
 
 **Changed**:
+- **Breaking**: `IGameNotification`, `INotificationService`, `INativeUiService` and `IDeviceService` gained members, and the `DeviceService` injection constructor takes an `IBackgroundTaskService`. Custom implementations and mocks must add them.
+- The package depends on the built-in `com.unity.modules.screencapture` and `com.unity.modules.imageconversion` modules.
 - iOS builds compile only the permission code whose usage description is declared, so a game that never requests location, camera, microphone or photos no longer references those APIs.
 
 **Fixed**:

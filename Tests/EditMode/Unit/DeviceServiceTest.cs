@@ -23,6 +23,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		private IPermissionsService _permissions;
 		private IAttService _att;
 		private IDeepLinkServiceDisposable _deepLink;
+		private IBackgroundTaskService _backgroundTasks;
 		private int _originalSleepTimeout;
 
 		[SetUp]
@@ -34,6 +35,7 @@ namespace GameLoversEditor.MobileServices.Tests
 			_permissions = Substitute.For<IPermissionsService>();
 			_att = Substitute.For<IAttService>();
 			_deepLink = Substitute.For<IDeepLinkServiceDisposable>();
+			_backgroundTasks = Substitute.For<IBackgroundTaskService>();
 		}
 
 		[TearDown]
@@ -44,7 +46,7 @@ namespace GameLoversEditor.MobileServices.Tests
 
 		[Test]
 		// ADMIT: DeviceService's injection ctor could store something other than the supplied instance on a child property.
-		// RCR: DeviceService.cs DeviceService(5-arg) — `Att = att` → `Att = new AttService()` → RED (AreSame fails on Att).
+		// RCR: DeviceService.cs DeviceService(6-arg) — `Att = att` → `Att = new AttService()` → RED (AreSame fails on Att).
 		public void InjectionCtor_StoresEachChildOnMatchingProperty()
 		{
 			var service = new DeviceService(
@@ -52,13 +54,15 @@ namespace GameLoversEditor.MobileServices.Tests
 				_audioSession,
 				_permissions,
 				_att,
-				_deepLink);
+				_deepLink,
+				_backgroundTasks);
 
 			Assert.AreSame(_battery, service.Battery);
 			Assert.AreSame(_audioSession, service.AudioSession);
 			Assert.AreSame(_permissions, service.Permissions);
 			Assert.AreSame(_att, service.Att);
 			Assert.AreSame(_deepLink, service.DeepLink);
+			Assert.AreSame(_backgroundTasks, service.BackgroundTasks);
 		}
 
 		[Test]
@@ -71,7 +75,8 @@ namespace GameLoversEditor.MobileServices.Tests
 				_audioSession,
 				_permissions,
 				_att,
-				_deepLink);
+				_deepLink,
+				_backgroundTasks);
 
 			service.Dispose();
 
@@ -92,7 +97,8 @@ namespace GameLoversEditor.MobileServices.Tests
 				_audioSession,
 				_permissions,
 				_att,
-				nonDisposableDeepLink);
+				nonDisposableDeepLink,
+				_backgroundTasks);
 
 			Assert.DoesNotThrow(service.Dispose);
 		}

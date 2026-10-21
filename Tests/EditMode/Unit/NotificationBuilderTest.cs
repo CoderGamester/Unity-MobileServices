@@ -55,6 +55,16 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: NotificationBuilder.Data could return `this` without writing the payload onto the notification.
+		// RCR: NotificationBuilder.cs Data — payload not written → RED (Expected: "game://shop" But was: null). 2026-10-21
+		public void Builder_Data_AssignsPayload()
+		{
+			_service.Schedule().Data("game://shop").Send();
+
+			Assert.AreEqual("game://shop", _stub.Data);
+		}
+
+		[Test]
 		// ADMIT: NotificationBuilder.In could compute a delivery time in the past instead of now+delay.
 		// RCR: NotificationBuilder.cs In — `DateTime.Now + delay` → `DateTime.Now - delay` → RED (DeliveryTime is not >= now+1h).
 		public void In_AssignsDeliveryTimeRelativeToNow()
@@ -108,6 +118,7 @@ namespace GameLoversEditor.MobileServices.Tests
 
 		private sealed class StubNotification : IGameNotification
 		{
+			public string Data { get; set; }
 			public int? Id { get; set; }
 			public string Title { get; set; }
 			public string Body { get; set; }

@@ -75,6 +75,12 @@ namespace GameLovers.MobileServices.Notifications
 		public NotificationBuilder In(TimeSpan delay) { _notification.DeliveryTime = DateTime.Now + delay; return this; }
 
 		/// <summary>
+		/// Attaches an application-defined string, for example a deep-link URI, that is returned when the player
+		/// opens the notification.
+		/// </summary>
+		public NotificationBuilder Data(string data) { _notification.Data = data; return this; }
+
+		/// <summary>
 		/// Marks the notification for badge-increment behaviour. The underlying
 		/// <see cref="GameNotificationsMonoBehaviour"/> auto-increments badge numbers when none of the
 		/// pending notifications have one set; calling this leaves <see cref="IGameNotification.BadgeNumber"/>

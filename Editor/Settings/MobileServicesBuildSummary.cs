@@ -61,7 +61,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			}
 			foreach (var filter in config.DeepLinks.AndroidIntentFilters.Where(filter => filter != null))
 			{
-				lines.Add($"Android intent filter: {filter.Scheme}://{filter.Host}{filter.PathPrefix}");
+				lines.Add($"Android intent filter: {filter.Scheme}://{filter.Host}{filter.PathPrefix}{(filter.AutoVerify ? " (autoVerify)" : string.Empty)}");
 			}
 			return lines;
 		}
@@ -70,6 +70,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		{
 			var lines = new List<string>();
 			if (config.AndroidManifest.IncludeShareQueriesBlock) lines.Add("Android manifest: <queries> entry for ACTION_SEND share targets");
+			if (config.AndroidManifest.IncludeShareFileProvider) lines.Add("Android manifest: GameLoversFileProvider (images can be shared on Android 7+) and res/xml/gamelovers_file_paths.xml");
 			return lines;
 		}
 

@@ -66,8 +66,15 @@ namespace GameLovers.MobileServices.Notifications
         /// <seealso cref="OperatingMode.Queue"/>
         public Action<PendingNotification> OnLocalNotificationExpired;
 
+        /// <summary>
+        /// Event fired when the player opens a notification while the application is running or returns to it. The
+        /// notification that cold-started the application is exposed through <see cref="LaunchNotification"/>.
+        /// </summary>
+        public Action<PendingNotification> OnNotificationOpened;
+
         private IGameNotificationsPlatform _platform;
         private bool _inForeground = true;
+        private string _lastOpenedKey;
 
         /// <summary>
         /// Gets a collection of notifications that are scheduled or queued.
@@ -78,6 +85,12 @@ namespace GameLovers.MobileServices.Notifications
         /// Gets whether this manager has been initialized.
         /// </summary>
         public bool Initialized { get; private set; }
+
+        /// <summary>
+        /// Gets the notification the player opened to start the application, or null when it was not started from a
+        /// notification.
+        /// </summary>
+        public PendingNotification LaunchNotification { get; private set; }
 
         // Clean up platform object if necessary
         private void OnDestroy()
@@ -268,14 +281,12 @@ namespace GameLovers.MobileServices.Notifications
             Initialized = true;
 
 #if UNITY_ANDROID
-            _platform = new AndroidNotificationsPlatform();
+            var platform = new AndroidNotificationsPlatform();
 
             // Register the notification channels
             var doneDefault = false;
             foreach (var notificationChannel in channels)
             {
-                var platform = _platform as AndroidNotificationsPlatform;
-
                 if (!doneDefault)
                 {
                     doneDefault = true;
@@ -284,18 +295,11 @@ namespace GameLovers.MobileServices.Notifications
 
                 platform.RegisterChannel(notificationChannel);
             }
+
+            AttachPlatform(platform);
 #elif UNITY_IOS
-            _platform = new iOSNotificationsPlatform();
+            AttachPlatform(new iOSNotificationsPlatform());
 #endif
-
-            if (_platform == null)
-            {
-                return;
-            }
-
-            _platform.NotificationReceived += OnNotificationReceived;
-
-            OnForegrounding();
         }
 
         /// <summary>
@@ -432,6 +436,29 @@ namespace GameLovers.MobileServices.Notifications
             return result;
         }
 
+        // Hands the host a platform and starts the foreground flow; a null platform leaves the host inert.
+        internal void AttachPlatform(IGameNotificationsPlatform platform)
+        {
+            Initialized = true;
+            _platform = platform;
+
+            if (_platform == null)
+            {
+                return;
+            }
+
+            _platform.NotificationReceived += OnNotificationReceived;
+
+            var launchNotification = _platform.GetLastOpenedNotification();
+            if (launchNotification != null)
+            {
+                LaunchNotification = new PendingNotification(launchNotification);
+                _lastOpenedKey = GetOpenedKey(launchNotification);
+            }
+
+            OnForegrounding();
+        }
+
 #if UNITY_EDITOR
         /// <summary>
         /// Delivers one pending notification through the normal foreground callback path for editor simulation.
@@ -450,7 +477,37 @@ namespace GameLovers.MobileServices.Notifications
             OnLocalNotificationDelivered?.Invoke(pendingNotification);
             return true;
         }
+
+        /// <summary>
+        /// Reports a notification as opened through the normal callback path for editor simulation.
+        /// </summary>
+        internal void SimulateOpen(IGameNotification notification)
+        {
+            OnNotificationOpened?.Invoke(new PendingNotification(notification));
+        }
 #endif
+
+        private static string GetOpenedKey(IGameNotification notification) =>
+            notification.Id.HasValue ? notification.Id.Value.ToString() : notification.Title + "|" + notification.Body;
+
+        // The platforms only expose the last opened notification, so a repeat read is skipped by key.
+        private void PublishOpenedNotification()
+        {
+            var opened = _platform.GetLastOpenedNotification();
+            if (opened == null)
+            {
+                return;
+            }
+
+            var key = GetOpenedKey(opened);
+            if (key == _lastOpenedKey)
+            {
+                return;
+            }
+
+            _lastOpenedKey = key;
+            OnNotificationOpened?.Invoke(new PendingNotification(opened));
+        }
 
         // Event fired by _platform when a notification is received.
         private void OnNotificationReceived(IGameNotification deliveredNotification)
@@ -475,6 +532,7 @@ namespace GameLovers.MobileServices.Notifications
         // Clear foreground notifications and reschedule stuff from a file
         private void OnForegrounding()
         {
+            PublishOpenedNotification();
             PendingNotifications.Clear();
             _platform.OnForeground();
 

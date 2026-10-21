@@ -37,6 +37,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 			{
 				warnings.Add("Native UI sharing is referenced but Android share-package queries are disabled.");
 			}
+			if (UsesNativeUiShare && !config.AndroidManifest.IncludeShareFileProvider)
+			{
+				warnings.Add("Native UI sharing is referenced but the Android share FileProvider is disabled; sharing an image on Android 7+ shares only the text.");
+			}
 			foreach (var permission in ReferencedPermissions)
 			{
 				if (MobileServicesConfig.GetIosUsageKey(permission) != null && string.IsNullOrWhiteSpace(config.GetUsageDescriptionEn(permission)))

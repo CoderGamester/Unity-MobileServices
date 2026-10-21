@@ -118,8 +118,10 @@ namespace GameLovers.MobileServices.Samples.NotificationsScheduler.Editor
 				return false;
 			}
 
-			spec = CreateBannerSpec(candidate.Notification);
-			return MobileNotificationSimulation.TryDeliver(service, candidate.Notification.Id.Value);
+			var delivered = candidate.Notification;
+			spec = CreateBannerSpec(delivered);
+			spec.OnTapped = () => MobileNotificationSimulation.TryOpen(service, delivered);
+			return MobileNotificationSimulation.TryDeliver(service, delivered.Id.Value);
 		}
 
 		private static int CompareDeliveryTime(IGameNotification left, IGameNotification right)

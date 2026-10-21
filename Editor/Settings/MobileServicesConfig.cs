@@ -112,6 +112,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// </summary>
 		[SerializeField] public bool IncludeShareQueriesBlock;
 
+		/// <summary>
+		/// Declares the package FileProvider so <c>NativeUiService.Share</c> can send images on Android 7+, where
+		/// <c>file://</c> URIs are rejected.
+		/// </summary>
+		[SerializeField] public bool IncludeShareFileProvider;
+
 		/// <summary>The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.</summary>
 		internal IEnumerable<(string Permission, int? MaxSdkVersion)> GetPermissions()
 		{
@@ -151,6 +157,18 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		/// <summary>Optional path-prefix constraint.</summary>
 		[SerializeField] public string PathPrefix;
+
+		/// <summary>
+		/// Marks the filter <c>android:autoVerify="true"</c> so Android verifies the https link against the domain's
+		/// <c>assetlinks.json</c> and opens it without a chooser. Needs an http or https scheme and a host.
+		/// </summary>
+		[SerializeField] public bool AutoVerify;
+
+		/// <summary>True when the scheme is http or https and a host is set, the shape Android can verify.</summary>
+		internal bool IsVerifiableAppLink() =>
+			!string.IsNullOrWhiteSpace(Host) &&
+			(string.Equals(Scheme?.Trim(), "https", StringComparison.OrdinalIgnoreCase) ||
+			 string.Equals(Scheme?.Trim(), "http", StringComparison.OrdinalIgnoreCase));
 	}
 
 	/// <summary>Native deep-link declarations shared by production builds and temporary sample overlays.</summary>
@@ -183,14 +201,15 @@ namespace GameLovers.MobileServices.Editor.Settings
 		}
 
 		/// <summary>Adds an Android registration using semantic set semantics.</summary>
-		public void AddAndroidIntentFilter(string scheme, string host = null, string pathPrefix = null)
+		public void AddAndroidIntentFilter(string scheme, string host = null, string pathPrefix = null, bool autoVerify = false)
 		{
 			AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			var registration = new AndroidDeepLinkRegistration
 			{
 				Scheme = Normalize(scheme),
 				Host = Normalize(host),
-				PathPrefix = Normalize(pathPrefix)
+				PathPrefix = Normalize(pathPrefix),
+				AutoVerify = autoVerify
 			};
 			if (string.IsNullOrEmpty(registration.Scheme)) return;
 
@@ -201,6 +220,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 					string.Equals(existing.Host?.Trim(), registration.Host, StringComparison.OrdinalIgnoreCase) &&
 					string.Equals(existing.PathPrefix?.Trim(), registration.PathPrefix, StringComparison.Ordinal))
 				{
+					existing.AutoVerify |= registration.AutoVerify;
 					return;
 				}
 			}
@@ -246,6 +266,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 				if (!string.IsNullOrWhiteSpace(entry.Host) && ContainsIllegalHostCharacters(entry.Host))
 				{
 					errors.Add($"{prefix}.AndroidIntentFilters[{i}].Host is invalid: '{entry.Host}'.");
+				}
+				if (entry.AutoVerify && !entry.IsVerifiableAppLink())
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}].AutoVerify needs an http or https scheme and a host: '{entry.Scheme}://{entry.Host}'.");
 				}
 				if (!string.IsNullOrWhiteSpace(entry.PathPrefix) &&
 					(!entry.PathPrefix.Trim().StartsWith("/", StringComparison.Ordinal) || entry.PathPrefix.IndexOfAny(new[] { '?', '#' }) >= 0))

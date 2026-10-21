@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using GameLovers.MobileServices.Editor.Settings;
+using GameLovers.MobileServices.NativeUi;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -29,6 +30,8 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 	{
 #if UNITY_ANDROID
 		private const string PlayReviewArtifactKey = "com.google.android.play:review";
+		private const string ShareFileProviderClass = "com.gamelovers.mobileservices.GameLoversFileProvider";
+		private const string ShareFileProviderPathsResource = "gamelovers_file_paths";
 		private static readonly XNamespace _androidNamespace = "http://schemas.android.com/apk/res/android";
 #endif
 
@@ -60,41 +63,10 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var warnings = scan.GetConfigurationWarnings(settings);
 			LogScannerWarnings(warnings);
 			if (NeedsAndroidManifestMutation(settings)) ProcessGeneratedAndroidManifest(path, settings);
-			if (!settings.IncludePlayReviewDependency)
-			{
-				Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=disabled scannerWarnings={warnings.Count}.");
-				return;
-			}
-
-			string[] gradleFiles;
-			try { gradleFiles = Directory.GetFiles(path, "*.gradle", SearchOption.AllDirectories); }
-			catch (Exception exception) { throw new BuildFailedException($"[GameLovers.MobileServices] Could not enumerate Gradle files under '{path}': {exception.Message}"); }
-			foreach (var file in gradleFiles)
-			{
-				var contents = ReadTextOrThrow(file);
-				if (contents.Contains(PlayReviewArtifactKey, StringComparison.Ordinal))
-				{
-					Debug.Log($"[GameLovers.MobileServices] '{PlayReviewArtifactKey}' already exists in '{file}' — preserving the existing dependency owner.");
-					Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=existing scannerWarnings={warnings.Count}.");
-					return;
-				}
-			}
-
-			var targetGradle = FindModuleBuildGradle(path, gradleFiles);
-			if (targetGradle == null)
-			{
-				throw new BuildFailedException($"[GameLovers.MobileServices] Could not find a Unity Android module with a dependencies block under '{path}'. Add implementation '{settings.PlayReviewDependencyCoordinate}' manually or disable Include Play Review Dependency.");
-			}
-
-			var injected = InsertIntoDependenciesBlock(ReadTextOrThrow(targetGradle), $"implementation '{settings.PlayReviewDependencyCoordinate}'");
-			if (injected == null)
-			{
-				throw new BuildFailedException($"[GameLovers.MobileServices] No dependencies block was found in '{targetGradle}'. Add implementation '{settings.PlayReviewDependencyCoordinate}' manually.");
-			}
-
-			File.WriteAllText(targetGradle, injected);
-			Debug.Log($"[GameLovers.MobileServices] Injected '{settings.PlayReviewDependencyCoordinate}' into '{targetGradle}'.");
-			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=changed scannerWarnings={warnings.Count}.");
+			var playReview = settings.IncludePlayReviewDependency
+				? EnsureGradleDependency(path, PlayReviewArtifactKey, settings.PlayReviewDependencyCoordinate, "disable Include Play Review Dependency")
+				: "disabled";
+			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} scannerWarnings={warnings.Count}.");
 		}
 #endif
 
@@ -408,6 +380,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private static bool NeedsAndroidManifestMutation(MobileServicesConfig settings) =>
 			settings.AndroidManifest.GetPermissions().Any() ||
 			settings.AndroidManifest.IncludeShareQueriesBlock ||
+			settings.AndroidManifest.IncludeShareFileProvider ||
 			settings.DeepLinks.AndroidIntentFilters.Count > 0;
 
 		private static void ProcessGeneratedAndroidManifest(string gradleProjectPath, MobileServicesConfig settings)
@@ -444,6 +417,11 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				changed = true;
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
+			if (settings.AndroidManifest.IncludeShareFileProvider)
+			{
+				changed |= AddShareFileProviderIfMissing(root);
+				changed |= WriteShareFileProviderPaths(Path.GetDirectoryName(target.path));
+			}
 			foreach (var registration in settings.DeepLinks.AndroidIntentFilters)
 				changed |= AddAndroidIntentFilterIfMissing(target.activity, registration);
 			if (!changed) return;
@@ -468,22 +446,62 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			return true;
 		}
 
+		private static bool AddShareFileProviderIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the share FileProvider.");
+			if (application.Elements(ns + "provider").Any(provider => string.Equals(GetAndroidAttribute(provider, "name"), ShareFileProviderClass, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "provider",
+				new XAttribute(_androidNamespace + "name", ShareFileProviderClass),
+				new XAttribute(_androidNamespace + "authorities", "${applicationId}" + NativeUiService.AndroidShareProviderAuthoritySuffix),
+				new XAttribute(_androidNamespace + "exported", "false"),
+				new XAttribute(_androidNamespace + "grantUriPermissions", "true"),
+				new XElement(ns + "meta-data",
+					new XAttribute(_androidNamespace + "name", "android.support.FILE_PROVIDER_PATHS"),
+					new XAttribute(_androidNamespace + "resource", "@xml/" + ShareFileProviderPathsResource))));
+			return true;
+		}
+
+		// The share cache and the app's own files directories, so any path Unity hands out can be shared.
+		private static bool WriteShareFileProviderPaths(string manifestDirectory)
+		{
+			var file = Path.Combine(manifestDirectory, "res", "xml", ShareFileProviderPathsResource + ".xml");
+			const string contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<paths>\n" +
+				"  <files-path name=\"gamelovers_files\" path=\".\" />\n" +
+				"  <cache-path name=\"gamelovers_cache\" path=\".\" />\n" +
+				"  <external-files-path name=\"gamelovers_external_files\" path=\".\" />\n" +
+				"  <external-cache-path name=\"gamelovers_external_cache\" path=\".\" />\n" +
+				"</paths>\n";
+			if (File.Exists(file) && string.Equals(ReadTextOrThrow(file), contents, StringComparison.Ordinal)) return false;
+			Directory.CreateDirectory(Path.GetDirectoryName(file));
+			File.WriteAllText(file, contents);
+			return true;
+		}
+
 		private static bool AddAndroidIntentFilterIfMissing(XElement activity, AndroidDeepLinkRegistration registration)
 		{
 			var ns = activity.Name.Namespace;
 			var name = _androidNamespace + "name";
-			var matches = activity.Elements(ns + "intent-filter").Any(filter =>
+			var existing = activity.Elements(ns + "intent-filter").FirstOrDefault(filter =>
 				filter.Elements(ns + "action").Any(action => string.Equals((string)action.Attribute(name), "android.intent.action.VIEW", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.DEFAULT", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.BROWSABLE", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "data").Any(data => string.Equals((string)data.Attribute(_androidNamespace + "scheme"), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
 					string.Equals((string)data.Attribute(_androidNamespace + "host") ?? string.Empty, registration.Host ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
 					string.Equals((string)data.Attribute(_androidNamespace + "pathPrefix") ?? string.Empty, registration.PathPrefix ?? string.Empty, StringComparison.Ordinal)));
-			if (matches) return false;
+			if (existing != null)
+			{
+				if (!registration.AutoVerify || string.Equals((string)existing.Attribute(_androidNamespace + "autoVerify"), "true", StringComparison.Ordinal)) return false;
+				existing.SetAttributeValue(_androidNamespace + "autoVerify", "true");
+				return true;
+			}
 			var data = new XElement(ns + "data", new XAttribute(_androidNamespace + "scheme", registration.Scheme));
 			if (!string.IsNullOrEmpty(registration.Host)) data.Add(new XAttribute(_androidNamespace + "host", registration.Host));
 			if (!string.IsNullOrEmpty(registration.PathPrefix)) data.Add(new XAttribute(_androidNamespace + "pathPrefix", registration.PathPrefix));
-			activity.Add(new XElement(ns + "intent-filter", new XElement(ns + "action", new XAttribute(name, "android.intent.action.VIEW")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.DEFAULT")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.BROWSABLE")), data));
+			var filterElement = new XElement(ns + "intent-filter", new XElement(ns + "action", new XAttribute(name, "android.intent.action.VIEW")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.DEFAULT")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.BROWSABLE")), data);
+			if (registration.AutoVerify) filterElement.SetAttributeValue(_androidNamespace + "autoVerify", "true");
+			activity.Add(filterElement);
 			return true;
 		}
 
@@ -497,6 +515,36 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			(activityName.EndsWith(".UnityPlayerActivity", StringComparison.Ordinal) || activityName.EndsWith(".UnityPlayerGameActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerGameActivity", StringComparison.Ordinal));
 
 		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(_androidNamespace + localName)?.Value;
+
+		// Adds `implementation '<coordinate>'` to the generated module unless any Gradle file already declares the artifact.
+		private static string EnsureGradleDependency(string path, string artifactKey, string coordinate, string optOutHint)
+		{
+			string[] gradleFiles;
+			try { gradleFiles = Directory.GetFiles(path, "*.gradle", SearchOption.AllDirectories); }
+			catch (Exception exception) { throw new BuildFailedException($"[GameLovers.MobileServices] Could not enumerate Gradle files under '{path}': {exception.Message}"); }
+			foreach (var file in gradleFiles)
+			{
+				if (!ReadTextOrThrow(file).Contains(artifactKey, StringComparison.Ordinal)) continue;
+				Debug.Log($"[GameLovers.MobileServices] '{artifactKey}' already exists in '{file}' — preserving the existing dependency owner.");
+				return "existing";
+			}
+
+			var targetGradle = FindModuleBuildGradle(path, gradleFiles);
+			if (targetGradle == null)
+			{
+				throw new BuildFailedException($"[GameLovers.MobileServices] Could not find a Unity Android module with a dependencies block under '{path}'. Add implementation '{coordinate}' manually or {optOutHint}.");
+			}
+
+			var injected = InsertIntoDependenciesBlock(ReadTextOrThrow(targetGradle), $"implementation '{coordinate}'");
+			if (injected == null)
+			{
+				throw new BuildFailedException($"[GameLovers.MobileServices] No dependencies block was found in '{targetGradle}'. Add implementation '{coordinate}' manually.");
+			}
+
+			File.WriteAllText(targetGradle, injected);
+			Debug.Log($"[GameLovers.MobileServices] Injected '{coordinate}' into '{targetGradle}'.");
+			return "changed";
+		}
 
 		private static string FindModuleBuildGradle(string path, string[] gradleFiles)
 		{

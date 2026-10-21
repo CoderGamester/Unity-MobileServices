@@ -91,6 +91,18 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			}
 		}
 
+		/// <summary>Reports a delivered notification as opened, as if the player tapped its banner.</summary>
+		public static bool TryOpen(INotificationService service, IGameNotification notification)
+		{
+			if (!(service is MobileNotificationService mobileService) || notification == null)
+			{
+				return false;
+			}
+
+			mobileService.SimulateOpen(notification);
+			return true;
+		}
+
 		/// <summary>Invokes the runtime service's explicit editor delivery path.</summary>
 		public static bool TryDeliver(INotificationService service, int notificationId)
 		{

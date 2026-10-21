@@ -79,6 +79,9 @@ namespace GameLovers.MobileServices.Notifications
         /// <inheritdoc />
         public string LargeIcon { get => InternalNotification.LargeIcon; set => _internalNotification.LargeIcon = value; }
 
+        /// <inheritdoc />
+        public string Data { get => InternalNotification.IntentData; set => _internalNotification.IntentData = value; }
+
         public AndroidGameNotification()
         {
             _internalNotification = new AndroidNotification();

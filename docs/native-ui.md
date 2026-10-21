@@ -88,6 +88,18 @@ The prompt never appears in TestFlight builds, and the OS quota means it will of
 
 Any combination of `text` / `url` / `imagePath` may be supplied. `imagePath` must be an absolute filesystem path. Nulls are skipped.
 
+### Sharing images on Android
+
+Android 7+ rejects `file://` URIs, so images travel through a package-owned `FileProvider` (`GameLoversFileProvider`). Turn on **Include Share FileProvider** in the Mobile Services Config; the build postprocessor then declares the provider and its `res/xml/gamelovers_file_paths.xml` in the generated manifest. The provider grants access to the app's files and cache directories (`Application.persistentDataPath`, `Application.temporaryCachePath`). With the toggle off, an image share logs a warning and shares only the text. iOS needs no setup.
+
+### Sharing a screenshot
+
+```csharp
+await NativeUiService.ShareScreenshotAsync("New high score!", "https://example.com/game");
+```
+
+`ShareScreenshotAsync(text, url, title)` waits for the end of the frame, captures what the player sees, writes a PNG to `Application.temporaryCachePath`, and opens the share sheet with it. On Android it needs the same **Include Share FileProvider** toggle.
+
 ## Editor & unsupported platforms
 
 In `UNITY_EDITOR`, alerts render through the in-Game-view simulator overlay and invoke their real button callbacks. The other methods log to console and return unless their Device Simulator override is engaged. On unsupported player platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops.

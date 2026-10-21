@@ -34,6 +34,8 @@ namespace GameLovers.MobileServices.Device
 		public IAttService Att { get; }
 		/// <inheritdoc />
 		public IDeepLinkService DeepLink { get; }
+		/// <inheritdoc />
+		public IBackgroundTaskService BackgroundTasks { get; }
 
 		public DeviceService() : this(BuildDefaults()) { }
 
@@ -42,27 +44,29 @@ namespace GameLovers.MobileServices.Device
 			IIosAudioSessionService audioSession,
 			IPermissionsService permissions,
 			IAttService att,
-			IDeepLinkService deepLink)
+			IDeepLinkService deepLink,
+			IBackgroundTaskService backgroundTasks)
 		{
 			Battery = battery;
 			AudioSession = audioSession;
 			Permissions = permissions;
 			Att = att;
 			DeepLink = deepLink;
+			BackgroundTasks = backgroundTasks;
 		}
 
 		// Tuple-routed delegating ctor so the host-dependent children share one explicit host
 		// instance constructed up-front, not separate accesses to the singleton during a
 		// constructor chain (cleaner ownership signal in the umbrella's call stack).
 		private DeviceService((IBatteryService,
-			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService) defaults)
+			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService, IBackgroundTaskService) defaults)
 			: this(defaults.Item1, defaults.Item2, defaults.Item3,
-				   defaults.Item4, defaults.Item5)
+				   defaults.Item4, defaults.Item5, defaults.Item6)
 		{
 		}
 
 		private static (IBatteryService,
-			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService) BuildDefaults()
+			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService, IBackgroundTaskService) BuildDefaults()
 		{
 			var host = DeviceServicesHost.Instance;
 			return (
@@ -70,7 +74,33 @@ namespace GameLovers.MobileServices.Device
 				new IosAudioSessionService(),
 				new PermissionsService(),
 				new AttService(),
-				new DeepLinkService());
+				new DeepLinkService(),
+				new BackgroundTaskService());
+		}
+
+		/// <summary>
+		/// Opens this application's page in the platform's store app: the App Store on iOS or Google Play on Android.
+		/// </summary>
+		/// <param name="iosAppId">The numeric App Store id, with or without an <c>id</c> prefix. Required on iOS.</param>
+		/// <param name="androidPackage">The Android application id. Defaults to <c>Application.identifier</c>.</param>
+		/// <param name="writeReview">
+		/// Opens the iOS write-review sheet. Android has no review deep link, so the store page opens instead.
+		/// </param>
+		public static void OpenStorePage(string iosAppId, string androidPackage = null, bool writeReview = false)
+		{
+			var url = StoreLinks.Build(Application.platform, iosAppId, androidPackage ?? Application.identifier, writeReview);
+			if (url == null)
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] OpenStorePage has no store page to open on {Application.platform} " +
+					"(iOS needs a numeric App Store id; Android needs a package name).");
+				return;
+			}
+
+#if UNITY_EDITOR
+			Debug.Log($"[GameLovers.MobileServices] OpenStorePage would open {url}");
+#else
+			Application.OpenURL(url);
+#endif
 		}
 
 		/// <summary>

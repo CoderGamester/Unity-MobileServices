@@ -5,7 +5,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Scope
 
 - Package: `com.gamelovers.mobileservices`; minimum Unity version and dependencies are authoritative in `package.json`.
-- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (battery, audio session, permissions, ATT, and deep links).
+- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (battery, audio session, permissions, ATT, deep links, and background tasks).
 - Consumers must enable the Input System or Both. The gesture contract uses EnhancedTouch.
 - This package is render-pipeline-neutral and has no dependency on GameLovers Services.
 
@@ -24,6 +24,9 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - `MobileNotificationService` owns its `NotificationService` GameObject. Disposal is idempotent, releases only owned resources, and public operations depending on the host throw `ObjectDisposedException` afterward. Shared validation and lifecycle behavior stay outside platform conditionals.
 - Android notification scheduling requires a registered default channel. Queue modes hand pending work to the OS on background transitions.
 - Every `GestureController` balances only its own `EnhancedTouchSupport.Enable()` acquisition. Multiple live controllers and external release must remain safe.
+- `IGameNotification.Data` maps to `AndroidNotification.IntentData` and `iOSNotification.Data` and must survive the queue-and-reschedule persistence. Both platforms keep returning the last opened notification, so `GameNotificationsMonoBehaviour` captures the cold-start one before the first foregrounding and de-duplicates later opens by id (title and body when unset). Opened-notification behavior is exercised through the internal `AttachPlatform` seam with a fake platform.
+- Android image sharing goes through the package FileProvider: the Java class `GameLoversFileProvider` (`Plugins/Android/`), the authority suffix `NativeUiService.AndroidShareProviderAuthoritySuffix`, and the postprocessor's provider and `res/xml` paths file change together. Without the toggle an image share degrades to text with a warning.
+- `IBackgroundTaskService` is iOS-only in effect. `Plugins/iOS/BackgroundTask.m` must end the system task before its expiration handler returns, on the main thread; handle members are readable from any thread; the `_GameLoversBackgroundTask*` exports, C# `DllImport` signatures, and the expiration callback signature change together. Android and Editor return a pass-through handle.
 - One haptic play replaces the previous play and cancels its pending auto-stop. Negative preset duration loops until explicit stop; `StopCurrentHaptic()` is idempotent.
 - `DeviceServicesHost` is the shared polling host. Do not create per-service update GameObjects when the host can own the callback.
 - The first `DeepLinkService` subscriber receives a pending cold-start link once. Construct the service early; event names are not persistent state.
@@ -56,5 +59,6 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Verification and documentation
 
 - Platform bridge changes require relevant Editor simulation plus real iOS/Android build or device evidence; unavailable platform evidence is `NOT VALIDATED`.
+- Android App Link `AutoVerify` needs an http or https scheme and a host; validation rejects anything else before a build file is touched.
 - Update `README.md`, the relevant `docs/` page, and the canonical sample README when public behavior or sample setup changes.
 - Update this guide only for durable subsystem, native-boundary, build-ownership, or test conventions.

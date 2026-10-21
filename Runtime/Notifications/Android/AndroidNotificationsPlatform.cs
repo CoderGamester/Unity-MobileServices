@@ -149,6 +149,13 @@ namespace GameLovers.MobileServices.Notifications
             AndroidNotificationCenter.CancelAllDisplayedNotifications();
         }
 
+        /// <inheritdoc />
+        public IGameNotification GetLastOpenedNotification()
+        {
+            var data = AndroidNotificationCenter.GetLastNotificationIntent();
+            return data == null ? null : new AndroidGameNotification(data.Notification, data.Id, data.Channel);
+        }
+
         /// <summary>
         /// Does nothing on Android.
         /// </summary>

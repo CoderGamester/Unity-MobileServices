@@ -155,5 +155,19 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(() => NativeUiService.Share("hi"));
 		}
 
+
+		[Test]
+		// ADMIT: NativeUiService.GetImageMimeType could label every shared image as image/png, so targets render a JPEG as a broken PNG.
+		// RCR: NativeUiService.cs GetImageMimeType — .png mapped to image/jpeg → RED (Expected string length 9 but was 10. Strings differ at index 6. Expected: "image/png" B...). 2026-10-21
+		[TestCase("/tmp/a.png", "image/png")]
+		[TestCase("/tmp/a.JPG", "image/jpeg")]
+		[TestCase("/tmp/a.jpeg", "image/jpeg")]
+		[TestCase("/tmp/a.webp", "image/webp")]
+		[TestCase("/tmp/a.bin", "image/*")]
+		[TestCase(null, "image/*")]
+		public void GetImageMimeType_MapsTheFileExtension(string path, string expected)
+		{
+			Assert.AreEqual(expected, NativeUiService.GetImageMimeType(path));
+		}
 	}
 }

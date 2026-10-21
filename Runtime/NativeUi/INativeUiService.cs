@@ -41,6 +41,9 @@ namespace GameLovers.MobileServices.NativeUi
 
 		/// <inheritdoc cref="NativeUiService.Share(string,string,string,string)"/>
 		void Share(string text, string url = null, string imagePath = null, string title = null);
+
+		/// <inheritdoc cref="NativeUiService.ShareScreenshotAsync(string,string,string)"/>
+		Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null);
 	}
 
 	/// <summary>
@@ -84,5 +87,9 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc />
 		public void Share(string text, string url = null, string imagePath = null, string title = null)
 			=> NativeUiService.Share(text, url, imagePath, title);
+
+		/// <inheritdoc />
+		public Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null)
+			=> NativeUiService.ShareScreenshotAsync(text, url, title);
 	}
 }

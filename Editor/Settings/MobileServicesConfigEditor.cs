@@ -74,7 +74,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.DeepLinks(config));
 
 			root.Add(MakeSection("Sharing"));
-			AddRelative(root, "_androidManifest", "IncludeShareQueriesBlock");
+			AddRelative(root, "_androidManifest", "IncludeShareQueriesBlock", "IncludeShareFileProvider");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.Sharing(config));
 
 			root.Add(MakeSection("Store review"));
