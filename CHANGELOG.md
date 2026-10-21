@@ -5,7 +5,7 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2026-10-21
+## [2.0.0] - 2026-10-22
 
 **New**:
 - **Game Platform**: Added opt-in `GamePlatformServices` (`IGamePlatformServices`) for Game Center and Google Play Games Services v2: sign-in, leaderboards, achievements and their native UIs, with `PlatformId` to keep per-platform ids in one value. Enable it with the `Game Center` toggle and the `Play Games Project Id` in the Mobile Services Config; the build then adds the entitlement, or the SDK and manifest entries.
