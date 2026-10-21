@@ -41,6 +41,18 @@ namespace GameLovers.MobileServices.NativeUi
 
 		/// <inheritdoc cref="NativeUiService.Share(string,string,string,string)"/>
 		void Share(string text, string url = null, string imagePath = null, string title = null);
+
+		/// <inheritdoc cref="NativeUiService.ShareScreenshotAsync(string,string,string)"/>
+		Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null);
+
+		/// <inheritdoc cref="NativeUiService.OpenInAppBrowser(string)"/>
+		void OpenInAppBrowser(string url);
+
+		/// <inheritdoc cref="NativeMediaService.SaveToGalleryAsync(string,MediaType)"/>
+		Awaitable<bool> SaveToGalleryAsync(string filePath, MediaType mediaType = MediaType.Image);
+
+		/// <inheritdoc cref="NativeMediaService.PickImageAsync"/>
+		Awaitable<string> PickImageAsync();
 	}
 
 	/// <summary>
@@ -84,5 +96,19 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc />
 		public void Share(string text, string url = null, string imagePath = null, string title = null)
 			=> NativeUiService.Share(text, url, imagePath, title);
+
+		/// <inheritdoc />
+		public Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null)
+			=> NativeUiService.ShareScreenshotAsync(text, url, title);
+
+		/// <inheritdoc />
+		public void OpenInAppBrowser(string url) => NativeUiService.OpenInAppBrowser(url);
+
+		/// <inheritdoc />
+		public Awaitable<bool> SaveToGalleryAsync(string filePath, MediaType mediaType = MediaType.Image)
+			=> NativeMediaService.SaveToGalleryAsync(filePath, mediaType);
+
+		/// <inheritdoc />
+		public Awaitable<string> PickImageAsync() => NativeMediaService.PickImageAsync();
 	}
 }

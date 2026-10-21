@@ -2,14 +2,16 @@
   "name": "com.gamelovers.mobileservices",
   "displayName": "Mobile Services",
   "author": "Miguel Tomas",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "unity": "6000.0",
   "license": "MIT",
-  "description": "Mobile platform services: local notifications, native UI, haptics, permissions, ATT, deep links, gestures, device helpers, and build/simulator tooling.",
+  "description": "Mobile platform services: local notifications, native UI, media, haptics, permissions, ATT, deep links, shortcuts, game services and cloud saves, gestures, device helpers, and build/simulator tooling.",
   "type": "library",
   "dependencies": {
     "com.unity.mobile.notifications": "2.3.0",
-    "com.unity.inputsystem": "1.11.0"
+    "com.unity.inputsystem": "1.11.0",
+    "com.unity.modules.imageconversion": "1.0.0",
+    "com.unity.modules.screencapture": "1.0.0"
   },
   "samples": [
     {

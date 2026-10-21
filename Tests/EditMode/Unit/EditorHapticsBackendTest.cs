@@ -12,11 +12,20 @@ namespace GameLoversEditor.MobileServices.Tests
 	public class EditorHapticsBackendTest
 	{
 		private EditorHapticsBackend _backend;
+		private bool _debugLoggingWasEnabled;
 
 		[SetUp]
 		public void Init()
 		{
+			_debugLoggingWasEnabled = EditorHapticsBackend.DebugLoggingEnabled;
+			EditorHapticsBackend.DebugLoggingEnabled = true;
 			_backend = new EditorHapticsBackend();
+		}
+
+		[TearDown]
+		public void Cleanup()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = _debugLoggingWasEnabled;
 		}
 
 		[Test]
@@ -25,6 +34,22 @@ namespace GameLoversEditor.MobileServices.Tests
 		public void IsSupported_AlwaysFalse()
 		{
 			Assert.IsFalse(_backend.IsSupported);
+		}
+
+		[Test]
+		// ADMIT: EditorHapticsBackend must suppress every play and stop diagnostic when debug logging is disabled.
+		// RCR: EditorHapticsBackend.cs PlayPresetOneShot — remove the disabled guard → RED
+		// (unexpected PlayPresetOneShot log). 2026-08-14
+		public void AllCalls_DebugLoggingDisabled_DoNotLog()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = false;
+
+			_backend.PlayPresetOneShot(HapticPreset.Selection);
+			_backend.PlayPresetLoop(HapticPreset.Warning);
+			_backend.PlayCustom(0.42f, 250f);
+			_backend.Stop();
+
+			LogAssert.NoUnexpectedReceived();
 		}
 
 		[Test]

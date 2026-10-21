@@ -9,9 +9,6 @@ namespace GameLovers.MobileServices.Device
 	/// </summary>
 	public interface IDeviceService
 	{
-		/// <summary>Display safe-area events (notch, dynamic island, orientation).</summary>
-		ISafeAreaService SafeArea { get; }
-
 		/// <summary>Battery level / status / low-power-mode awareness.</summary>
 		IBatteryService Battery { get; }
 
@@ -26,5 +23,8 @@ namespace GameLovers.MobileServices.Device
 
 		/// <summary>OS deep link delivery with cold-start link queueing.</summary>
 		IDeepLinkService DeepLink { get; }
+
+		/// <summary>Extra execution time when the app moves to the background (iOS; pass-through on Android).</summary>
+		IBackgroundTaskService BackgroundTasks { get; }
 	}
 }

@@ -131,6 +131,8 @@ namespace GameLovers.MobileServices.Samples.Editor.Build
 			config.AndroidManifest.PostNotifications = true;
 			config.AndroidManifest.Vibrate = true;
 			config.AndroidManifest.IncludeShareQueriesBlock = true;
+			config.AndroidManifest.IncludeShareFileProvider = true;
+			config.AndroidManifest.IncludeMediaPicker = true;
 			config.IncludePlayReviewDependency = true;
 			var sampleScheme = DeepLinkSampleScheme.FromIdentifier(PlayerSettings.applicationIdentifier);
 			config.DeepLinks.AddIosUrlScheme(sampleScheme);

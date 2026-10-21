@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GameLovers.MobileServices.Device;
+using GameLovers.MobileServices.Haptics.Internal;
 using UnityEditor;
 using UnityEngine;
 
@@ -67,14 +68,90 @@ namespace GameLovers.MobileServices.Editor.Settings
 	}
 
 	/// <summary>
+	/// Game Center and Google Play Games settings for <c>GamePlatformServices</c>; both are off until filled in.
+	/// </summary>
+	[Serializable]
+	public sealed class GamePlatformSettings
+	{
+		/// <summary>Default Maven coordinate for the Play Games Services v2 SDK.</summary>
+		public const string DefaultPlayGamesCoordinate = "com.google.android.gms:play-services-games-v2:20.1.2";
+
+		/// <summary>
+		/// Adds the Game Center capability and compiles the GameKit bridge into iOS builds. The App ID and provisioning
+		/// profile must also have Game Center enabled.
+		/// </summary>
+		[SerializeField] public bool GameCenter;
+
+		/// <summary>
+		/// Adds the iCloud Documents capability that Game Center saved games need on iOS. Cloud saves also need Game Center
+		/// and, on Android, the Play Games project id with Saved Games enabled in the Play Console.
+		/// </summary>
+		[SerializeField] public bool CloudSave;
+
+		/// <summary>
+		/// The numeric Google Play Console project id. Entering it adds the Play Games Services SDK and the
+		/// <c>APP_ID</c> manifest entry to Android builds; leaving it empty keeps the SDK out.
+		/// </summary>
+		[SerializeField] public string PlayGamesProjectId;
+
+		/// <summary>
+		/// Overrides the Play Games Services Maven coordinate, for example to pin a version or use an internal mirror.
+		/// Blank uses <see cref="DefaultPlayGamesCoordinate"/>.
+		/// </summary>
+		[SerializeField] public string PlayGamesDependencyCoordinate;
+
+		/// <summary>True when a Play Games project id is set, which switches the Android integration on.</summary>
+		public bool PlayGamesEnabled => !string.IsNullOrWhiteSpace(PlayGamesProjectId);
+
+		/// <summary>The coordinate to inject: the override when set, otherwise the default.</summary>
+		public string ResolvePlayGamesCoordinate() =>
+			string.IsNullOrWhiteSpace(PlayGamesDependencyCoordinate) ? DefaultPlayGamesCoordinate : PlayGamesDependencyCoordinate.Trim();
+
+		/// <summary>Appends malformed explicitly configured values to the supplied error collection.</summary>
+		internal void CollectValidationErrors(string prefix, List<string> errors)
+		{
+			if (CloudSave && !GameCenter && !PlayGamesEnabled)
+			{
+				errors.Add($"{prefix}.CloudSave is enabled but neither GameCenter nor PlayGamesProjectId is set; cloud saves need a game service to sign in to.");
+			}
+			if (PlayGamesEnabled && !IsAllDigits(PlayGamesProjectId.Trim()))
+			{
+				errors.Add($"{prefix}.PlayGamesProjectId must be the numeric Play Console project id: '{PlayGamesProjectId}'.");
+			}
+			if (PlayGamesEnabled && !MobileServicesConfig.IsValidMavenCoordinate(ResolvePlayGamesCoordinate()))
+			{
+				errors.Add($"{prefix}.PlayGamesDependencyCoordinate is invalid: '{PlayGamesDependencyCoordinate}'.");
+			}
+		}
+
+		private static bool IsAllDigits(string value)
+		{
+			if (value.Length == 0) return false;
+			foreach (var character in value)
+			{
+				if (character < '0' || character > '9') return false;
+			}
+			return true;
+		}
+	}
+
+	/// <summary>
 	/// Android <c>&lt;uses-permission&gt;</c> / <c>&lt;queries&gt;</c> entries to inject into the
 	/// manifest template.
 	/// </summary>
 	[Serializable]
 	public sealed class AndroidManifestToggles
 	{
-		/// <summary>Adds <c>READ_MEDIA_IMAGES</c> (Photo Library on API 33+).</summary>
+		/// <summary>
+		/// Adds the Photo Library permissions: <c>READ_MEDIA_IMAGES</c> (API 33+), <c>READ_MEDIA_VISUAL_USER_SELECTED</c>
+		/// (API 34+ partial access) and <c>READ_EXTERNAL_STORAGE</c> up to API 32.
+		/// </summary>
 		[SerializeField] public bool ReadMediaImages;
+
+		/// <summary>
+		/// Adds <c>WRITE_EXTERNAL_STORAGE</c> up to API 28, needed to save to the gallery on Android 9 and older.
+		/// </summary>
+		[SerializeField] public bool WriteExternalStorageLegacy;
 
 		/// <summary>Adds <c>POST_NOTIFICATIONS</c> (API 33+).</summary>
 		[SerializeField] public bool PostNotifications;
@@ -88,13 +165,57 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds <c>CAMERA</c>.</summary>
 		[SerializeField] public bool Camera;
 
-		/// <summary>Adds <c>ACCESS_FINE_LOCATION</c>.</summary>
+		/// <summary>
+		/// Adds <c>ACCESS_FINE_LOCATION</c> and <c>ACCESS_COARSE_LOCATION</c>, which Android 12+ requires together.
+		/// </summary>
 		[SerializeField] public bool AccessFineLocation;
+
+		/// <summary>Adds <c>ACCESS_COARSE_LOCATION</c> for apps that only need approximate location.</summary>
+		[SerializeField] public bool AccessCoarseLocation;
+
+		/// <summary>
+		/// Adds <c>ACCESS_BACKGROUND_LOCATION</c> for <c>AppPermission.LocationAlways</c>. Google Play requires a
+		/// permission declaration form for it.
+		/// </summary>
+		[SerializeField] public bool AccessBackgroundLocation;
 
 		/// <summary>
 		/// Adds the share-chooser <c>&lt;queries&gt;</c> block (Android 11+ visibility for share targets).
 		/// </summary>
 		[SerializeField] public bool IncludeShareQueriesBlock;
+
+		/// <summary>
+		/// Declares the package FileProvider so <c>NativeUiService.Share</c> can send images on Android 7+, where
+		/// <c>file://</c> URIs are rejected.
+		/// </summary>
+		[SerializeField] public bool IncludeShareFileProvider;
+
+		/// <summary>
+		/// Declares the transparent picker activity <c>NativeMediaService.PickImageAsync</c> uses on Android. The
+		/// system picker needs no permission.
+		/// </summary>
+		[SerializeField] public bool IncludeMediaPicker;
+
+		/// <summary>
+		/// The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.
+		/// </summary>
+		internal IEnumerable<(string Permission, int? MaxSdkVersion)> GetPermissions()
+		{
+			if (Camera) yield return ("android.permission.CAMERA", null);
+			if (RecordAudio) yield return ("android.permission.RECORD_AUDIO", null);
+			if (AccessFineLocation) yield return ("android.permission.ACCESS_FINE_LOCATION", null);
+			if (AccessFineLocation || AccessCoarseLocation) yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
+			if (AccessBackgroundLocation) yield return ("android.permission.ACCESS_BACKGROUND_LOCATION", null);
+			if (ReadMediaImages)
+			{
+				yield return ("android.permission.READ_MEDIA_IMAGES", null);
+				yield return ("android.permission.READ_MEDIA_VISUAL_USER_SELECTED", null);
+				yield return ("android.permission.READ_EXTERNAL_STORAGE", 32);
+			}
+			if (WriteExternalStorageLegacy) yield return ("android.permission.WRITE_EXTERNAL_STORAGE", 28);
+			if (PostNotifications) yield return ("android.permission.POST_NOTIFICATIONS", null);
+			if (Vibrate) yield return ("android.permission.VIBRATE", null);
+		}
 	}
 
 	/// <summary>One Android browsable deep-link registration.</summary>
@@ -109,6 +230,18 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		/// <summary>Optional path-prefix constraint.</summary>
 		[SerializeField] public string PathPrefix;
+
+		/// <summary>
+		/// Marks the filter <c>android:autoVerify="true"</c> so Android verifies the https link against the domain's
+		/// <c>assetlinks.json</c> and opens it without a chooser. Needs an http or https scheme and a host.
+		/// </summary>
+		[SerializeField] public bool AutoVerify;
+
+		/// <summary>True when the scheme is http or https and a host is set, the shape Android can verify.</summary>
+		internal bool IsVerifiableAppLink() =>
+			!string.IsNullOrWhiteSpace(Host) &&
+			(string.Equals(Scheme?.Trim(), "https", StringComparison.OrdinalIgnoreCase) ||
+			 string.Equals(Scheme?.Trim(), "http", StringComparison.OrdinalIgnoreCase));
 	}
 
 	/// <summary>Native deep-link declarations shared by production builds and temporary sample overlays.</summary>
@@ -141,14 +274,15 @@ namespace GameLovers.MobileServices.Editor.Settings
 		}
 
 		/// <summary>Adds an Android registration using semantic set semantics.</summary>
-		public void AddAndroidIntentFilter(string scheme, string host = null, string pathPrefix = null)
+		public void AddAndroidIntentFilter(string scheme, string host = null, string pathPrefix = null, bool autoVerify = false)
 		{
 			AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			var registration = new AndroidDeepLinkRegistration
 			{
 				Scheme = Normalize(scheme),
 				Host = Normalize(host),
-				PathPrefix = Normalize(pathPrefix)
+				PathPrefix = Normalize(pathPrefix),
+				AutoVerify = autoVerify
 			};
 			if (string.IsNullOrEmpty(registration.Scheme)) return;
 
@@ -159,6 +293,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 					string.Equals(existing.Host?.Trim(), registration.Host, StringComparison.OrdinalIgnoreCase) &&
 					string.Equals(existing.PathPrefix?.Trim(), registration.PathPrefix, StringComparison.Ordinal))
 				{
+					existing.AutoVerify |= registration.AutoVerify;
 					return;
 				}
 			}
@@ -205,6 +340,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 				{
 					errors.Add($"{prefix}.AndroidIntentFilters[{i}].Host is invalid: '{entry.Host}'.");
 				}
+				if (entry.AutoVerify && !entry.IsVerifiableAppLink())
+				{
+					errors.Add($"{prefix}.AndroidIntentFilters[{i}].AutoVerify needs an http or https scheme and a host: '{entry.Scheme}://{entry.Host}'.");
+				}
 				if (!string.IsNullOrWhiteSpace(entry.PathPrefix) &&
 					(!entry.PathPrefix.Trim().StartsWith("/", StringComparison.Ordinal) || entry.PathPrefix.IndexOfAny(new[] { '?', '#' }) >= 0))
 				{
@@ -233,7 +372,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 	/// UX (including the per-locale usage-description lists), and a single instance is located ANYWHERE
 	/// in the project via <see cref="Instance"/> / <see cref="GetOrCreateAsset"/>. Open it from
 	/// <c>Tools &gt; GameLovers &gt; Mobile Services &gt; Select Mobile Services Config</c>.
-	/// See <c>docs/build-pipeline.md</c> for the schema and behaviour.
+	/// See <c>docs/build-configuration.md</c> for the schema and behaviour.
 	/// </summary>
 	/// <remarks>
 	/// The type lives in the Editor assembly, so the asset is editor-only (keep it under an
@@ -249,6 +388,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Default Maven coordinate for the Play In-App Review library injected on Android builds.</summary>
 		public const string DefaultPlayReviewCoordinate = "com.google.android.play:review:2.0.2";
 
+		/// <summary>Default Maven coordinate for the Custom Tabs library behind the Android in-app browser.</summary>
+		public const string DefaultCustomTabsCoordinate = "androidx.browser:browser:1.8.0";
+
 		private static MobileServicesConfig _cached;
 		private static bool _cachedIsTransient;
 
@@ -257,8 +399,13 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private CapabilityToggles _capabilities = new CapabilityToggles();
 		[SerializeField] private AndroidManifestToggles _androidManifest = new AndroidManifestToggles();
 		[SerializeField] private NativeDeepLinkSettings _deepLinks = new NativeDeepLinkSettings();
+		[SerializeField] private GamePlatformSettings _gamePlatform = new GamePlatformSettings();
+		[Tooltip("Logs Editor haptics play and stop calls to the Unity console. Disabled by default.")]
+		[SerializeField] private bool _enableHapticsDebugLogs;
 		[SerializeField] private bool _includePlayReviewDependency = true;
 		[SerializeField] private string _playReviewDependencyCoordinate = DefaultPlayReviewCoordinate;
+		[SerializeField] private bool _includeCustomTabsDependency = true;
+		[SerializeField] private string _customTabsDependencyCoordinate = DefaultCustomTabsCoordinate;
 		[SerializeField] private bool _manageNativeBuildManually;
 
 		private void OnEnable()
@@ -270,9 +417,17 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_capabilities.AssociatedDomainList ??= new List<string>();
 			_androidManifest ??= new AndroidManifestToggles();
 			_deepLinks ??= new NativeDeepLinkSettings();
+			_gamePlatform ??= new GamePlatformSettings();
 			_deepLinks.IosUrlSchemes ??= new List<string>();
 			_deepLinks.AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			_playReviewDependencyCoordinate ??= DefaultPlayReviewCoordinate;
+			_customTabsDependencyCoordinate ??= DefaultCustomTabsCoordinate;
+			ApplyEditorRuntimeSettings();
+		}
+
+		private void OnValidate()
+		{
+			ApplyEditorRuntimeSettings();
 		}
 
 		/// <summary>
@@ -329,6 +484,21 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>iOS URL scheme and Android intent-filter declarations applied at build time.</summary>
 		public NativeDeepLinkSettings DeepLinks => _deepLinks ??= new NativeDeepLinkSettings();
 
+		/// <summary>Game Center and Google Play Games settings applied at build time.</summary>
+		public GamePlatformSettings GamePlatform => _gamePlatform ??= new GamePlatformSettings();
+
+		/// <summary>Whether Editor haptics calls write diagnostic messages to the Unity console.</summary>
+		public bool EnableHapticsDebugLogs
+		{
+			get => _enableHapticsDebugLogs;
+			set
+			{
+				_enableHapticsDebugLogs = value;
+				ApplyEditorRuntimeSettings();
+				Persist();
+			}
+		}
+
 		/// <summary>
 		/// When <c>true</c> (the default), the Android build postprocessor auto-injects the Play In-App
 		/// Review dependency (<see cref="PlayReviewDependencyCoordinate"/>) into the generated Gradle
@@ -361,6 +531,37 @@ namespace GameLovers.MobileServices.Editor.Settings
 			set
 			{
 				_playReviewDependencyCoordinate = value;
+				Persist();
+			}
+		}
+
+		/// <summary>
+		/// When <c>true</c> (the default), the Android build postprocessor injects the <c>androidx.browser</c> library so
+		/// <c>NativeUiService.OpenInAppBrowser</c> can show Chrome Custom Tabs. It is skipped when the library is already
+		/// declared. Turn it off to keep the library out; the browser call then opens the external browser.
+		/// </summary>
+		public bool IncludeCustomTabsDependency
+		{
+			get => _includeCustomTabsDependency;
+			set
+			{
+				_includeCustomTabsDependency = value;
+				Persist();
+			}
+		}
+
+		/// <summary>
+		/// The full <c>group:artifact:version</c> Maven coordinate injected for Custom Tabs, for pinning a version or
+		/// using an internal mirror. Falls back to <see cref="DefaultCustomTabsCoordinate"/> when blank.
+		/// </summary>
+		public string CustomTabsDependencyCoordinate
+		{
+			get => string.IsNullOrWhiteSpace(_customTabsDependencyCoordinate)
+				? DefaultCustomTabsCoordinate
+				: _customTabsDependencyCoordinate;
+			set
+			{
+				_customTabsDependencyCoordinate = value;
 				Persist();
 			}
 		}
@@ -440,6 +641,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		{
 			var config = CreateInstance<MobileServicesConfig>();
 			config._includePlayReviewDependency = false;
+			config._includeCustomTabsDependency = false;
 			config.hideFlags = HideFlags.HideAndDontSave;
 			return config;
 		}
@@ -499,7 +701,13 @@ namespace GameLovers.MobileServices.Editor.Settings
 				errors.Add("Capabilities.AssociatedDomains is enabled but AssociatedDomainList is empty.");
 			}
 			_deepLinks?.CollectValidationErrors(nameof(DeepLinks), errors);
-			if (_includePlayReviewDependency && !IsValidPlayReviewCoordinate(PlayReviewDependencyCoordinate))
+			if (_gamePlatform == null) errors.Add("GamePlatform is null.");
+			_gamePlatform?.CollectValidationErrors(nameof(GamePlatform), errors);
+			if (_includeCustomTabsDependency && !IsValidMavenCoordinate(CustomTabsDependencyCoordinate))
+			{
+				errors.Add($"CustomTabsDependencyCoordinate is invalid: '{CustomTabsDependencyCoordinate}'.");
+			}
+			if (_includePlayReviewDependency && !IsValidMavenCoordinate(PlayReviewDependencyCoordinate))
 			{
 				errors.Add($"PlayReviewDependencyCoordinate is invalid: '{PlayReviewDependencyCoordinate}'.");
 			}
@@ -514,7 +722,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return errors.Count == 0;
 		}
 
-		private static bool IsValidPlayReviewCoordinate(string coordinate)
+		/// <summary>True for a <c>group:artifact:version</c> coordinate whose three parts are all non-empty.</summary>
+		internal static bool IsValidMavenCoordinate(string coordinate)
 		{
 			if (string.IsNullOrWhiteSpace(coordinate)) return false;
 			var pieces = coordinate.Split(':');
@@ -736,6 +945,11 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return TryGetPersistedConfig(out var config) ? config : null;
 		}
 
+		private void ApplyEditorRuntimeSettings()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = _enableHapticsDebugLogs;
+		}
+
 		private static void CollectLocales(List<LocaleEntry> entries, HashSet<string> set)
 		{
 			foreach (var entry in entries ?? new List<LocaleEntry>())
@@ -770,6 +984,21 @@ namespace GameLovers.MobileServices.Editor.Settings
 				}
 			}
 			entries.Add(new LocaleEntry { LocaleCode = locale, UsageDescription = text });
+		}
+	}
+
+	/// <summary>Restores Mobile Services Editor runtime settings after Unity reloads the package assemblies.</summary>
+	[InitializeOnLoad]
+	internal static class MobileServicesConfigInitializer
+	{
+		static MobileServicesConfigInitializer()
+		{
+			EditorApplication.delayCall += Apply;
+		}
+
+		private static void Apply()
+		{
+			EditorHapticsBackend.DebugLoggingEnabled = MobileServicesConfig.Instance.EnableHapticsDebugLogs;
 		}
 	}
 }

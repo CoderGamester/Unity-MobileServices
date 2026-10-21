@@ -149,6 +149,8 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 			_sectionsContainer.Add(BuildGesturesSection());
 			_sectionsContainer.Add(BuildPermissionsSection());
 			_sectionsContainer.Add(BuildAttSection());
+			_sectionsContainer.Add(new GamePlatformSimulatorSection());
+			_sectionsContainer.Add(new CloudSaveSimulatorSection());
 			scroll.Add(_sectionsContainer);
 
 			root.Add(scroll);

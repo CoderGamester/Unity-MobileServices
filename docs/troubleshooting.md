@@ -6,7 +6,7 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 
 | Symptom | Fix |
 |---------|-----|
-| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](explorer.md) to preview platform-shaped mocks inside the simulated phone. |
+| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](device-simulator.md) to preview platform-shaped mocks inside the simulated phone. |
 | `ShowAlertPopUp` throws `SystemException` | Running on an unsupported platform (Standalone, WebGL). Mobile-only API. |
 | iOS alert button callback fires the wrong handler | Two buttons in the same alert share their `Text`. iOS matches by text — keep button texts unique within a single alert. |
 | `RequestReview()` does nothing on Android | The generated Gradle project does not contain `com.google.android.play:review` (or the config opted out). The call logs an error and returns; it does NOT throw. |
@@ -53,8 +53,48 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | Symptom | Fix |
 |---------|-----|
 | `RequestAsync` resolves to `Granted` in editor without prompting | Editor short-circuits to `Granted`. Use `EditorPlatformSimulator.QueuePermissionResult(...)` to override. |
-| `Permission.READ_MEDIA_IMAGES` denied on Android < 13 | The permission is auto-granted below API 33. The service returns `Granted` immediately via Unity's `Permission.HasUserAuthorizedPermission` short-circuit. Add the legacy `READ_EXTERNAL_STORAGE` for that path. |
+| `Check(PhotoLibrary)` is `Denied` or `NotDetermined` on Android < 13 | Below API 33 the service checks `READ_EXTERNAL_STORAGE`, not `READ_MEDIA_IMAGES`. Turn on the `ReadMediaImages` Android manifest toggle; it also declares `READ_EXTERNAL_STORAGE` up to API 32. |
+| Android location never shows a dialog or stays `Limited` | Android 12+ needs precise and approximate location declared together (`AccessFineLocation` adds both). `LocationAlways` also needs `AccessBackgroundLocation` and reports `Limited` until background access is granted. |
+| `Check` reports `Denied` and `RequestAsync` returns instantly | The player refused (or chose "Don't ask again"). Explain the need and call `DeviceService.OpenAppSettings()`. |
+| iOS `RequestAsync` returns `NotDetermined` and the log says a permission group is not compiled | The generated `Info.plist` has no usage description for it, so the group was left out of the binary. Add the description in the Mobile Services Config. |
 | iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` or rely on the build postprocessor to fail the build (default). |
+
+## Game platform
+
+| Symptom | Fix |
+|---------|-----|
+| `AuthenticateAsync` returns `false` on iOS and the log says Game Center is not enabled | Turn on **Game Center** in the Mobile Services Config and rebuild. The App ID and provisioning profile need Game Center too. |
+| Play Games calls fail on Android and the log says the SDK is unavailable | Enter the **Play Games Project Id** in the Mobile Services Config so the build includes `play-services-games-v2`, then rebuild. |
+| Play Games sign-in fails although the SDK is present | Check in the Play Console that the app's package name and signing certificate are registered with the Play Games project. |
+| `IncrementAchievementAsync` returns `false` on iOS | Pass `totalSteps`; Game Center tracks a percentage and needs the total to convert steps. |
+| Progress calls return `false` and log that a signed-in player is needed | Call `AuthenticateAsync` first and check its result. |
+
+## Shortcuts and in-app browser
+
+| Symptom | Fix |
+|---------|-----|
+| Android shortcuts do not appear | They need API 25 or newer and a launcher that supports dynamic shortcuts. Check the log for entries skipped by validation (id, title and absolute URI are required; four at most). |
+| A tapped shortcut does nothing in the game | Construct `DeepLinkService` early and subscribe to `OnLinkActivated`; on iOS the tap is collected at construction and on each return to the foreground. Verify the app uses the app-delegate lifecycle, not UIScene. |
+| `OpenInAppBrowser` opens the external browser on Android | The `androidx.browser` library is missing. Turn on **Include Custom Tabs Dependency** in the Mobile Services Config and rebuild. |
+| `OpenInAppBrowser` logs that it needs an http or https URL | The in-app browser only shows web pages; use `Application.OpenURL` or a deep-link route for other schemes. |
+
+## Cloud save
+
+| Symptom | Fix |
+|---------|-----|
+| `CloudSaveException` with `NotAuthenticated` | Call `IGamePlatformServices.AuthenticateAsync` first and check its result. |
+| `CloudUnavailable` on iOS | The player needs an iCloud account for the app. Turn on **Cloud Save** in the Mobile Services Config so the iCloud Documents capability is added, and enable iCloud for the App ID and provisioning profile. |
+| `CloudUnavailable` after enabling Game Center | Cloud saves need the **Game Center** capability compiled in; check the *Game platform* section. |
+| Android saves fail with `Io` | Enable **Saved Games** for the Play Games project in the Play Console. |
+| `LoadAsync` throws `Conflict` | `ConflictPolicy` is `Manual` and `ConflictResolver` is null or returned null. Set a resolver or use `MostRecent`. |
+
+## Media
+
+| Symptom | Fix |
+|---------|-----|
+| `SaveToGalleryAsync` returns `false` on iOS with a log about the add-only usage description | Add a **PhotoLibraryAddOnly** usage description in the Mobile Services Config; the save code is only compiled when `NSPhotoLibraryAddUsageDescription` is declared. |
+| `PickImageAsync` returns `null` on Android and the log says to turn on Include Media Picker | Enable **Include Media Picker** in the Mobile Services Config and rebuild so the picker activity is declared. |
+| `SaveToGalleryAsync` fails on Android 9 or older | Enable **Write External Storage Legacy** and request the storage permission before saving; Android 10 and newer need neither. |
 
 ## Editor / Build
 

@@ -16,6 +16,7 @@ namespace GameLovers.MobileServices.Notifications
 		public string Body;
 		public string Subtitle;
 		public string Channel;
+		public string Data;
 		public bool HasBadgeNumber;
 		public int BadgeNumber;
 		public bool HasDeliveryTime;
@@ -45,6 +46,7 @@ namespace GameLovers.MobileServices.Notifications
 			notification.Body = serializableNotification.Body;
 			notification.Subtitle = serializableNotification.Subtitle;
 			notification.Channel = serializableNotification.Channel;
+			notification.Data = serializableNotification.Data;
 			notification.BadgeNumber = ReadNullableInt(
 				serializableNotification.HasBadgeNumber,
 				serializableNotification.BadgeNumber);
@@ -72,6 +74,7 @@ namespace GameLovers.MobileServices.Notifications
 				Body = source.Body,
 				Subtitle = source.Subtitle,
 				Channel = source.Channel,
+				Data = source.Data,
 				HasBadgeNumber = source.BadgeNumber.HasValue,
 				BadgeNumber = source.BadgeNumber ?? 0,
 				HasDeliveryTime = deliveryTime.HasValue,

@@ -5,7 +5,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Scope
 
 - Package: `com.gamelovers.mobileservices`; minimum Unity version and dependencies are authoritative in `package.json`.
-- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (safe area, battery, audio session, permissions, ATT, and deep links).
+- Runtime subsystems: Native UI, notifications, gestures, haptics, device services (battery, audio session, permissions, ATT, deep links, and background tasks), and the opt-in game platform (Game Center and Play Games sign-in, leaderboards, achievements, and cloud saves).
 - Consumers must enable the Input System or Both. The gesture contract uses EnhancedTouch.
 - This package is render-pipeline-neutral and has no dependency on GameLovers Services.
 
@@ -24,13 +24,29 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - `MobileNotificationService` owns its `NotificationService` GameObject. Disposal is idempotent, releases only owned resources, and public operations depending on the host throw `ObjectDisposedException` afterward. Shared validation and lifecycle behavior stay outside platform conditionals.
 - Android notification scheduling requires a registered default channel. Queue modes hand pending work to the OS on background transitions.
 - Every `GestureController` balances only its own `EnhancedTouchSupport.Enable()` acquisition. Multiple live controllers and external release must remain safe.
+- `IGameNotification.Data` maps to `AndroidNotification.IntentData` and `iOSNotification.Data` and must survive the queue-and-reschedule persistence. Both platforms keep returning the last opened notification, so `GameNotificationsMonoBehaviour` captures the cold-start one before the first foregrounding and de-duplicates later opens by id (title and body when unset). Opened-notification behavior is exercised through the internal `AttachPlatform` seam with a fake platform.
+- Android image sharing goes through the package FileProvider: the Java class `GameLoversFileProvider` (`Plugins/Android/`), the authority suffix `NativeUiService.AndroidShareProviderAuthoritySuffix`, and the postprocessor's provider and `res/xml` paths file change together. Without the toggle an image share degrades to text with a warning.
+- `NativeMediaService` needs no permission. iOS saves through `PHPhotoLibrary` only when `NSPhotoLibraryAddUsageDescription` is declared (`GL_PERMISSION_PHOTOS_ADD`) and picks through `PHPickerViewController`. Android saves through `MediaStore` (legacy storage below API 29) and picks through the transparent `GameLoversMediaPickerActivity`, which the postprocessor declares behind `IncludeMediaPicker`.
+- Picked images are always a private copy the caller may delete. The `_GameLoversMedia*` exports, their callback signature, and the Java `ResultCallback` and `PathCallback` interfaces change together with their C# callers.
+- `GamePlatformServices` is opt-in and holds one `IGamePlatformBackend` per platform. Its guards (signed-in player, non-empty id, positive steps, one shared sign-in) live in the service, not the backends. The Editor backend and `EditorGamePlatformState` are process-wide, so the simulator panel drives the consumer's own instance.
+- The Android game backend talks to Play Games v2 through JNI and `OnCompleteListener` proxies so the package compiles without the SDK; the postprocessor adds the SDK only when `GamePlatform.PlayGamesProjectId` is set.
+- Cloud saves share the game platform opt-in. `CloudSaveService` owns validation, availability and conflict resolution (policy, resolver, newest-first ordering) so both platforms behave alike.
+- Cloud save backends only list, load every stored version, resolve to a chosen version, save, and delete, and report failures as `CloudSaveException`. The Android backend uses JNI like the sign-in backend.
+- The iOS bridge (`CloudSave.m`) replies with tagged strings decoded by `CloudSaveProtocol` and holds its own `UIBackgroundTask` during saves, because Unity's main loop is paused while backgrounded.
+- `Plugins/iOS/GamePlatform.m` links GameKit only when `GL_GAME_CENTER` is defined (Game Center capability on). The `_GameLoversGamePlatform*` exports and their callback signature change together with the C# callers.
+- Shortcut taps travel through `DeepLinkService`. On Android the shortcut intent is an explicit `ACTION_VIEW` on the app activity that Unity reports as a deep link. On iOS `AppShortcuts.m` installs its `performActionForShortcutItem` hook in `+load`, chains to any existing implementation, and holds the URI until `DeepLinkService` collects it; an iOS shortcut with no subscriber becomes the cold-start link, unlike a runtime link.
+- `OpenInAppBrowser` accepts only http and https (`SFSafariViewController` throws otherwise) and falls back to `Application.OpenURL` when Custom Tabs are unavailable. `GameLoversShortcuts.java` and the `_GameLoversShortcut*` exports change together with `AppShortcutsBridge`.
+- `IBackgroundTaskService` is iOS-only in effect. `Plugins/iOS/BackgroundTask.m` must end the system task before its expiration handler returns, on the main thread; handle members are readable from any thread; the `_GameLoversBackgroundTask*` exports, C# `DllImport` signatures, and the expiration callback signature change together. Android and Editor return a pass-through handle.
 - One haptic play replaces the previous play and cancels its pending auto-stop. Negative preset duration loops until explicit stop; `StopCurrentHaptic()` is idempotent.
 - `DeviceServicesHost` is the shared polling host. Do not create per-service update GameObjects when the host can own the callback.
 - The first `DeepLinkService` subscriber receives a pending cold-start link once. Construct the service early; event names are not persistent state.
 - ATT returning `Authorized` outside iOS means “not applicable,” not an observed user decision.
-- Permission, ATT, battery, safe-area, native-alert, and review Editor overrides are process-wide statics. Simulator code must install and remove them symmetrically; tests must reset overrides they touch.
+- Permission, ATT, battery, native-alert, and review Editor overrides are process-wide statics. Simulator code must install and remove them symmetrically; tests must reset overrides they touch.
 - The iOS location permission bridge retains each `CLLocationManager` delegate until authorization changes and removes it only after callback dispatch. Do not simplify the static delegate-retention collection into a local lifetime.
-- Android Photos and Notifications permissions use API-33 runtime permissions (`READ_MEDIA_IMAGES` and `POST_NOTIFICATIONS`) and short-circuit as granted on older APIs. Keep runtime checks and generated manifest entries aligned.
+- `AndroidPermissionPolicy` owns which manifest permissions each `AppPermission` needs per API level and how grants fold into `PermissionStatus`; it stays platform-neutral so it is unit-tested. Keep it, the runtime request code, and `AndroidManifestToggles.GetPermissions` aligned.
+- Android never reports a refusal directly: `Denied` is the persisted "requested" flag or the OS rationale flag, and requests are serialized through one gate because Android shows one dialog at a time. Background location is always a separate second request. Notifications below API 33 have no runtime permission and follow the enabled switch.
+- `PermissionStatus` integer values are a native contract; `Limited` is 4. Limited covers partial photos, provisional notifications, approximate location, and foreground-only location when Always was asked.
+- `Plugins/iOS/Permissions.m` is built in groups (camera, microphone, location, photos) gated by `GL_PERMISSION_<GROUP>`. Without `GL_PERMISSIONS_DECLARED_ONLY` every group compiles; the build postprocessor sets it and defines only the groups whose purpose string is in the final `Info.plist`. `IosPermissionGroups`, the plugin, and the postprocessor change together. Notification status is a native cache, so `Check` never blocks after the first read.
 
 ## Editor and native-build invariants
 
@@ -53,5 +69,6 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Verification and documentation
 
 - Platform bridge changes require relevant Editor simulation plus real iOS/Android build or device evidence; unavailable platform evidence is `NOT VALIDATED`.
+- Android App Link `AutoVerify` needs an http or https scheme and a host; validation rejects anything else before a build file is touched.
 - Update `README.md`, the relevant `docs/` page, and the canonical sample README when public behavior or sample setup changes.
 - Update this guide only for durable subsystem, native-boundary, build-ownership, or test conventions.

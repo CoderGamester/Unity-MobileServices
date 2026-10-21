@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using GameLovers.MobileServices.Editor.Settings;
+using GameLovers.MobileServices.NativeUi;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -29,7 +30,14 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 	{
 #if UNITY_ANDROID
 		private const string PlayReviewArtifactKey = "com.google.android.play:review";
-		private static readonly XNamespace AndroidNamespace = "http://schemas.android.com/apk/res/android";
+		private const string ShareFileProviderClass = "com.gamelovers.mobileservices.GameLoversFileProvider";
+		private const string ShareFileProviderPathsResource = "gamelovers_file_paths";
+		private const string MediaPickerActivityClass = "com.gamelovers.mobileservices.GameLoversMediaPickerActivity";
+		private const string CustomTabsArtifactKey = "androidx.browser:browser";
+		private const string PlayGamesArtifactKey = "com.google.android.gms:play-services-games-v2";
+		private const string PlayGamesAppIdMetaData = "com.google.android.gms.games.APP_ID";
+		private const string PlayGamesProjectIdResource = "gamelovers_play_games_project_id";
+		private static readonly XNamespace _androidNamespace = "http://schemas.android.com/apk/res/android";
 #endif
 
 		/// <inheritdoc />
@@ -60,41 +68,16 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var warnings = scan.GetConfigurationWarnings(settings);
 			LogScannerWarnings(warnings);
 			if (NeedsAndroidManifestMutation(settings)) ProcessGeneratedAndroidManifest(path, settings);
-			if (!settings.IncludePlayReviewDependency)
-			{
-				Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=disabled scannerWarnings={warnings.Count}.");
-				return;
-			}
-
-			string[] gradleFiles;
-			try { gradleFiles = Directory.GetFiles(path, "*.gradle", SearchOption.AllDirectories); }
-			catch (Exception exception) { throw new BuildFailedException($"[GameLovers.MobileServices] Could not enumerate Gradle files under '{path}': {exception.Message}"); }
-			foreach (var file in gradleFiles)
-			{
-				var contents = ReadTextOrThrow(file);
-				if (contents.Contains(PlayReviewArtifactKey, StringComparison.Ordinal))
-				{
-					Debug.Log($"[GameLovers.MobileServices] '{PlayReviewArtifactKey}' already exists in '{file}' — preserving the existing dependency owner.");
-					Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=existing scannerWarnings={warnings.Count}.");
-					return;
-				}
-			}
-
-			var targetGradle = FindModuleBuildGradle(path, gradleFiles);
-			if (targetGradle == null)
-			{
-				throw new BuildFailedException($"[GameLovers.MobileServices] Could not find a Unity Android module with a dependencies block under '{path}'. Add implementation '{settings.PlayReviewDependencyCoordinate}' manually or disable Include Play Review Dependency.");
-			}
-
-			var injected = InsertIntoDependenciesBlock(ReadTextOrThrow(targetGradle), $"implementation '{settings.PlayReviewDependencyCoordinate}'");
-			if (injected == null)
-			{
-				throw new BuildFailedException($"[GameLovers.MobileServices] No dependencies block was found in '{targetGradle}'. Add implementation '{settings.PlayReviewDependencyCoordinate}' manually.");
-			}
-
-			File.WriteAllText(targetGradle, injected);
-			Debug.Log($"[GameLovers.MobileServices] Injected '{settings.PlayReviewDependencyCoordinate}' into '{targetGradle}'.");
-			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview=changed scannerWarnings={warnings.Count}.");
+			var playReview = settings.IncludePlayReviewDependency
+				? EnsureGradleDependency(path, PlayReviewArtifactKey, settings.PlayReviewDependencyCoordinate, "disable Include Play Review Dependency")
+				: "disabled";
+			var customTabs = settings.IncludeCustomTabsDependency
+				? EnsureGradleDependency(path, CustomTabsArtifactKey, settings.CustomTabsDependencyCoordinate, "disable Include Custom Tabs Dependency")
+				: "disabled";
+			var playGames = settings.GamePlatform.PlayGamesEnabled
+				? EnsureGradleDependency(path, PlayGamesArtifactKey, settings.GamePlatform.ResolvePlayGamesCoordinate(), "clear the Play Games project id")
+				: "disabled";
+			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} customTabs={customTabs} playGames={playGames} scannerWarnings={warnings.Count}.");
 		}
 #endif
 
@@ -135,21 +118,8 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				: $"asset:{path}";
 		}
 
-		private static bool NeedsIosMutation(MobileServicesConfig settings)
-		{
-			if (settings.Capabilities.PushNotifications || settings.Capabilities.AppTracking || settings.Capabilities.AssociatedDomains) return true;
-			if (settings.DeepLinks.IosUrlSchemes.Count > 0) return true;
-			foreach (var row in settings.PermissionDescriptions)
-			{
-				if (row?.Entries == null) continue;
-				if (row.Entries.Any(entry => entry != null && !string.IsNullOrWhiteSpace(entry.UsageDescription))) return true;
-			}
-			return settings.AttUsageDescription?.Entries?.Any(entry => entry != null && !string.IsNullOrWhiteSpace(entry.UsageDescription)) == true;
-		}
-
 		private static void PostprocessIos(BuildReport report, MobileServicesConfig settings)
 		{
-			if (!NeedsIosMutation(settings)) return;
 #if UNITY_IOS
 			InjectIosBuild(report, settings);
 #else
@@ -193,7 +163,9 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 			var mainTargetGuid = pbx.GetUnityMainTargetGuid();
 			var pbxChanged = EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
-			var capabilityNeeded = settings.Capabilities.PushNotifications ||
+			ApplyNativeGroupDefines(pbx, plist.root, settings);
+			pbxChanged = true;
+			var capabilityNeeded = settings.Capabilities.PushNotifications || settings.GamePlatform.GameCenter || settings.GamePlatform.CloudSave ||
 				(settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0);
 			if (capabilityNeeded)
 			{
@@ -207,6 +179,8 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				if (pbxChanged) pbx.WriteToFile(pbxPath);
 				var capability = new ProjectCapabilityManager(pbxPath, entitlementsName, null, mainTargetGuid);
 				if (settings.Capabilities.PushNotifications) capability.AddPushNotifications(true);
+				if (settings.GamePlatform.GameCenter) capability.AddGameCenter();
+				if (settings.GamePlatform.CloudSave) capability.AddiCloud(false, true, false, true, null);
 				if (settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0)
 					capability.AddAssociatedDomains(settings.Capabilities.AssociatedDomainList.ToArray());
 				capability.WriteToFile();
@@ -217,6 +191,19 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				pbx.WriteToFile(pbxPath);
 			}
 			Debug.Log($"[GameLovers.MobileServices] iOS native processing completed for '{buildPath}'.");
+		}
+
+		private static void ApplyNativeGroupDefines(PBXProject pbx, PlistElementDict plistRoot, MobileServicesConfig settings)
+		{
+			var add = new List<string> { "GL_PERMISSIONS_DECLARED_ONLY=1" };
+			var remove = new List<string>();
+			(settings.GamePlatform.GameCenter ? add : remove).Add("GL_GAME_CENTER=1");
+			foreach (var group in IosPermissionGroups.All)
+			{
+				var declared = group.PlistKeys.Any(key => plistRoot.values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value.AsString()));
+				(declared ? add : remove).Add($"{group.Define}=1");
+			}
+			pbx.UpdateBuildProperty(pbx.GetUnityFrameworkTargetGuid(), "GCC_PREPROCESSOR_DEFINITIONS", add, remove);
 		}
 
 		private static bool MergePlistString(PlistElementDict root, string key, string requested, string file)
@@ -402,8 +389,11 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 #if UNITY_ANDROID
 		private static bool NeedsAndroidManifestMutation(MobileServicesConfig settings) =>
-			GetConfiguredAndroidPermissions(settings.AndroidManifest).Any() ||
+			settings.AndroidManifest.GetPermissions().Any() ||
 			settings.AndroidManifest.IncludeShareQueriesBlock ||
+			settings.AndroidManifest.IncludeShareFileProvider ||
+			settings.AndroidManifest.IncludeMediaPicker ||
+			settings.GamePlatform.PlayGamesEnabled ||
 			settings.DeepLinks.AndroidIntentFilters.Count > 0;
 
 		private static void ProcessGeneratedAndroidManifest(string gradleProjectPath, MobileServicesConfig settings)
@@ -431,28 +421,31 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var root = target.document.Root;
 			if (root == null) throw new BuildFailedException($"[GameLovers.MobileServices] Generated Android manifest '{target.path}' has no root element.");
 			var changed = false;
-			foreach (var permission in GetConfiguredAndroidPermissions(settings.AndroidManifest))
+			foreach (var (permission, maxSdkVersion) in settings.AndroidManifest.GetPermissions())
 			{
 				if (root.Elements(root.Name.Namespace + "uses-permission").Any(element => string.Equals(GetAndroidAttribute(element, "name"), permission, StringComparison.Ordinal))) continue;
-				root.AddFirst(new XElement(root.Name.Namespace + "uses-permission", new XAttribute(AndroidNamespace + "name", permission)));
+				var declaration = new XElement(root.Name.Namespace + "uses-permission", new XAttribute(_androidNamespace + "name", permission));
+				if (maxSdkVersion.HasValue) declaration.Add(new XAttribute(_androidNamespace + "maxSdkVersion", maxSdkVersion.Value));
+				root.AddFirst(declaration);
 				changed = true;
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
+			if (settings.AndroidManifest.IncludeMediaPicker) changed |= AddMediaPickerActivityIfMissing(root);
+			if (settings.GamePlatform.PlayGamesEnabled)
+			{
+				changed |= AddPlayGamesMetaDataIfMissing(root);
+				changed |= WritePlayGamesProjectId(Path.GetDirectoryName(target.path), settings.GamePlatform.PlayGamesProjectId.Trim());
+			}
+			if (settings.AndroidManifest.IncludeShareFileProvider)
+			{
+				changed |= AddShareFileProviderIfMissing(root);
+				changed |= WriteShareFileProviderPaths(Path.GetDirectoryName(target.path));
+			}
 			foreach (var registration in settings.DeepLinks.AndroidIntentFilters)
 				changed |= AddAndroidIntentFilterIfMissing(target.activity, registration);
 			if (!changed) return;
 			target.document.Save(target.path, SaveOptions.DisableFormatting);
 			Debug.Log($"[GameLovers.MobileServices] Patched generated Android manifest '{target.path}'.");
-		}
-
-		private static IEnumerable<string> GetConfiguredAndroidPermissions(AndroidManifestToggles toggles)
-		{
-			if (toggles.Camera) yield return "android.permission.CAMERA";
-			if (toggles.RecordAudio) yield return "android.permission.RECORD_AUDIO";
-			if (toggles.AccessFineLocation) yield return "android.permission.ACCESS_FINE_LOCATION";
-			if (toggles.ReadMediaImages) yield return "android.permission.READ_MEDIA_IMAGES";
-			if (toggles.PostNotifications) yield return "android.permission.POST_NOTIFICATIONS";
-			if (toggles.Vibrate) yield return "android.permission.VIBRATE";
 		}
 
 		private static bool AddShareQueriesIfMissing(XElement root)
@@ -468,26 +461,103 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			if (queries.Elements(ns + "intent").Any(intent =>
 				intent.Elements(ns + "action").Any(action => string.Equals(GetAndroidAttribute(action, "name"), "android.intent.action.SEND", StringComparison.Ordinal)) &&
 				intent.Elements(ns + "data").Any(data => string.Equals(GetAndroidAttribute(data, "mimeType"), "*/*", StringComparison.Ordinal)))) return false;
-			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(AndroidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(AndroidNamespace + "mimeType", "*/*"))));
+			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(_androidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(_androidNamespace + "mimeType", "*/*"))));
+			return true;
+		}
+
+		private static bool AddPlayGamesMetaDataIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the Play Games app id.");
+			if (application.Elements(ns + "meta-data").Any(meta => string.Equals(GetAndroidAttribute(meta, "name"), PlayGamesAppIdMetaData, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "meta-data",
+				new XAttribute(_androidNamespace + "name", PlayGamesAppIdMetaData),
+				new XAttribute(_androidNamespace + "value", "@string/" + PlayGamesProjectIdResource)));
+			return true;
+		}
+
+		private static bool WritePlayGamesProjectId(string manifestDirectory, string projectId)
+		{
+			var file = Path.Combine(manifestDirectory, "res", "values", PlayGamesProjectIdResource + ".xml");
+			var contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n" +
+				$"  <string name=\"{PlayGamesProjectIdResource}\" translatable=\"false\">{projectId}</string>\n" +
+				"</resources>\n";
+			if (File.Exists(file) && string.Equals(ReadTextOrThrow(file), contents, StringComparison.Ordinal)) return false;
+			Directory.CreateDirectory(Path.GetDirectoryName(file));
+			File.WriteAllText(file, contents);
+			return true;
+		}
+
+		private static bool AddMediaPickerActivityIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the media picker activity.");
+			if (application.Elements(ns + "activity").Any(activity => string.Equals(GetAndroidAttribute(activity, "name"), MediaPickerActivityClass, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "activity",
+				new XAttribute(_androidNamespace + "name", MediaPickerActivityClass),
+				new XAttribute(_androidNamespace + "theme", "@android:style/Theme.Translucent.NoTitleBar"),
+				new XAttribute(_androidNamespace + "configChanges", "orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"),
+				new XAttribute(_androidNamespace + "exported", "false")));
+			return true;
+		}
+
+		private static bool AddShareFileProviderIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the share FileProvider.");
+			if (application.Elements(ns + "provider").Any(provider => string.Equals(GetAndroidAttribute(provider, "name"), ShareFileProviderClass, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "provider",
+				new XAttribute(_androidNamespace + "name", ShareFileProviderClass),
+				new XAttribute(_androidNamespace + "authorities", "${applicationId}" + NativeUiService.AndroidShareProviderAuthoritySuffix),
+				new XAttribute(_androidNamespace + "exported", "false"),
+				new XAttribute(_androidNamespace + "grantUriPermissions", "true"),
+				new XElement(ns + "meta-data",
+					new XAttribute(_androidNamespace + "name", "android.support.FILE_PROVIDER_PATHS"),
+					new XAttribute(_androidNamespace + "resource", "@xml/" + ShareFileProviderPathsResource))));
+			return true;
+		}
+
+		private static bool WriteShareFileProviderPaths(string manifestDirectory)
+		{
+			var file = Path.Combine(manifestDirectory, "res", "xml", ShareFileProviderPathsResource + ".xml");
+			const string contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<paths>\n" +
+				"  <files-path name=\"gamelovers_files\" path=\".\" />\n" +
+				"  <cache-path name=\"gamelovers_cache\" path=\".\" />\n" +
+				"  <external-files-path name=\"gamelovers_external_files\" path=\".\" />\n" +
+				"  <external-cache-path name=\"gamelovers_external_cache\" path=\".\" />\n" +
+				"</paths>\n";
+			if (File.Exists(file) && string.Equals(ReadTextOrThrow(file), contents, StringComparison.Ordinal)) return false;
+			Directory.CreateDirectory(Path.GetDirectoryName(file));
+			File.WriteAllText(file, contents);
 			return true;
 		}
 
 		private static bool AddAndroidIntentFilterIfMissing(XElement activity, AndroidDeepLinkRegistration registration)
 		{
 			var ns = activity.Name.Namespace;
-			var name = AndroidNamespace + "name";
-			var matches = activity.Elements(ns + "intent-filter").Any(filter =>
+			var name = _androidNamespace + "name";
+			var existing = activity.Elements(ns + "intent-filter").FirstOrDefault(filter =>
 				filter.Elements(ns + "action").Any(action => string.Equals((string)action.Attribute(name), "android.intent.action.VIEW", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.DEFAULT", StringComparison.Ordinal)) &&
 				filter.Elements(ns + "category").Any(category => string.Equals((string)category.Attribute(name), "android.intent.category.BROWSABLE", StringComparison.Ordinal)) &&
-				filter.Elements(ns + "data").Any(data => string.Equals((string)data.Attribute(AndroidNamespace + "scheme"), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
-					string.Equals((string)data.Attribute(AndroidNamespace + "host") ?? string.Empty, registration.Host ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
-					string.Equals((string)data.Attribute(AndroidNamespace + "pathPrefix") ?? string.Empty, registration.PathPrefix ?? string.Empty, StringComparison.Ordinal)));
-			if (matches) return false;
-			var data = new XElement(ns + "data", new XAttribute(AndroidNamespace + "scheme", registration.Scheme));
-			if (!string.IsNullOrEmpty(registration.Host)) data.Add(new XAttribute(AndroidNamespace + "host", registration.Host));
-			if (!string.IsNullOrEmpty(registration.PathPrefix)) data.Add(new XAttribute(AndroidNamespace + "pathPrefix", registration.PathPrefix));
-			activity.Add(new XElement(ns + "intent-filter", new XElement(ns + "action", new XAttribute(name, "android.intent.action.VIEW")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.DEFAULT")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.BROWSABLE")), data));
+				filter.Elements(ns + "data").Any(data => string.Equals((string)data.Attribute(_androidNamespace + "scheme"), registration.Scheme, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals((string)data.Attribute(_androidNamespace + "host") ?? string.Empty, registration.Host ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
+					string.Equals((string)data.Attribute(_androidNamespace + "pathPrefix") ?? string.Empty, registration.PathPrefix ?? string.Empty, StringComparison.Ordinal)));
+			if (existing != null)
+			{
+				if (!registration.AutoVerify || string.Equals((string)existing.Attribute(_androidNamespace + "autoVerify"), "true", StringComparison.Ordinal)) return false;
+				existing.SetAttributeValue(_androidNamespace + "autoVerify", "true");
+				return true;
+			}
+			var data = new XElement(ns + "data", new XAttribute(_androidNamespace + "scheme", registration.Scheme));
+			if (!string.IsNullOrEmpty(registration.Host)) data.Add(new XAttribute(_androidNamespace + "host", registration.Host));
+			if (!string.IsNullOrEmpty(registration.PathPrefix)) data.Add(new XAttribute(_androidNamespace + "pathPrefix", registration.PathPrefix));
+			var filterElement = new XElement(ns + "intent-filter", new XElement(ns + "action", new XAttribute(name, "android.intent.action.VIEW")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.DEFAULT")), new XElement(ns + "category", new XAttribute(name, "android.intent.category.BROWSABLE")), data);
+			if (registration.AutoVerify) filterElement.SetAttributeValue(_androidNamespace + "autoVerify", "true");
+			activity.Add(filterElement);
 			return true;
 		}
 
@@ -500,7 +570,36 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private static bool IsUnityPlayerActivity(string activityName) => !string.IsNullOrEmpty(activityName) &&
 			(activityName.EndsWith(".UnityPlayerActivity", StringComparison.Ordinal) || activityName.EndsWith(".UnityPlayerGameActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerActivity", StringComparison.Ordinal) || string.Equals(activityName, "UnityPlayerGameActivity", StringComparison.Ordinal));
 
-		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(AndroidNamespace + localName)?.Value;
+		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(_androidNamespace + localName)?.Value;
+
+		private static string EnsureGradleDependency(string path, string artifactKey, string coordinate, string optOutHint)
+		{
+			string[] gradleFiles;
+			try { gradleFiles = Directory.GetFiles(path, "*.gradle", SearchOption.AllDirectories); }
+			catch (Exception exception) { throw new BuildFailedException($"[GameLovers.MobileServices] Could not enumerate Gradle files under '{path}': {exception.Message}"); }
+			foreach (var file in gradleFiles)
+			{
+				if (!ReadTextOrThrow(file).Contains(artifactKey, StringComparison.Ordinal)) continue;
+				Debug.Log($"[GameLovers.MobileServices] '{artifactKey}' already exists in '{file}' — preserving the existing dependency owner.");
+				return "existing";
+			}
+
+			var targetGradle = FindModuleBuildGradle(path, gradleFiles);
+			if (targetGradle == null)
+			{
+				throw new BuildFailedException($"[GameLovers.MobileServices] Could not find a Unity Android module with a dependencies block under '{path}'. Add implementation '{coordinate}' manually or {optOutHint}.");
+			}
+
+			var injected = InsertIntoDependenciesBlock(ReadTextOrThrow(targetGradle), $"implementation '{coordinate}'");
+			if (injected == null)
+			{
+				throw new BuildFailedException($"[GameLovers.MobileServices] No dependencies block was found in '{targetGradle}'. Add implementation '{coordinate}' manually.");
+			}
+
+			File.WriteAllText(targetGradle, injected);
+			Debug.Log($"[GameLovers.MobileServices] Injected '{coordinate}' into '{targetGradle}'.");
+			return "changed";
+		}
 
 		private static string FindModuleBuildGradle(string path, string[] gradleFiles)
 		{

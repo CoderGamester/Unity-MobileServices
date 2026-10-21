@@ -252,6 +252,10 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 			content.Add(body);
 
 			card.Add(content);
+			if (spec.OnTapped != null)
+			{
+				card.RegisterCallback<ClickEvent>(_ => spec.OnTapped());
+			}
 			wrapper.Add(card);
 			return wrapper;
 		}

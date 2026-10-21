@@ -1,0 +1,27 @@
+fileFormatVersion: 2
+guid: 9d3b5a7c1e2f4a6b8c0d2e4f6a8b0c1d
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 3
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 1
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+    Any:
+      enabled: 0
+      settings: {}
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    iOS:
+      enabled: 1
+      settings:
+        FrameworkDependencies: GameKit;
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

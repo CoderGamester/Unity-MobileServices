@@ -5,6 +5,47 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-22
+
+**New**:
+- **Game Platform**: Added opt-in `GamePlatformServices` (`IGamePlatformServices`) for Game Center and Google Play Games Services v2: sign-in, leaderboards, achievements and their native UIs, with `PlatformId` to keep per-platform ids in one value. Enable it with the `Game Center` toggle and the `Play Games Project Id` in the Mobile Services Config; the build then adds the entitlement, or the SDK and manifest entries.
+- **Cloud Save**: Added `IGamePlatformServices.CloudSave` (`ICloudSaveService`) for slot-based saves on Game Center saved games and Google Play Games saved games, with `MostRecent` or `Manual` conflict resolution and typed `CloudSaveException` failures. The `Cloud Save` config toggle adds the iCloud Documents capability on iOS.
+- **Permissions**: Added `PermissionStatus.Limited` for partial access (selected photos, provisional notifications, approximate location, foreground-only location) and `DeviceService.OpenAppSettings()` to send the player to the OS Settings page after a denial.
+- **Media**: Added `NativeMediaService.SaveToGalleryAsync` to save an image or video to the device gallery and `PickImageAsync` to pick an image with the system picker, both without asking for the Photos permission. Android uses the new `Include Media Picker` and `Write External Storage Legacy` config toggles; iOS gallery saving needs a `PhotoLibraryAddOnly` usage description.
+- **Native UI**: Added `NativeUiService.OpenInAppBrowser` for web pages in `SFSafariViewController` or Chrome Custom Tabs (the build adds `androidx.browser` unless `Include Custom Tabs Dependency` is turned off), and `ShareScreenshotAsync` to share the current frame.
+- **Notifications**: Added `IGameNotification.Data` and `NotificationBuilder.Data` for a payload such as a deep-link URI, `INotificationService.OnNotificationOpened` for taps while the app runs, and `TryGetLaunchNotification` for the notification that started the app.
+- **App Shortcuts**: Added `DeviceService.SetShortcuts` and `ClearShortcuts` for home-screen quick actions whose taps arrive through `IDeepLinkService`, including as the cold-start link.
+- **Background Tasks**: Added `IDeviceService.BackgroundTasks` (`IBackgroundTaskService`) to finish short work when the app moves to the background on iOS; it is a pass-through on Android.
+- **Store Links**: Added `DeviceService.OpenStorePage` to open the App Store or Google Play page, optionally the iOS write-review sheet.
+- **Deep Links**: Android intent-filter registrations can set `AutoVerify` so https links open as verified App Links.
+- **Mobile Services Config**: The Inspector is grouped by feature and each section lists the native build entries it adds. New Android manifest toggles cover coarse and background location, legacy storage access, the share FileProvider and the media picker.
+- **Haptics**: Added an `Enable Haptics Debug Logs` config toggle; Editor haptics logs are disabled by default.
+
+**Changed**:
+- **Breaking**: `IGameNotification`, `INotificationService`, `INativeUiService` and `IDeviceService` gained members, and the `DeviceService` injection constructor takes an `IBackgroundTaskService`. Custom implementations and mocks must add them.
+- iOS builds compile only the permission code whose usage description is declared, so a game that never requests location, camera, microphone or photos no longer references those APIs. `Manage Native Build Manually` compiles every permission group.
+- The package depends on the built-in `com.unity.modules.screencapture` and `com.unity.modules.imageconversion` modules.
+
+**Fixed**:
+- Android permissions now request precise and approximate location together, request background location separately, report `Denied` after a refusal, use the correct permissions below API 33, and no longer prompt for storage just to save to the gallery.
+- Android image sharing works on Android 7+ through a package FileProvider (enable `Include Share FileProvider`); previously it used a `file://` URI the OS rejects.
+- iOS notification status checks no longer block the main thread, and location permission delegates are released after delivery.
+- Declared the iOS framework dependencies of the native bridges so a generated Xcode project links.
+- Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
+
+**Removed**:
+- Removed `ISafeAreaService`, `SafeAreaService`, and the `SafeAreaContainer` UI Toolkit element; `IDeviceService` no longer exposes a `SafeArea` child and `EditorPlatformSimulator` no longer exposes safe-area overrides. For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).
+
+**Docs**:
+- The root README is now the documentation index and lists common issues. `docs/build-pipeline.md` is now `docs/build-configuration.md`, `docs/explorer.md` is now `docs/device-simulator.md`, and `docs/README.md` is removed.
+
+**Migration**:
+- Replace `IDeviceService.SafeArea` and `SafeAreaContainer` with `com.gamelovers.uiservice` `SafeAreaPanelView`/`SafeAreaContainer`.
+- Add `Data`, `OnNotificationOpened`, `TryGetLaunchNotification`, `BackgroundTasks` and the new `INativeUiService` methods to custom implementations and mocks, and pass an `IBackgroundTaskService` to the `DeviceService` constructor.
+- Treat `PermissionStatus.Limited` as usable access in code that switches on `PermissionStatus`.
+- On iOS, declare a usage description in the Mobile Services Config for every permission the game requests; undeclared groups are no longer compiled in.
+- `AccessFineLocation` now also declares `ACCESS_COARSE_LOCATION`, which Android 12+ requires; add `AccessBackgroundLocation` for `AppPermission.LocationAlways`.
+
 ## [1.2.0] - 2026-08-14
 
 **New**:

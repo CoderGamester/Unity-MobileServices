@@ -28,7 +28,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		// RCR: DeviceService.cs BuildDefaults — `new IosAudioSessionService()` → `null` → RED (AudioSession expected not null).
 		public void DefaultCtor_WiresAllSubServices_NonNull()
 		{
-			Assert.IsNotNull(_service.SafeArea);
 			Assert.IsNotNull(_service.Battery);
 			Assert.IsNotNull(_service.AudioSession);
 			Assert.IsNotNull(_service.Permissions);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using GameLovers.MobileServices.Device;
 using GameLovers.MobileServices.Editor.Explorer.Overlays;
@@ -12,9 +13,9 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Editor.Simulation
 {
 	/// <summary>
-	/// Editor-only façade for driving platform state (battery, connectivity, safe area, deep links,
+	/// Editor-only façade for driving platform state (battery, connectivity, deep links,
 	/// permissions, ATT) from edit-mode tests and the Device Simulator panel. See
-	/// <c>docs/explorer.md</c> for the comparison with Unity's Device Simulator.
+	/// <c>docs/device-simulator.md</c> for the comparison with Unity's Device Simulator.
 	/// </summary>
 	public static class EditorPlatformSimulator
 	{
@@ -54,36 +55,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 				foreach (var s in services)
 				{
 					s?.SimulateLowPowerModeChanged();
-				}
-			}
-		}
-
-		/// <summary>
-		/// Pushes a safe-area override that <see cref="SafeAreaService"/> will report on its next
-		/// <c>LateUpdate</c> diff. Each service you pass is forced to diff immediately so the
-		/// Explorer surfaces the change without waiting for the host's poll.
-		/// </summary>
-		public static void SetSafeArea(Rect safeArea, params SafeAreaService[] services)
-		{
-			SafeAreaService.EditorSafeAreaOverride = safeArea;
-			if (services != null)
-			{
-				foreach (var s in services)
-				{
-					s?.SimulateSafeAreaChanged();
-				}
-			}
-		}
-
-		/// <summary>Clears the safe-area override and restores the live <c>Screen.safeArea</c> read.</summary>
-		public static void ClearSafeAreaOverride(params SafeAreaService[] services)
-		{
-			SafeAreaService.EditorSafeAreaOverride = null;
-			if (services != null)
-			{
-				foreach (var s in services)
-				{
-					s?.SimulateSafeAreaChanged();
 				}
 			}
 		}
@@ -134,6 +105,9 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			_engaged = true;
 			PermissionsService.EditorCheckOverride = ReadPermissionStore;
 			PermissionsService.EditorRequestAsyncOverride = RequestPermissionAsync;
+			DeviceService.EditorOpenAppSettingsOverride = OpenAppSettings;
+			NativeMediaService.EditorSaveToGalleryOverride = SaveToSimulatedGallery;
+			NativeMediaService.EditorPickImageOverride = PickImageFromDisk;
 			AttService.EditorCurrentStatusOverride = ReadAttStore();
 			AttService.EditorRequestAsyncOverride = RequestAttAsync;
 			NativeUiService.EditorShowAlertOverride = MobileSimulatorRuntimeOverlay.ShowAlert;
@@ -154,6 +128,9 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorCheckOverride = null;
 			PermissionsService.EditorRequestOverride = null;
 			PermissionsService.EditorRequestAsyncOverride = null;
+			DeviceService.EditorOpenAppSettingsOverride = null;
+			NativeMediaService.EditorSaveToGalleryOverride = null;
+			NativeMediaService.EditorPickImageOverride = null;
 			AttService.EditorCurrentStatusOverride = null;
 			AttService.EditorRequestResultOverride = null;
 			AttService.EditorRequestAsyncOverride = null;
@@ -232,6 +209,34 @@ namespace GameLovers.MobileServices.Editor.Simulation
 
 		/// <summary>Closes any active simulator-overlay dialog without firing a button callback.</summary>
 		public static void DismissAllOverlays() => MobileSimulatorState.PushDismissAll();
+
+		private static bool SaveToSimulatedGallery(string filePath, MediaType mediaType)
+		{
+			var folder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "GameLovers", "SimulatedGallery");
+			Directory.CreateDirectory(folder);
+			var destination = Path.Combine(folder, $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Path.GetFileName(filePath)}");
+			File.Copy(filePath, destination);
+			Debug.Log($"[GameLovers.MobileServices] Simulator: saved the {mediaType.ToString().ToLowerInvariant()} to {destination}");
+			return true;
+		}
+
+		// Like the real pickers, hands back a private copy so the caller can delete it without touching the original.
+		private static string PickImageFromDisk()
+		{
+			var chosen = EditorUtility.OpenFilePanel("Simulator: pick an image", string.Empty, "png,jpg,jpeg,gif,webp");
+			if (string.IsNullOrEmpty(chosen))
+			{
+				return null;
+			}
+
+			var copy = Path.Combine(Application.temporaryCachePath, $"gamelovers-picked-{Guid.NewGuid():N}{Path.GetExtension(chosen)}");
+			File.Copy(chosen, copy);
+			return copy;
+		}
+
+		private static void OpenAppSettings() =>
+			Debug.Log("[GameLovers.MobileServices] Simulator: DeviceService.OpenAppSettings() would open the OS Settings page. " +
+				"Change the simulated permission state in the Device Simulator panel's Permissions section instead.");
 
 		private static PermissionStatus ReadPermissionStore(AppPermission permission) =>
 			(PermissionStatus)EditorPrefs.GetInt(PermStorePrefix + permission, (int)PermissionStatus.NotDetermined);

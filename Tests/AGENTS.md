@@ -29,11 +29,12 @@ Fixtures under `Smoke/` are exempt from A1/A2 and may assert construction/bootst
 
 Every new or strengthened behavioral test must be observed failing once against a plausible production mutation before commit:
 
-1. Run the new test against normal production code and observe GREEN.
+1. Run the new test against normal production code and observe GREEN. The harness prints `baseline green: N test cases`; that line is the fixture count, not a reason to run it again.
 2. Preserve the exact working patch or use an isolated worktree; then apply the A2 mutation. Never restore a dirty file from `HEAD`.
 3. Run the smallest attributable filter. RED must come from the intended assertion with a diagnostic failure, not a compile error or unrelated `NullReferenceException`.
-4. Restore the saved production state, confirm the mutation is gone without losing other edits, and observe GREEN again.
+4. Restore the saved production state, confirm the mutation is gone without losing other edits, and observe GREEN again as one re-run of the same filtered probe.
 5. Record the observation on the test using `file + symbol`, never a line number.
+6. Correcting an existing `ADMIT`/`RCR` line is itself a claim about production: read the symbol it names, re-run the mutation when the claim is about RED, and run `python3 Tools/rcr-anchor-check.py` before committing.
 
 Use this compact form, targeting four lines and never exceeding six:
 
@@ -73,13 +74,14 @@ Benchmarks use the inverted check: removing the workload from the measured body 
 - Use namespace `GameLoversEditor.MobileServices.Tests` and the existing namespace-suppression comment.
 - Use singular `{Subject}Test`; add `PlayMode` when the same subject also has an EditMode fixture.
 - Prefer NSubstitute for simple EditMode interfaces, hand-written fakes for sequence-sensitive backends, and real MonoBehaviour stubs in PlayMode.
+- EditMode NSubstitute resolves to the binaries vendored under `Tests/EditMode/Plugins/` (NSubstitute 4.2.2, BSD-3-Clause per its nuspec license URL; Castle.Core 4.4.0 Apache-2.0 and the dotnet library texts vendored alongside). Stay on 4.x: Castle.Core 5.1.1 references `System.Diagnostics.EventLog`, which Unity cannot resolve, so the 5.x set fails plugin validation.
 - No private reflection. Use public/internal surfaces exposed through `InternalsVisibleTo`; omit platform state that cannot be fabricated honestly.
 - Disposable service tests separately cover owned-resource release, idempotent disposal, and post-disposal operations. Shared-global acquisitions require two-owner lifecycle coverage.
 
 ## Cleanup
 
 - Dispose services before resetting their hosts. Reset `DeviceServicesHost`, `HapticsHost`, permission/ATT receivers, and notification hosts touched by the fixture.
-- Reset every process-wide Editor override installed by the test, including permission, ATT, battery, safe-area, native-alert, and review hooks. Never rely on another fixture's cleanup.
+- Reset every process-wide Editor override installed by the test, including permission, ATT, battery, native-alert, and review hooks. Never rely on another fixture's cleanup.
 - Simulator adapters unregister the exact running-service target they registered; a parallel throwaway instance is not acceptable test coverage.
 
 ## Verification

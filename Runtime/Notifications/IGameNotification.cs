@@ -79,5 +79,11 @@ namespace GameLovers.MobileServices.Notifications
         /// Notification large icon.
         /// </summary>
         string LargeIcon { get; set; }
+
+        /// <summary>
+        /// Gets or sets an application-defined string that travels with the notification, for example a deep-link
+        /// URI. It is returned when the player opens the notification.
+        /// </summary>
+        string Data { get; set; }
     }
 }

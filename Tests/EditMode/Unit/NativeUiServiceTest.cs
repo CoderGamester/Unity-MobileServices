@@ -155,5 +155,35 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.DoesNotThrow(() => NativeUiService.Share("hi"));
 		}
 
+
+		[Test]
+		// ADMIT: NativeUiService.GetImageMimeType could label every shared image as image/png, so targets render a JPEG as a broken PNG.
+		// RCR: NativeUiService.cs GetImageMimeType — .png mapped to image/jpeg → RED (Expected string length 9 but was 10. Strings differ at index 6. Expected: "image/png" B...). 2026-10-21
+		[TestCase("/tmp/a.png", "image/png")]
+		[TestCase("/tmp/a.JPG", "image/jpeg")]
+		[TestCase("/tmp/a.jpeg", "image/jpeg")]
+		[TestCase("/tmp/a.webp", "image/webp")]
+		[TestCase("/tmp/a.bin", "image/*")]
+		[TestCase(null, "image/*")]
+		public void GetImageMimeType_MapsTheFileExtension(string path, string expected)
+		{
+			Assert.AreEqual(expected, NativeUiService.GetImageMimeType(path));
+		}
+
+		[Test]
+		// ADMIT: NativeUiService.IsWebUrl could accept a non-web URL, which SFSafariViewController rejects by throwing.
+		// RCR: NativeUiService.cs IsWebUrl — scheme check removed → RED (Expected: False But was: True). 2026-10-21
+		[TestCase("https://example.com/terms", true)]
+		[TestCase("http://example.com", true)]
+		[TestCase("HTTPS://EXAMPLE.COM", true)]
+		[TestCase("ftp://example.com", false)]
+		[TestCase("mygame://deep/link", false)]
+		[TestCase("example.com/terms", false)]
+		[TestCase("", false)]
+		[TestCase(null, false)]
+		public void IsWebUrl_AcceptsOnlyAbsoluteHttpAndHttps(string url, bool expected)
+		{
+			Assert.AreEqual(expected, NativeUiService.IsWebUrl(url));
+		}
 	}
 }

@@ -1,4 +1,5 @@
 #if UNITY_ANDROID && !UNITY_EDITOR
+using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
 #endif
 
@@ -25,7 +26,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 			get
 			{
 #if UNITY_ANDROID && !UNITY_EDITOR
-				if (GetApiLevel() < MinimumVibrationEffectApi)
+				if (AndroidApiLevel.Current < MinimumVibrationEffectApi)
 				{
 					WarnUnsupportedApiOnce();
 					return false;
@@ -99,22 +100,6 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		}
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-		private static int GetApiLevel()
-		{
-			try
-			{
-				using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
-				{
-					return version.GetStatic<int>("SDK_INT");
-				}
-			}
-			catch
-			{
-				// Treat an unavailable API query as unsupported rather than attempting to load VibrationEffect.
-				return 0;
-			}
-		}
-
 		private static void WarnUnsupportedApiOnce()
 		{
 			if (_unsupportedApiWarningShown)
