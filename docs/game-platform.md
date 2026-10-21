@@ -19,7 +19,16 @@ if (await platform.AuthenticateAsync())
     platform.ShowAchievements();
 }
 
-static class Boards { public static readonly PlatformId HighScore = new PlatformId(ios: "grp.highscore", android: "CgkI..."); }
+static class Boards
+{
+    public static readonly PlatformId HighScore = new PlatformId(ios: "grp.highscore", android: "CgkI...");
+}
+
+static class Achievements
+{
+    public static readonly PlatformId FirstWin = new PlatformId(ios: "grp.firstwin", android: "CgkI...");
+    public static readonly PlatformId Collector = new PlatformId(ios: "grp.collector", android: "CgkI...");
+}
 ```
 
 ## Platform ids
