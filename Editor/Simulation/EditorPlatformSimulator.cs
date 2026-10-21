@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using GameLovers.MobileServices.Device;
 using GameLovers.MobileServices.Editor.Explorer.Overlays;
@@ -105,6 +106,8 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorCheckOverride = ReadPermissionStore;
 			PermissionsService.EditorRequestAsyncOverride = RequestPermissionAsync;
 			DeviceService.EditorOpenAppSettingsOverride = OpenAppSettings;
+			NativeMediaService.EditorSaveToGalleryOverride = SaveToSimulatedGallery;
+			NativeMediaService.EditorPickImageOverride = PickImageFromDisk;
 			AttService.EditorCurrentStatusOverride = ReadAttStore();
 			AttService.EditorRequestAsyncOverride = RequestAttAsync;
 			NativeUiService.EditorShowAlertOverride = MobileSimulatorRuntimeOverlay.ShowAlert;
@@ -126,6 +129,8 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorRequestOverride = null;
 			PermissionsService.EditorRequestAsyncOverride = null;
 			DeviceService.EditorOpenAppSettingsOverride = null;
+			NativeMediaService.EditorSaveToGalleryOverride = null;
+			NativeMediaService.EditorPickImageOverride = null;
 			AttService.EditorCurrentStatusOverride = null;
 			AttService.EditorRequestResultOverride = null;
 			AttService.EditorRequestAsyncOverride = null;
@@ -204,6 +209,31 @@ namespace GameLovers.MobileServices.Editor.Simulation
 
 		/// <summary>Closes any active simulator-overlay dialog without firing a button callback.</summary>
 		public static void DismissAllOverlays() => MobileSimulatorState.PushDismissAll();
+
+		// Stands in for the device gallery: saved files land in Library/GameLovers/SimulatedGallery.
+		private static bool SaveToSimulatedGallery(string filePath, MediaType mediaType)
+		{
+			var folder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "GameLovers", "SimulatedGallery");
+			Directory.CreateDirectory(folder);
+			var destination = Path.Combine(folder, $"{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Path.GetFileName(filePath)}");
+			File.Copy(filePath, destination);
+			Debug.Log($"[GameLovers.MobileServices] Simulator: saved the {mediaType.ToString().ToLowerInvariant()} to {destination}");
+			return true;
+		}
+
+		// Like the real pickers, hands back a private copy so the caller can delete it without touching the original.
+		private static string PickImageFromDisk()
+		{
+			var chosen = EditorUtility.OpenFilePanel("Simulator: pick an image", string.Empty, "png,jpg,jpeg,gif,webp");
+			if (string.IsNullOrEmpty(chosen))
+			{
+				return null;
+			}
+
+			var copy = Path.Combine(Application.temporaryCachePath, $"gamelovers-picked-{Guid.NewGuid():N}{Path.GetExtension(chosen)}");
+			File.Copy(chosen, copy);
+			return copy;
+		}
 
 		private static void OpenAppSettings() =>
 			Debug.Log("[GameLovers.MobileServices] Simulator: DeviceService.OpenAppSettings() would open the OS Settings page. " +

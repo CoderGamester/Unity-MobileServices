@@ -100,8 +100,25 @@ await NativeUiService.ShareScreenshotAsync("New high score!", "https://example.c
 
 `ShareScreenshotAsync(text, url, title)` waits for the end of the frame, captures what the player sees, writes a PNG to `Application.temporaryCachePath`, and opens the share sheet with it. On Android it needs the same **Include Share FileProvider** toggle.
 
+## Gallery and image picker
+
+```csharp
+bool saved = await NativeMediaService.SaveToGalleryAsync(screenshotPath);             // image
+bool clip  = await NativeMediaService.SaveToGalleryAsync(videoPath, MediaType.Video);
+string picked = await NativeMediaService.PickImageAsync();                            // null when cancelled
+```
+
+`NativeMediaService` (also on `INativeUiService`) saves a file to the shared gallery and picks one image with the operating system's own picker. Neither call needs the Photos permission.
+
+- **Save, iOS** — `PHPhotoLibrary` creates the asset. iOS shows its add-only prompt the first time, so the Mobile Services Config needs a **PhotoLibraryAddOnly** usage description (`NSPhotoLibraryAddUsageDescription`); without it the save code is not compiled into the build and the call returns `false` with a log message.
+- **Save, Android** — `MediaStore` writes to `Pictures/<product name>` or `Movies/<product name>`; no permission on Android 10 and newer. Android 9 and older need the **Write External Storage Legacy** toggle, which declares `WRITE_EXTERNAL_STORAGE` up to API 28.
+- **Pick, iOS** — `PHPickerViewController`, which runs out of process and needs no usage description.
+- **Pick, Android** — the Android 13 photo picker, or the document picker on older versions, hosted by a transparent package activity. Turn on **Include Media Picker** in the Mobile Services Config so the build postprocessor declares it.
+- **The picked image is a private copy** in a temporary or cache folder the app owns, so it can be loaded at once and deleted when done. Only one pick can be open at a time; a second call returns `null`.
+- **Editor** — with the Device Simulator panel engaged, saves land in `Library/GameLovers/SimulatedGallery` and the picker opens a file dialog. Without it both log and return `false` or `null`.
+
 ## Editor & unsupported platforms
 
-In `UNITY_EDITOR`, alerts render through the in-Game-view simulator overlay and invoke their real button callbacks. The other methods log to console and return unless their Device Simulator override is engaged. On unsupported player platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops.
+In `UNITY_EDITOR`, alerts render through the in-Game-view simulator overlay and invoke their real button callbacks. The other methods log to console and return unless their Device Simulator override is engaged. On unsupported player platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops, and `SaveToGalleryAsync` and `PickImageAsync` return `false` and `null`.
 
 The [Device Simulator panel](explorer.md) selects the platform skin and renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor without device builds. Alerts also render in a plain Game view when the panel is closed.

@@ -59,6 +59,14 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | iOS `RequestAsync` returns `NotDetermined` and the log says a permission group is not compiled | The generated `Info.plist` has no usage description for it, so the group was left out of the binary. Add the description in the Mobile Services Config. |
 | iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` or rely on the build postprocessor to fail the build (default). |
 
+## Media
+
+| Symptom | Fix |
+|---------|-----|
+| `SaveToGalleryAsync` returns `false` on iOS with a log about the add-only usage description | Add a **PhotoLibraryAddOnly** usage description in the Mobile Services Config; the save code is only compiled when `NSPhotoLibraryAddUsageDescription` is declared. |
+| `PickImageAsync` returns `null` on Android and the log says to turn on Include Media Picker | Enable **Include Media Picker** in the Mobile Services Config and rebuild so the picker activity is declared. |
+| `SaveToGalleryAsync` fails on Android 9 or older | Enable **Write External Storage Legacy** and request the storage permission before saving; Android 10 and newer need neither. |
+
 ## Editor / Build
 
 | Symptom | Fix |

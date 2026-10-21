@@ -32,6 +32,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private const string PlayReviewArtifactKey = "com.google.android.play:review";
 		private const string ShareFileProviderClass = "com.gamelovers.mobileservices.GameLoversFileProvider";
 		private const string ShareFileProviderPathsResource = "gamelovers_file_paths";
+		private const string MediaPickerActivityClass = "com.gamelovers.mobileservices.GameLoversMediaPickerActivity";
 		private static readonly XNamespace _androidNamespace = "http://schemas.android.com/apk/res/android";
 #endif
 
@@ -381,6 +382,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			settings.AndroidManifest.GetPermissions().Any() ||
 			settings.AndroidManifest.IncludeShareQueriesBlock ||
 			settings.AndroidManifest.IncludeShareFileProvider ||
+			settings.AndroidManifest.IncludeMediaPicker ||
 			settings.DeepLinks.AndroidIntentFilters.Count > 0;
 
 		private static void ProcessGeneratedAndroidManifest(string gradleProjectPath, MobileServicesConfig settings)
@@ -417,6 +419,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				changed = true;
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
+			if (settings.AndroidManifest.IncludeMediaPicker) changed |= AddMediaPickerActivityIfMissing(root);
 			if (settings.AndroidManifest.IncludeShareFileProvider)
 			{
 				changed |= AddShareFileProviderIfMissing(root);
@@ -443,6 +446,20 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				intent.Elements(ns + "action").Any(action => string.Equals(GetAndroidAttribute(action, "name"), "android.intent.action.SEND", StringComparison.Ordinal)) &&
 				intent.Elements(ns + "data").Any(data => string.Equals(GetAndroidAttribute(data, "mimeType"), "*/*", StringComparison.Ordinal)))) return false;
 			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(_androidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(_androidNamespace + "mimeType", "*/*"))));
+			return true;
+		}
+
+		private static bool AddMediaPickerActivityIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the media picker activity.");
+			if (application.Elements(ns + "activity").Any(activity => string.Equals(GetAndroidAttribute(activity, "name"), MediaPickerActivityClass, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "activity",
+				new XAttribute(_androidNamespace + "name", MediaPickerActivityClass),
+				new XAttribute(_androidNamespace + "theme", "@android:style/Theme.Translucent.NoTitleBar"),
+				new XAttribute(_androidNamespace + "configChanges", "orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"),
+				new XAttribute(_androidNamespace + "exported", "false")));
 			return true;
 		}
 

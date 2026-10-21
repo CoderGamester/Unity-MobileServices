@@ -1,0 +1,27 @@
+fileFormatVersion: 2
+guid: 0b6f6c0e5d2a4a7f9d3e8c1a4b7e2f60
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 3
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 1
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+    Any:
+      enabled: 0
+      settings: {}
+    Editor:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+    iOS:
+      enabled: 1
+      settings:
+        FrameworkDependencies: Photos;PhotosUI;
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

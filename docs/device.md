@@ -103,7 +103,7 @@ When a permission is `Denied`, explain why it is needed (for example with `ShowA
 ### iOS behavior
 
 - Notification status is cached natively (refreshed at startup, on every foreground return, and after each request) so `Check` never blocks. Only the very first call after launch can wait up to 250 ms for the initial read.
-- Only permission groups whose usage description is present in the generated `Info.plist` are compiled into the iOS binary (see [build-pipeline.md](build-pipeline.md)). Requesting an undeclared group returns `NotDetermined` and logs a message instead of calling an API Apple would flag as missing its purpose string.
+- Only permission groups whose usage description is present in the generated `Info.plist` are compiled into the iOS binary (camera, microphone, location, photos read/write, photos add-only) (see [build-pipeline.md](build-pipeline.md)). Requesting an undeclared group returns `NotDetermined` and logs a message instead of calling an API Apple would flag as missing its purpose string.
 - `LocationAlways` requested while When-In-Use is already granted returns `Limited` immediately; iOS shows its own upgrade prompt later, so `Check` again after the app returns to the foreground.
 
 Manifest entries are auto-injected by the build postprocessor when the matching Android manifest toggle is on — see [build-pipeline.md](build-pipeline.md).

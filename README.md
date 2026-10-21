@@ -74,7 +74,7 @@ For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`S
 
 | Area | Provides |
 | --- | --- |
-| Native UI | Dismissible or blocking alerts, action sheets, toasts, review requests, and sharing (including screenshots) |
+| Native UI | Dismissible or blocking alerts, action sheets, toasts, review requests, and sharing (including screenshots), gallery saving, and image picking |
 | Notifications | Local notification channels, scheduling, custom data, and opened-notification routing |
 | Haptics | Presets, custom output, and bounded loops |
 | Device | Permissions, ATT, deep links, background tasks, store and Settings links, and device helpers |

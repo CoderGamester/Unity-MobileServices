@@ -38,7 +38,20 @@ namespace GameLovers.MobileServices.Editor.Settings
 				? "iOS permission code compiled in: none from this config (keys already in Player Settings or Info.plist also count)"
 				: "iOS permission code compiled in: " + string.Join(", ", groups) + " (undeclared groups stay out of the binary)");
 
-			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission != "POST_NOTIFICATIONS" && permission != "VIBRATE");
+			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission != "POST_NOTIFICATIONS" && permission != "VIBRATE" && permission != "WRITE_EXTERNAL_STORAGE");
+			return lines;
+		}
+
+		public static IReadOnlyList<string> Media(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.PermissionDescriptions.Any(row => row != null && row.Permission == AppPermission.PhotoLibraryAddOnly &&
+				!string.IsNullOrWhiteSpace(config.GetUsageDescriptionEn(AppPermission.PhotoLibraryAddOnly))))
+			{
+				lines.Add("iOS: gallery saving compiled in (NSPhotoLibraryAddUsageDescription is declared)");
+			}
+			if (config.AndroidManifest.IncludeMediaPicker) lines.Add("Android manifest: GameLoversMediaPickerActivity (image picker host)");
+			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission == "WRITE_EXTERNAL_STORAGE");
 			return lines;
 		}
 

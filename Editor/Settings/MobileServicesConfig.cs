@@ -118,6 +118,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// </summary>
 		[SerializeField] public bool IncludeShareFileProvider;
 
+		/// <summary>
+		/// Declares the transparent picker activity <c>NativeMediaService.PickImageAsync</c> uses on Android. The
+		/// system picker needs no permission.
+		/// </summary>
+		[SerializeField] public bool IncludeMediaPicker;
+
 		/// <summary>The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.</summary>
 		internal IEnumerable<(string Permission, int? MaxSdkVersion)> GetPermissions()
 		{

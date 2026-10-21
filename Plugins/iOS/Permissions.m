@@ -2,15 +2,7 @@
 #import <UIKit/UIKit.h>
 #import <UserNotifications/UserNotifications.h>
 
-#ifndef GL_PERMISSIONS_DECLARED_ONLY
-// Without the build postprocessor every permission group is compiled. When it sets
-// GL_PERMISSIONS_DECLARED_ONLY it also defines GL_PERMISSION_<GROUP>=1 for each group the project
-// declares a usage description for, so the binary references no API that lacks its Info.plist purpose string.
-#define GL_PERMISSION_CAMERA 1
-#define GL_PERMISSION_MICROPHONE 1
-#define GL_PERMISSION_LOCATION 1
-#define GL_PERMISSION_PHOTOS 1
-#endif
+#import "GLPermissionGroups.h"
 
 #if GL_PERMISSION_CAMERA || GL_PERMISSION_MICROPHONE
 #import <AVFoundation/AVFoundation.h>
@@ -18,7 +10,7 @@
 #if GL_PERMISSION_LOCATION
 #import <CoreLocation/CoreLocation.h>
 #endif
-#if GL_PERMISSION_PHOTOS
+#if GL_PERMISSION_PHOTOS || GL_PERMISSION_PHOTOS_ADD
 #import <Photos/Photos.h>
 #endif
 
@@ -245,7 +237,7 @@ static void GLRequestLocation(BOOL always, int requestId, NSString *goName, NSSt
 
 #pragma mark - Photos
 
-#if GL_PERMISSION_PHOTOS
+#if GL_PERMISSION_PHOTOS || GL_PERMISSION_PHOTOS_ADD
 static GLPermissionStatus MapPHAuthorizationStatus(PHAuthorizationStatus s)
 {
     switch (s)
@@ -295,6 +287,8 @@ int _GameLoversPermissionsCheck(int permissionId)
 #if GL_PERMISSION_PHOTOS
         case GLAppPermissionPhotoLibrary:
             return GLCheckPhotos(PHAccessLevelReadWrite);
+#endif
+#if GL_PERMISSION_PHOTOS_ADD
         case GLAppPermissionPhotoLibraryAddOnly:
             return GLCheckPhotos(PHAccessLevelAddOnly);
 #endif
@@ -335,12 +329,17 @@ void _GameLoversPermissionsRequest(int permissionId, int requestId, const char *
 #endif
             return;
         case GLAppPermissionPhotoLibrary:
-        case GLAppPermissionPhotoLibraryAddOnly:
 #if GL_PERMISSION_PHOTOS
-            GLRequestPhotos(permissionId == GLAppPermissionPhotoLibraryAddOnly ? PHAccessLevelAddOnly : PHAccessLevelReadWrite,
-                            requestId, goName, methodName);
+            GLRequestPhotos(PHAccessLevelReadWrite, requestId, goName, methodName);
 #else
             GLSendUndeclared(requestId, goName, methodName, "photos");
+#endif
+            return;
+        case GLAppPermissionPhotoLibraryAddOnly:
+#if GL_PERMISSION_PHOTOS_ADD
+            GLRequestPhotos(PHAccessLevelAddOnly, requestId, goName, methodName);
+#else
+            GLSendUndeclared(requestId, goName, methodName, "photos add-only");
 #endif
             return;
         case GLAppPermissionNotifications:

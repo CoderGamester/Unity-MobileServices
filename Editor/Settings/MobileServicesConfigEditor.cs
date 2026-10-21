@@ -60,7 +60,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			root.Add(new PropertyField(serializedObject.FindProperty("_attUsageDescription"), "App Tracking (ATT) Description"));
 			AddRelative(root, "_capabilities", "AppTracking");
 			AddRelative(root, "_androidManifest", "Camera", "RecordAudio", "AccessFineLocation", "AccessCoarseLocation",
-				"AccessBackgroundLocation", "ReadMediaImages", "WriteExternalStorageLegacy");
+				"AccessBackgroundLocation", "ReadMediaImages");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.Permissions(config));
 
 			root.Add(MakeSection("Notifications"));
@@ -76,6 +76,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 			root.Add(MakeSection("Sharing"));
 			AddRelative(root, "_androidManifest", "IncludeShareQueriesBlock", "IncludeShareFileProvider");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.Sharing(config));
+
+			root.Add(MakeSection("Media (gallery and picker)"));
+			AddRelative(root, "_androidManifest", "IncludeMediaPicker", "WriteExternalStorageLegacy");
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.Media(config));
 
 			root.Add(MakeSection("Store review"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
