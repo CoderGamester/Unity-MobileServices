@@ -9,10 +9,11 @@ The package ships a consumer-wide postprocessor (`Editor/NativeBuild/MobileServi
 The Inspector (`MobileServicesConfigEditor`) shows:
 
 - **Status box** — info when every referenced permission has an English usage description; a warning listing the count otherwise.
+- **Feature sections** — the Inspector groups settings by feature (Permissions and privacy, Notifications, Deep links, Sharing, Store review). Each section ends with an **Adds to build** summary listing the plist keys, entitlements, manifest entries and Gradle lines the current values produce, so no build is needed to see what a toggle changes.
 - **Usage descriptions (localized)** — `Permission Descriptions` is a list with one entry per `AppPermission`, and each holds a **per-locale list** of `(LocaleCode, UsageDescription)`. The `en` value is the base; add `fr`, `pt-BR`, … to localize. (Notifications has no iOS Info.plist key, so it's not emitted.)
 - **App Tracking (ATT) Description** — the per-locale `NSUserTrackingUsageDescription` list. Only marked missing when the App Tracking capability is enabled.
 - **Capabilities** — `Push Notifications`, `App Tracking`, `Associated Domains` (+ domain list). (Background audio is not here — use Unity's own **Player Settings > iOS > Behavior in Background = Custom > Audio**.)
-- **Android manifest** — `CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION`, `READ_MEDIA_IMAGES`, `POST_NOTIFICATIONS`, share-chooser `<queries>` block, and semantic deep-link registrations (`Scheme`, optional `Host`, optional `PathPrefix`).
+- **Android manifest** — `CAMERA`, `RECORD_AUDIO`, `ACCESS_FINE_LOCATION` (adds coarse too), `ACCESS_COARSE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`, `READ_MEDIA_IMAGES` (adds the API 34 partial-access permission and `READ_EXTERNAL_STORAGE` up to API 32), `WRITE_EXTERNAL_STORAGE` up to API 28, `POST_NOTIFICATIONS`, share-chooser `<queries>` block, and semantic deep-link registrations (`Scheme`, optional `Host`, optional `PathPrefix`).
 - **Native deep links** — `DeepLinks.IosUrlSchemes` and `DeepLinks.AndroidIntentFilters` are deduplicated by semantic identity. Malformed rows fail before a build file is touched.
 - **Android dependencies** — `Include Play Review Dependency` toggle (**ON by default**) + editable `Play Review Coordinate` (default `com.google.android.play:review:2.0.2`). When on, the Play In-App Review library is auto-injected into the generated Gradle project so `NativeUiService.RequestReview()` works with zero manual setup.
 - **Build behaviour** — `Manage Native Build Manually` (**OFF by default**) — when ON, the package writes nothing to the iOS/Android build and skips the iOS usage-description validation. It's the single escape for teams that configure the native build (Xcode / Gradle) themselves. (This is *build* configuration — unrelated to render post-processing.)
@@ -36,6 +37,7 @@ After validation, the postprocessor mutates the post-build Xcode project:
 - **Info.plist** — writes every configured **base (`en`)** usage description string. When any non-`en` locale is configured, also writes `CFBundleLocalizations` (+ `CFBundleDevelopmentRegion`).
 - **Localized usage descriptions** — for every non-`en` `LocaleEntry`, writes a `<locale>.lproj/InfoPlist.strings` file (the platform-native format: `"NSCameraUsageDescription" = "…";`) and registers it on the main target so Xcode copies it into the app bundle. iOS then shows the description in the device language, falling back to the `Info.plist` base value. (The in-memory `PBXProject` is saved before `ProjectCapabilityManager` runs so the registration isn't clobbered.)
 - **URL schemes** — unions configured schemes into an existing `CFBundleURLTypes` owner (or creates the package-owned entry) without replacing other SDK declarations.
+- **Compiled permission groups** — `Plugins/iOS/Permissions.m` is built in groups (camera, microphone, location, photos). The postprocessor sets `GL_PERMISSIONS_DECLARED_ONLY` and one `GL_PERMISSION_<GROUP>` define on the UnityFramework target for each group whose usage description is present in the final `Info.plist` (from this config, Player Settings, or your own plist). Undeclared groups are not compiled, so the binary references no privacy API without its purpose string. Notifications are always compiled because they have no purpose string. Builds that skip the postprocessor (no config, or `Manage Native Build Manually`) compile every group.
 - **Entitlements** — reuses an existing `CODE_SIGN_ENTITLEMENTS` path when one is configured and creates the deterministic package file only when none exists. Push Notifications and Associated Domains are merged into that file; existing domains are preserved.
 
 Idempotent — re-running against the same Xcode project produces no diff if the configured state already matches.
@@ -77,6 +79,7 @@ Everything the package writes at build time, and how to override or disable each
 | Platform | What is written | File | Override / opt-out |
 |----------|-----------------|------|--------------------|
 | iOS | Base (`en`) usage description strings | `Info.plist` | Per-permission text in the config asset; set the key yourself and it is not overwritten |
+| iOS | Compiled permission groups | UnityFramework `GCC_PREPROCESSOR_DEFINITIONS` | Declare or omit the usage description; `Manage Native Build Manually` compiles every group |
 | iOS | Localized usage descriptions + `CFBundleLocalizations` | `<locale>.lproj/InfoPlist.strings` | Add/remove `LocaleEntry` rows per permission/ATT; emitted only for non-`en` locales |
 | iOS | Push / Associated Domains capabilities | `GameLoversMobileServices.entitlements` | Per-capability toggles (see entitlements caveat below) |
 | Android | `<uses-permission>` entries | generated application manifest | Per-permission Android-manifest toggles; skipped if already present |
@@ -95,7 +98,7 @@ Cross-cutting controls:
 - `MobileNotificationService` → `UsesNotifications` (drives Push Notifications capability)
 - `DeepLinkService` → `UsesDeepLinks` (drives Associated Domains capability)
 - `AttService` / `IAttService` → `UsesAtt` (drives App Tracking capability)
-- `PermissionsService` / `IPermissionsService` → flags every `AppPermission` as potentially required
+- `PermissionsService` / `IPermissionsService` → flags every `AppPermission` as potentially required (advisory warnings only; the compiled iOS groups follow the declared usage descriptions, not the scan)
 - `NativeUiService` → `UsesNativeUiShare` (drives Android share-chooser queries block)
 
 The scan is intentionally pessimistic for permissions — when permissions are referenced but the scanner can't statically infer WHICH permissions, all of them flag. The user un-toggles the ones they don't actually call. False positives (capability enabled when not strictly needed) are preferable to false negatives (build ships missing an entitlement).

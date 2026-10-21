@@ -74,8 +74,14 @@ namespace GameLovers.MobileServices.Editor.Settings
 	[Serializable]
 	public sealed class AndroidManifestToggles
 	{
-		/// <summary>Adds <c>READ_MEDIA_IMAGES</c> (Photo Library on API 33+).</summary>
+		/// <summary>
+		/// Adds the Photo Library permissions: <c>READ_MEDIA_IMAGES</c> (API 33+), <c>READ_MEDIA_VISUAL_USER_SELECTED</c>
+		/// (API 34+ partial access) and <c>READ_EXTERNAL_STORAGE</c> up to API 32.
+		/// </summary>
 		[SerializeField] public bool ReadMediaImages;
+
+		/// <summary>Adds <c>WRITE_EXTERNAL_STORAGE</c> up to API 28, needed to save to the gallery on Android 9 and older.</summary>
+		[SerializeField] public bool WriteExternalStorageLegacy;
 
 		/// <summary>Adds <c>POST_NOTIFICATIONS</c> (API 33+).</summary>
 		[SerializeField] public bool PostNotifications;
@@ -89,13 +95,48 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds <c>CAMERA</c>.</summary>
 		[SerializeField] public bool Camera;
 
-		/// <summary>Adds <c>ACCESS_FINE_LOCATION</c>.</summary>
+		/// <summary>Adds <c>ACCESS_FINE_LOCATION</c> and <c>ACCESS_COARSE_LOCATION</c>, which Android 12+ requires together.</summary>
 		[SerializeField] public bool AccessFineLocation;
+
+		/// <summary>Adds <c>ACCESS_COARSE_LOCATION</c> for apps that only need approximate location.</summary>
+		[SerializeField] public bool AccessCoarseLocation;
+
+		/// <summary>
+		/// Adds <c>ACCESS_BACKGROUND_LOCATION</c> for <c>AppPermission.LocationAlways</c>. Google Play requires a
+		/// permission declaration form for it.
+		/// </summary>
+		[SerializeField] public bool AccessBackgroundLocation;
 
 		/// <summary>
 		/// Adds the share-chooser <c>&lt;queries&gt;</c> block (Android 11+ visibility for share targets).
 		/// </summary>
 		[SerializeField] public bool IncludeShareQueriesBlock;
+
+		/// <summary>The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.</summary>
+		internal IEnumerable<(string Permission, int? MaxSdkVersion)> GetPermissions()
+		{
+			if (Camera) yield return ("android.permission.CAMERA", null);
+			if (RecordAudio) yield return ("android.permission.RECORD_AUDIO", null);
+			if (AccessFineLocation)
+			{
+				yield return ("android.permission.ACCESS_FINE_LOCATION", null);
+				yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
+			}
+			else if (AccessCoarseLocation)
+			{
+				yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
+			}
+			if (AccessBackgroundLocation) yield return ("android.permission.ACCESS_BACKGROUND_LOCATION", null);
+			if (ReadMediaImages)
+			{
+				yield return ("android.permission.READ_MEDIA_IMAGES", null);
+				yield return ("android.permission.READ_MEDIA_VISUAL_USER_SELECTED", null);
+				yield return ("android.permission.READ_EXTERNAL_STORAGE", 32);
+			}
+			if (WriteExternalStorageLegacy) yield return ("android.permission.WRITE_EXTERNAL_STORAGE", 28);
+			if (PostNotifications) yield return ("android.permission.POST_NOTIFICATIONS", null);
+			if (Vibrate) yield return ("android.permission.VIBRATE", null);
+		}
 	}
 
 	/// <summary>One Android browsable deep-link registration.</summary>

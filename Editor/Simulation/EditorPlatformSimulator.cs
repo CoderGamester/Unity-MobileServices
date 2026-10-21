@@ -104,6 +104,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			_engaged = true;
 			PermissionsService.EditorCheckOverride = ReadPermissionStore;
 			PermissionsService.EditorRequestAsyncOverride = RequestPermissionAsync;
+			DeviceService.EditorOpenAppSettingsOverride = OpenAppSettings;
 			AttService.EditorCurrentStatusOverride = ReadAttStore();
 			AttService.EditorRequestAsyncOverride = RequestAttAsync;
 			NativeUiService.EditorShowAlertOverride = MobileSimulatorRuntimeOverlay.ShowAlert;
@@ -124,6 +125,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 			PermissionsService.EditorCheckOverride = null;
 			PermissionsService.EditorRequestOverride = null;
 			PermissionsService.EditorRequestAsyncOverride = null;
+			DeviceService.EditorOpenAppSettingsOverride = null;
 			AttService.EditorCurrentStatusOverride = null;
 			AttService.EditorRequestResultOverride = null;
 			AttService.EditorRequestAsyncOverride = null;
@@ -202,6 +204,10 @@ namespace GameLovers.MobileServices.Editor.Simulation
 
 		/// <summary>Closes any active simulator-overlay dialog without firing a button callback.</summary>
 		public static void DismissAllOverlays() => MobileSimulatorState.PushDismissAll();
+
+		private static void OpenAppSettings() =>
+			Debug.Log("[GameLovers.MobileServices] Simulator: DeviceService.OpenAppSettings() would open the OS Settings page. " +
+				"Change the simulated permission state in the Device Simulator panel's Permissions section instead.");
 
 		private static PermissionStatus ReadPermissionStore(AppPermission permission) =>
 			(PermissionStatus)EditorPrefs.GetInt(PermStorePrefix + permission, (int)PermissionStatus.NotDetermined);

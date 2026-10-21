@@ -50,7 +50,7 @@ Every event-driven child shares a single internal `MonoBehaviour` (`DeviceServic
 
 ```csharp
 public enum AppPermission { Camera, Microphone, LocationWhenInUse, LocationAlways, PhotoLibrary, PhotoLibraryAddOnly, Notifications }
-public enum PermissionStatus { NotDetermined, Denied, Granted, Restricted }
+public enum PermissionStatus { NotDetermined, Denied, Granted, Restricted, Limited }
 
 PermissionStatus Check(AppPermission permission);              // sync, no prompt
 Task<PermissionStatus> RequestAsync(AppPermission permission); // async, may prompt
@@ -61,7 +61,27 @@ Task<IReadOnlyDictionary<AppPermission, PermissionStatus>> RequestAsync(params A
 
 iOS callbacks land at `PermissionsCallbackReceiver` (auto-spawned `DontDestroyOnLoad` GameObject) via `UnitySendMessage("PermissionsCallbackReceiver", "OnPermissionResult", "<id>:<status>")`. Android uses Unity's `UnityEngine.Android.Permission` API.
 
-Android API 33+ requirements (`READ_MEDIA_IMAGES` for Photos, `POST_NOTIFICATIONS` for Notifications) are baked into the `AndroidManifestPermission` mapping. Manifest entries are auto-injected by the build postprocessor when the matching capability toggle is on — see [build-pipeline.md](build-pipeline.md).
+Treat `Granted` and `Limited` as usable access. `Limited` means partial access: selected photos only (iOS 14+ and Android 14+), provisional notifications (iOS), approximate location (iOS reduced accuracy, Android coarse-only), or When-In-Use location after `LocationAlways` was requested.
+
+### Android behavior
+
+- **Location** — `LocationWhenInUse` and `LocationAlways` ask for precise and approximate location together, because Android 12+ ignores a precise-only request. `LocationAlways` then makes a second, separate request for `ACCESS_BACKGROUND_LOCATION` once foreground access is granted (API 29+). Foreground-only access reports `Limited`.
+- **Photos** — `READ_MEDIA_IMAGES` on API 33+, plus `READ_MEDIA_VISUAL_USER_SELECTED` on API 34+ so a partial selection reports `Limited`; `READ_EXTERNAL_STORAGE` below API 33. `PhotoLibraryAddOnly` needs no permission on API 29+ and reports `Granted`.
+- **Notifications** — `POST_NOTIFICATIONS` on API 33+. Below API 33 there is nothing to request: `Check` reports `Granted` or `Denied` from the user's notifications-enabled switch, and `RequestAsync` returns that status without a prompt.
+- **`Denied` versus `NotDetermined`** — Android never reports a refusal directly. The service remembers (in `PlayerPrefs`) that it requested a permission and also reads the OS rationale flag, so a refused permission reports `Denied` and an untouched one `NotDetermined`. A refused permission often cannot be requested again.
+- Requests are serialized because Android shows one system dialog at a time.
+
+### Sending the player to Settings
+
+When a permission is `Denied`, explain why it is needed (for example with `ShowAlertPopUpAsync`) and call `DeviceService.OpenAppSettings()`. It opens this app's page in iOS Settings or Android App Info. The game should `Check` again when it returns to the foreground.
+
+### iOS behavior
+
+- Notification status is cached natively (refreshed at startup, on every foreground return, and after each request) so `Check` never blocks. Only the very first call after launch can wait up to 250 ms for the initial read.
+- Only permission groups whose usage description is present in the generated `Info.plist` are compiled into the iOS binary (see [build-pipeline.md](build-pipeline.md)). Requesting an undeclared group returns `NotDetermined` and logs a message instead of calling an API Apple would flag as missing its purpose string.
+- `LocationAlways` requested while When-In-Use is already granted returns `Limited` immediately; iOS shows its own upgrade prompt later, so `Check` again after the app returns to the foreground.
+
+Manifest entries are auto-injected by the build postprocessor when the matching Android manifest toggle is on — see [build-pipeline.md](build-pipeline.md).
 
 ## App Tracking Transparency (`IAttService`)
 

@@ -9,8 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **New**:
 - Added an `Enable Haptics Debug Logs` Mobile Services Config toggle; Editor haptics logs are disabled by default.
+- **Permissions**: Added `PermissionStatus.Limited` for partial access (selected photos, provisional notifications, approximate location, foreground-only location) and `DeviceService.OpenAppSettings()` to send the player to the OS Settings page after a denial.
+- **Mobile Services Config**: The Inspector is grouped by feature, and each section lists the native build entries it adds. New Android manifest toggles cover coarse and background location and legacy storage access.
+
+**Changed**:
+- iOS builds compile only the permission code whose usage description is declared, so a game that never requests location, camera, microphone or photos no longer references those APIs.
 
 **Fixed**:
+- Android permissions now request precise and approximate location together, request background location separately, report `Denied` after a refusal, use the correct permissions below API 33, and no longer prompt for storage just to save to the gallery.
+- iOS notification status checks no longer block the main thread, and location permission delegates are released after delivery.
 - Declared the iOS framework dependencies of the native bridges (`Permissions.m`: CoreLocation and Photos; `NativeUi.m`: StoreKit) in their plugin import settings, so generated Xcode projects link them and `UnityFramework` no longer fails with undefined `CLLocationManager`, `PHPhotoLibrary` and `SKStoreReviewController` symbols.
 - Retained the Android activity and review manager Java references until the async `requestReviewFlow` callback completes, preventing a `NullReferenceException` in `launchReviewFlow`.
 - Vendored NSubstitute 4.2.2 with Castle.Core 4.4.0 and System.Threading.Tasks.Extensions 4.3.0 under `Tests/EditMode/Plugins/` so the EditMode suite compiles and loads in Unity; 5.x stays unloadable because Castle.Core 5.1.1 references `System.Diagnostics.EventLog`, which Unity cannot resolve.

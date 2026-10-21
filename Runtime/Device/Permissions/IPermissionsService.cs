@@ -23,15 +23,21 @@ namespace GameLovers.MobileServices.Device
 	/// </summary>
 	public enum PermissionStatus
 	{
-		NotDetermined,
-		Denied,
-		Granted,
-		Restricted,
+		NotDetermined, // 0
+		Denied, // 1
+		Granted, // 2
+		Restricted, // 3
+		Limited, // 4: partial access (selected photos, provisional notifications, approximate or when-in-use-only location)
 	}
 
 	/// <summary>
 	/// Unified iOS+Android runtime-permissions service.
 	/// </summary>
+	/// <remarks>
+	/// Treat <see cref="PermissionStatus.Granted"/> and <see cref="PermissionStatus.Limited"/> as usable access.
+	/// A <see cref="PermissionStatus.Denied"/> permission usually cannot be requested again: explain why it is
+	/// needed and send the player to <see cref="DeviceService.OpenAppSettings"/>.
+	/// </remarks>
 	/// <remarks>
 	/// Uses <see cref="Task{TResult}"/> rather than <c>UniTask</c> to avoid pulling in a new package dependency.
 	/// </remarks>

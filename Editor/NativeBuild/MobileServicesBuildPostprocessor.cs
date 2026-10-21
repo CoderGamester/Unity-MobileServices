@@ -135,21 +135,8 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				: $"asset:{path}";
 		}
 
-		private static bool NeedsIosMutation(MobileServicesConfig settings)
-		{
-			if (settings.Capabilities.PushNotifications || settings.Capabilities.AppTracking || settings.Capabilities.AssociatedDomains) return true;
-			if (settings.DeepLinks.IosUrlSchemes.Count > 0) return true;
-			foreach (var row in settings.PermissionDescriptions)
-			{
-				if (row?.Entries == null) continue;
-				if (row.Entries.Any(entry => entry != null && !string.IsNullOrWhiteSpace(entry.UsageDescription))) return true;
-			}
-			return settings.AttUsageDescription?.Entries?.Any(entry => entry != null && !string.IsNullOrWhiteSpace(entry.UsageDescription)) == true;
-		}
-
 		private static void PostprocessIos(BuildReport report, MobileServicesConfig settings)
 		{
-			if (!NeedsIosMutation(settings)) return;
 #if UNITY_IOS
 			InjectIosBuild(report, settings);
 #else
@@ -193,6 +180,8 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 			var mainTargetGuid = pbx.GetUnityMainTargetGuid();
 			var pbxChanged = EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
+			ApplyPermissionGroupDefines(pbx, plist.root);
+			pbxChanged = true;
 			var capabilityNeeded = settings.Capabilities.PushNotifications ||
 				(settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0);
 			if (capabilityNeeded)
@@ -217,6 +206,21 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				pbx.WriteToFile(pbxPath);
 			}
 			Debug.Log($"[GameLovers.MobileServices] iOS native processing completed for '{buildPath}'.");
+		}
+
+		// Compiles only the permission groups whose purpose string the generated Info.plist declares (from this
+		// config, the player settings, or the project's own plist), so the binary references no privacy API that
+		// App Store validation would flag as missing its usage description.
+		private static void ApplyPermissionGroupDefines(PBXProject pbx, PlistElementDict plistRoot)
+		{
+			var add = new List<string> { "GL_PERMISSIONS_DECLARED_ONLY=1" };
+			var remove = new List<string>();
+			foreach (var group in IosPermissionGroups.All)
+			{
+				var declared = group.PlistKeys.Any(key => plistRoot.values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value.AsString()));
+				(declared ? add : remove).Add($"{group.Define}=1");
+			}
+			pbx.UpdateBuildProperty(pbx.GetUnityFrameworkTargetGuid(), "GCC_PREPROCESSOR_DEFINITIONS", add, remove);
 		}
 
 		private static bool MergePlistString(PlistElementDict root, string key, string requested, string file)
@@ -402,7 +406,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 #if UNITY_ANDROID
 		private static bool NeedsAndroidManifestMutation(MobileServicesConfig settings) =>
-			GetConfiguredAndroidPermissions(settings.AndroidManifest).Any() ||
+			settings.AndroidManifest.GetPermissions().Any() ||
 			settings.AndroidManifest.IncludeShareQueriesBlock ||
 			settings.DeepLinks.AndroidIntentFilters.Count > 0;
 
@@ -431,10 +435,12 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var root = target.document.Root;
 			if (root == null) throw new BuildFailedException($"[GameLovers.MobileServices] Generated Android manifest '{target.path}' has no root element.");
 			var changed = false;
-			foreach (var permission in GetConfiguredAndroidPermissions(settings.AndroidManifest))
+			foreach (var (permission, maxSdkVersion) in settings.AndroidManifest.GetPermissions())
 			{
 				if (root.Elements(root.Name.Namespace + "uses-permission").Any(element => string.Equals(GetAndroidAttribute(element, "name"), permission, StringComparison.Ordinal))) continue;
-				root.AddFirst(new XElement(root.Name.Namespace + "uses-permission", new XAttribute(_androidNamespace + "name", permission)));
+				var declaration = new XElement(root.Name.Namespace + "uses-permission", new XAttribute(_androidNamespace + "name", permission));
+				if (maxSdkVersion.HasValue) declaration.Add(new XAttribute(_androidNamespace + "maxSdkVersion", maxSdkVersion.Value));
+				root.AddFirst(declaration);
 				changed = true;
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
@@ -443,16 +449,6 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			if (!changed) return;
 			target.document.Save(target.path, SaveOptions.DisableFormatting);
 			Debug.Log($"[GameLovers.MobileServices] Patched generated Android manifest '{target.path}'.");
-		}
-
-		private static IEnumerable<string> GetConfiguredAndroidPermissions(AndroidManifestToggles toggles)
-		{
-			if (toggles.Camera) yield return "android.permission.CAMERA";
-			if (toggles.RecordAudio) yield return "android.permission.RECORD_AUDIO";
-			if (toggles.AccessFineLocation) yield return "android.permission.ACCESS_FINE_LOCATION";
-			if (toggles.ReadMediaImages) yield return "android.permission.READ_MEDIA_IMAGES";
-			if (toggles.PostNotifications) yield return "android.permission.POST_NOTIFICATIONS";
-			if (toggles.Vibrate) yield return "android.permission.VIBRATE";
 		}
 
 		private static bool AddShareQueriesIfMissing(XElement root)

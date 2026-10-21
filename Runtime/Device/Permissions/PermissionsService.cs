@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
@@ -15,6 +16,11 @@ namespace GameLovers.MobileServices.Device
 	/// <inheritdoc />
 	public sealed class PermissionsService : IPermissionsService
 	{
+#if UNITY_ANDROID && !UNITY_EDITOR
+		private const string RequestedKeyPrefix = "GameLovers.MobileServices.Permissions.Requested.";
+		private static readonly SemaphoreSlim _androidRequestGate = new SemaphoreSlim(1, 1);
+#endif
+
 #if UNITY_IOS && !UNITY_EDITOR
 		[DllImport("__Internal")] private static extern int  _GameLoversPermissionsCheck(int permissionId);
 		[DllImport("__Internal")] private static extern void _GameLoversPermissionsRequest(int permissionId, int requestId, string callbackGameObject, string callbackMethod);
@@ -88,54 +94,107 @@ namespace GameLovers.MobileServices.Device
 		}
 
 #if UNITY_ANDROID && !UNITY_EDITOR
-		private static string AndroidManifestPermission(AppPermission permission)
-		{
-			return permission switch
-			{
-				AppPermission.Camera               => Permission.Camera,
-				AppPermission.Microphone           => Permission.Microphone,
-				AppPermission.LocationWhenInUse    => Permission.FineLocation,
-				AppPermission.LocationAlways       => Permission.FineLocation,
-				AppPermission.PhotoLibrary         => "android.permission.READ_MEDIA_IMAGES",
-				AppPermission.PhotoLibraryAddOnly  => "android.permission.READ_MEDIA_IMAGES",
-				AppPermission.Notifications        => "android.permission.POST_NOTIFICATIONS",
-				_                                  => null
-			};
-		}
-
 		private static PermissionStatus CheckAndroid(AppPermission permission)
 		{
-			var manifestId = AndroidManifestPermission(permission);
-			if (string.IsNullOrEmpty(manifestId))
+			var apiLevel = AndroidApiLevel.Current;
+			if (permission == AppPermission.Notifications && apiLevel < AndroidPermissionPolicy.ApiLevelTiramisu)
 			{
-				return PermissionStatus.NotDetermined;
+				return AndroidPermissionPolicy.ResolveLegacyNotifications(AreNotificationsEnabled(apiLevel));
 			}
-			return Permission.HasUserAuthorizedPermission(manifestId)
-				? PermissionStatus.Granted
-				: PermissionStatus.NotDetermined;
+
+			return AndroidPermissionPolicy.Resolve(
+				permission,
+				apiLevel,
+				Permission.HasUserAuthorizedPermission,
+				WasRequested(permission),
+				ShouldShowRationale(permission, apiLevel));
 		}
 
-		private static Task<PermissionStatus> RequestAndroidAsync(AppPermission permission)
+		private static async Task<PermissionStatus> RequestAndroidAsync(AppPermission permission)
 		{
-			var manifestId = AndroidManifestPermission(permission);
-			if (string.IsNullOrEmpty(manifestId))
+			var apiLevel = AndroidApiLevel.Current;
+			var current = CheckAndroid(permission);
+			var legacyNotifications = permission == AppPermission.Notifications && apiLevel < AndroidPermissionPolicy.ApiLevelTiramisu;
+			if (current == PermissionStatus.Granted || legacyNotifications)
 			{
-				return Task.FromResult(PermissionStatus.NotDetermined);
+				return current;
 			}
 
-			if (Permission.HasUserAuthorizedPermission(manifestId))
+			// Android shows one system dialog at a time; a concurrent request would be dropped without a callback.
+			await _androidRequestGate.WaitAsync();
+			try
 			{
-				return Task.FromResult(PermissionStatus.Granted);
+				var missing = new List<string>();
+				foreach (var manifestPermission in AndroidPermissionPolicy.GetForegroundRequest(permission, apiLevel))
+				{
+					if (!Permission.HasUserAuthorizedPermission(manifestPermission)) missing.Add(manifestPermission);
+				}
+				if (missing.Count > 0)
+				{
+					await RequestManifestPermissionsAsync(missing.ToArray());
+				}
+
+				var hasForegroundLocation = Permission.HasUserAuthorizedPermission(AndroidPermissionPolicy.FineLocation) ||
+					Permission.HasUserAuthorizedPermission(AndroidPermissionPolicy.CoarseLocation);
+				if (AndroidPermissionPolicy.NeedsBackgroundRequest(permission, apiLevel) && hasForegroundLocation &&
+					!Permission.HasUserAuthorizedPermission(AndroidPermissionPolicy.BackgroundLocation))
+				{
+					await RequestManifestPermissionsAsync(new[] { AndroidPermissionPolicy.BackgroundLocation });
+				}
+
+				PlayerPrefs.SetInt(RequestedKeyPrefix + permission, 1);
+				PlayerPrefs.Save();
+				return CheckAndroid(permission);
+			}
+			finally
+			{
+				_androidRequestGate.Release();
+			}
+		}
+
+		private static Task RequestManifestPermissionsAsync(string[] manifestPermissions)
+		{
+			var completion = new TaskCompletionSource<bool>();
+			var remaining = manifestPermissions.Length;
+			void OnAnswered(string _)
+			{
+				if (--remaining == 0) completion.TrySetResult(true);
 			}
 
-			var tcs = new TaskCompletionSource<PermissionStatus>();
 			var callbacks = new PermissionCallbacks();
-			callbacks.PermissionGranted             += _ => tcs.TrySetResult(PermissionStatus.Granted);
-			callbacks.PermissionDenied              += _ => tcs.TrySetResult(PermissionStatus.Denied);
-			callbacks.PermissionDeniedAndDontAskAgain += _ => tcs.TrySetResult(PermissionStatus.Denied);
+			callbacks.PermissionGranted += OnAnswered;
+			callbacks.PermissionDenied += OnAnswered;
+			Permission.RequestUserPermissions(manifestPermissions, callbacks);
+			return completion.Task;
+		}
 
-			Permission.RequestUserPermission(manifestId, callbacks);
-			return tcs.Task;
+		private static bool WasRequested(AppPermission permission) => PlayerPrefs.GetInt(RequestedKeyPrefix + permission, 0) == 1;
+
+		private static bool ShouldShowRationale(AppPermission permission, int apiLevel)
+		{
+			foreach (var manifestPermission in AndroidPermissionPolicy.GetForegroundRequest(permission, apiLevel))
+			{
+				if (Permission.ShouldShowRequestPermissionRationale(manifestPermission)) return true;
+			}
+			return false;
+		}
+
+		private static bool AreNotificationsEnabled(int apiLevel)
+		{
+			// NotificationManager.areNotificationsEnabled needs API 24; older devices cannot disable them per app.
+			if (apiLevel < 24) return true;
+			try
+			{
+				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				using var manager = activity.Call<AndroidJavaObject>("getSystemService", "notification");
+				return manager.Call<bool>("areNotificationsEnabled");
+			}
+			catch (Exception exception)
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] Could not read the notifications-enabled state: {exception.Message}");
+				return true;
+			}
 		}
 #endif
 	}

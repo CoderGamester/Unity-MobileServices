@@ -30,7 +30,10 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - ATT returning `Authorized` outside iOS means “not applicable,” not an observed user decision.
 - Permission, ATT, battery, native-alert, and review Editor overrides are process-wide statics. Simulator code must install and remove them symmetrically; tests must reset overrides they touch.
 - The iOS location permission bridge retains each `CLLocationManager` delegate until authorization changes and removes it only after callback dispatch. Do not simplify the static delegate-retention collection into a local lifetime.
-- Android Photos and Notifications permissions use API-33 runtime permissions (`READ_MEDIA_IMAGES` and `POST_NOTIFICATIONS`) and short-circuit as granted on older APIs. Keep runtime checks and generated manifest entries aligned.
+- `AndroidPermissionPolicy` owns which manifest permissions each `AppPermission` needs per API level and how grants fold into `PermissionStatus`; it stays platform-neutral so it is unit-tested. Keep it, the runtime request code, and `AndroidManifestToggles.GetPermissions` aligned.
+- Android never reports a refusal directly: `Denied` is the persisted "requested" flag or the OS rationale flag, and requests are serialized through one gate because Android shows one dialog at a time. Background location is always a separate second request. Notifications below API 33 have no runtime permission and follow the enabled switch.
+- `PermissionStatus` integer values are a native contract; `Limited` is 4. Limited covers partial photos, provisional notifications, approximate location, and foreground-only location when Always was asked.
+- `Plugins/iOS/Permissions.m` is built in groups (camera, microphone, location, photos) gated by `GL_PERMISSION_<GROUP>`. Without `GL_PERMISSIONS_DECLARED_ONLY` every group compiles; the build postprocessor sets it and defines only the groups whose purpose string is in the final `Info.plist`. `IosPermissionGroups`, the plugin, and the postprocessor change together. Notification status is a native cache, so `Check` never blocks after the first read.
 
 ## Editor and native-build invariants
 

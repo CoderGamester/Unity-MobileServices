@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using GameLovers.MobileServices.Device;
 using UnityEditor;
@@ -44,9 +45,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_statusBox = new HelpBox(string.Empty, HelpBoxMessageType.Info);
 			root.Add(_statusBox);
 
-			root.Add(MakeSection("Usage descriptions (Info.plist) — localized per device language"));
+			var summaries = new List<(Label Label, Func<IReadOnlyList<string>> Lines)>();
+
+			root.Add(MakeSection("Permissions and privacy"));
 			var locHint = new Label("Each permission holds one entry per locale (ISO code: en, fr, pt-BR …). " +
-				"The 'en' value is written to Info.plist; other locales are emitted as <locale>.lproj/InfoPlist.strings at build.");
+				"The 'en' value is written to Info.plist; other locales are emitted as <locale>.lproj/InfoPlist.strings at build. " +
+				"Writing a usage description is what switches that iOS permission on.");
 			locHint.style.whiteSpace = WhiteSpace.Normal;
 			locHint.style.fontSize = 10;
 			locHint.style.unityFontStyleAndWeight = FontStyle.Italic;
@@ -54,19 +58,29 @@ namespace GameLovers.MobileServices.Editor.Settings
 			root.Add(locHint);
 			root.Add(new PropertyField(serializedObject.FindProperty("_permissionDescriptions"), "Permission Descriptions"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_attUsageDescription"), "App Tracking (ATT) Description"));
+			AddRelative(root, "_capabilities", "AppTracking");
+			AddRelative(root, "_androidManifest", "Camera", "RecordAudio", "AccessFineLocation", "AccessCoarseLocation",
+				"AccessBackgroundLocation", "ReadMediaImages", "WriteExternalStorageLegacy");
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.Permissions(config));
 
-			root.Add(MakeSection("Capabilities"));
-			root.Add(new PropertyField(serializedObject.FindProperty("_capabilities"), "Capabilities"));
+			root.Add(MakeSection("Notifications"));
+			AddRelative(root, "_capabilities", "PushNotifications");
+			AddRelative(root, "_androidManifest", "PostNotifications", "Vibrate");
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.Notifications(config));
 
-			root.Add(MakeSection("Android manifest"));
-			root.Add(new PropertyField(serializedObject.FindProperty("_androidManifest"), "Android Manifest"));
-
-			root.Add(MakeSection("Native deep links"));
+			root.Add(MakeSection("Deep links"));
+			AddRelative(root, "_capabilities", "AssociatedDomains", "AssociatedDomainList");
 			root.Add(new PropertyField(serializedObject.FindProperty("_deepLinks"), "Deep-link registrations"));
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.DeepLinks(config));
 
-			root.Add(MakeSection("Android dependencies"));
+			root.Add(MakeSection("Sharing"));
+			AddRelative(root, "_androidManifest", "IncludeShareQueriesBlock");
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.Sharing(config));
+
+			root.Add(MakeSection("Store review"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_playReviewDependencyCoordinate"), "Play Review Coordinate"));
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.StoreReview(config));
 
 			root.Add(MakeSection("Build behaviour"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_manageNativeBuildManually"), "Manage Native Build Manually"));
@@ -80,9 +94,50 @@ namespace GameLovers.MobileServices.Editor.Settings
 			root.Add(BuildPrivacyNutritionButton(config));
 
 			root.Bind(serializedObject);
-			root.TrackSerializedObjectValue(serializedObject, _ => UpdateStatus(config));
+			root.TrackSerializedObjectValue(serializedObject, _ =>
+			{
+				UpdateStatus(config);
+				RefreshSummaries(config, summaries);
+			});
 			UpdateStatus(config);
+			RefreshSummaries(config, summaries);
 			return root;
+		}
+
+		private void AddRelative(VisualElement root, string structName, params string[] fieldNames)
+		{
+			var parent = serializedObject.FindProperty(structName);
+			foreach (var fieldName in fieldNames)
+			{
+				root.Add(new PropertyField(parent.FindPropertyRelative(fieldName)));
+			}
+		}
+
+		private static void AddSummary(VisualElement root, List<(Label Label, Func<IReadOnlyList<string>> Lines)> summaries, Func<IReadOnlyList<string>> lines)
+		{
+			var label = new Label();
+			label.style.whiteSpace = WhiteSpace.Normal;
+			label.style.fontSize = 10;
+			label.style.unityFontStyleAndWeight = FontStyle.Italic;
+			label.style.marginTop = 2;
+			root.Add(label);
+			summaries.Add((label, lines));
+		}
+
+		private static void RefreshSummaries(MobileServicesConfig config, List<(Label Label, Func<IReadOnlyList<string>> Lines)> summaries)
+		{
+			foreach (var (label, lines) in summaries)
+			{
+				if (config.ManageNativeBuildManually)
+				{
+					label.text = "Adds to build: nothing. Manage Native Build Manually is on.";
+					continue;
+				}
+				var entries = lines();
+				label.text = entries.Count == 0
+					? "Adds to build: nothing."
+					: "Adds to build:\n- " + string.Join("\n- ", entries);
+			}
 		}
 
 		private static Label MakeSection(string text)

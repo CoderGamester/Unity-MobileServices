@@ -8,6 +8,11 @@ namespace GameLovers.MobileServices.Device
 	/// <inheritdoc />
 	public sealed class DeviceService : IDeviceService, IDisposable
 	{
+#if UNITY_EDITOR
+		// Editor-only simulator hook, installed and removed symmetrically by EditorPlatformSimulator.
+		internal static Action EditorOpenAppSettingsOverride;
+#endif
+
 		/// <summary>
 		/// Controls whether the device screen stays awake. When <c>true</c>, sets
 		/// <c>Screen.sleepTimeout</c> to <c>SleepTimeout.NeverSleep</c>; when <c>false</c>,
@@ -66,6 +71,38 @@ namespace GameLovers.MobileServices.Device
 				new PermissionsService(),
 				new AttService(),
 				new DeepLinkService());
+		}
+
+		/// <summary>
+		/// Opens this application's page in the operating system Settings, where the player can change a denied
+		/// permission. Opening Settings can move the app to the background.
+		/// </summary>
+		public static void OpenAppSettings()
+		{
+#if UNITY_EDITOR
+			if (EditorOpenAppSettingsOverride != null)
+			{
+				EditorOpenAppSettingsOverride.Invoke();
+				return;
+			}
+			Debug.Log("[GameLovers.MobileServices] OpenAppSettings() is a no-op in the Editor unless the Mobile Services simulator is engaged.");
+#elif UNITY_IOS
+			Application.OpenURL("app-settings:");
+#elif UNITY_ANDROID
+			try
+			{
+				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				using var uriClass = new AndroidJavaClass("android.net.Uri");
+				using var uri = uriClass.CallStatic<AndroidJavaObject>("fromParts", "package", activity.Call<string>("getPackageName"), (string)null);
+				using var intent = new AndroidJavaObject("android.content.Intent", "android.settings.APPLICATION_DETAILS_SETTINGS", uri);
+				activity.Call("startActivity", intent);
+			}
+			catch (Exception exception)
+			{
+				Debug.LogError($"[GameLovers.MobileServices] OpenAppSettings failed: {exception.Message}");
+			}
+#endif
 		}
 
 		/// <inheritdoc />

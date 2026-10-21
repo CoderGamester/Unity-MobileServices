@@ -53,7 +53,10 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | Symptom | Fix |
 |---------|-----|
 | `RequestAsync` resolves to `Granted` in editor without prompting | Editor short-circuits to `Granted`. Use `EditorPlatformSimulator.QueuePermissionResult(...)` to override. |
-| `Permission.READ_MEDIA_IMAGES` denied on Android < 13 | The permission is auto-granted below API 33. The service returns `Granted` immediately via Unity's `Permission.HasUserAuthorizedPermission` short-circuit. Add the legacy `READ_EXTERNAL_STORAGE` for that path. |
+| `Check(PhotoLibrary)` is `Denied` or `NotDetermined` on Android < 13 | Below API 33 the service checks `READ_EXTERNAL_STORAGE`, not `READ_MEDIA_IMAGES`. Turn on the `ReadMediaImages` Android manifest toggle; it also declares `READ_EXTERNAL_STORAGE` up to API 32. |
+| Android location never shows a dialog or stays `Limited` | Android 12+ needs precise and approximate location declared together (`AccessFineLocation` adds both). `LocationAlways` also needs `AccessBackgroundLocation` and reports `Limited` until background access is granted. |
+| `Check` reports `Denied` and `RequestAsync` returns instantly | The player refused (or chose "Don't ask again"). Explain the need and call `DeviceService.OpenAppSettings()`. |
+| iOS `RequestAsync` returns `NotDetermined` and the log says a permission group is not compiled | The generated `Info.plist` has no usage description for it, so the group was left out of the binary. Add the description in the Mobile Services Config. |
 | iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` or rely on the build postprocessor to fail the build (default). |
 
 ## Editor / Build
