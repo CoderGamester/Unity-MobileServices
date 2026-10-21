@@ -1,6 +1,5 @@
 #if UNITY_ANDROID && !UNITY_EDITOR
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
@@ -15,7 +14,6 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 		private const string PlayGamesClass = "com.google.android.gms.games.PlayGames";
 		private const int ShowUiRequestCode = 9004;
 
-		private readonly List<AndroidJavaProxy> _listeners = new List<AndroidJavaProxy>();
 		private bool _authenticated;
 		private GamePlayer _player;
 
@@ -44,7 +42,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			try
 			{
 				var client = GetClient("getGamesSignInClient");
-				Listen(client.Call<AndroidJavaObject>("isAuthenticated"), checkTask =>
+				AndroidTaskListeners.Listen(client.Call<AndroidJavaObject>("isAuthenticated"), checkTask =>
 				{
 					if (IsAuthenticatedResult(checkTask))
 					{
@@ -52,7 +50,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 						return;
 					}
 
-					Listen(client.Call<AndroidJavaObject>("signIn"), signInTask =>
+					AndroidTaskListeners.Listen(client.Call<AndroidJavaObject>("signIn"), signInTask =>
 					{
 						if (IsAuthenticatedResult(signInTask)) LoadPlayer(completion);
 						else Complete(completion, false);
@@ -108,7 +106,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 
 		private void LoadPlayer(AwaitableCompletionSource<bool> completion)
 		{
-			Listen(GetClient("getPlayersClient").Call<AndroidJavaObject>("getCurrentPlayer"), task =>
+			AndroidTaskListeners.Listen(GetClient("getPlayersClient").Call<AndroidJavaObject>("getCurrentPlayer"), task =>
 			{
 				if (!task.Call<bool>("isSuccessful"))
 				{
@@ -130,7 +128,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			var completion = new AwaitableCompletionSource<bool>();
 			try
 			{
-				Listen(startTask(), task => Complete(completion, task.Call<bool>("isSuccessful")));
+				AndroidTaskListeners.Listen(startTask(), task => Complete(completion, task.Call<bool>("isSuccessful")));
 			}
 			catch (Exception exception)
 			{
@@ -144,7 +142,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 		{
 			try
 			{
-				Listen(GetClient(clientFactory).Call<AndroidJavaObject>(intentMethod, intentArguments), task =>
+				AndroidTaskListeners.Listen(GetClient(clientFactory).Call<AndroidJavaObject>(intentMethod, intentArguments), task =>
 				{
 					if (!task.Call<bool>("isSuccessful")) return;
 					using var intent = task.Call<AndroidJavaObject>("getResult");
@@ -156,39 +154,6 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			{
 				Debug.LogError($"[GameLovers.MobileServices] Play Games UI failed: {exception.Message}");
 			}
-		}
-
-		// Task callbacks arrive on Android's UI thread; the proxy is kept alive until it has run once.
-		private void Listen(AndroidJavaObject task, Action<AndroidJavaObject> onComplete)
-		{
-			CompleteListener listener = null;
-			listener = new CompleteListener(finished =>
-			{
-				lock (_listeners) _listeners.Remove(listener);
-				try
-				{
-					onComplete(finished);
-				}
-				catch (Exception exception)
-				{
-					Debug.LogError($"[GameLovers.MobileServices] Play Games callback failed: {exception.Message}");
-				}
-			});
-			lock (_listeners) _listeners.Add(listener);
-			task.Call<AndroidJavaObject>("addOnCompleteListener", listener);
-		}
-
-		private sealed class CompleteListener : AndroidJavaProxy
-		{
-			private readonly Action<AndroidJavaObject> _onComplete;
-
-			public CompleteListener(Action<AndroidJavaObject> onComplete) : base("com.google.android.gms.tasks.OnCompleteListener")
-			{
-				_onComplete = onComplete;
-			}
-
-			// ReSharper disable once InconsistentNaming
-			public void onComplete(AndroidJavaObject task) => _onComplete(task);
 		}
 	}
 }

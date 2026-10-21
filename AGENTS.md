@@ -5,7 +5,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Scope
 
 - Package: `com.gamelovers.mobileservices`; minimum Unity version and dependencies are authoritative in `package.json`.
-- Runtime subsystems: Native UI, notifications, gestures, haptics, device services (battery, audio session, permissions, ATT, deep links, and background tasks), and the opt-in game platform (Game Center and Play Games).
+- Runtime subsystems: Native UI, notifications, gestures, haptics, device services (battery, audio session, permissions, ATT, deep links, and background tasks), and the opt-in game platform (Game Center and Play Games sign-in, leaderboards, achievements, and cloud saves).
 - Consumers must enable the Input System or Both. The gesture contract uses EnhancedTouch.
 - This package is render-pipeline-neutral and has no dependency on GameLovers Services.
 
@@ -30,6 +30,9 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - Picked images are always a private copy the caller may delete. The `_GameLoversMedia*` exports, their callback signature, and the Java `ResultCallback` and `PathCallback` interfaces change together with their C# callers.
 - `GamePlatformServices` is opt-in and holds one `IGamePlatformBackend` per platform. Its guards (signed-in player, non-empty id, positive steps, one shared sign-in) live in the service, not the backends. The Editor backend and `EditorGamePlatformState` are process-wide, so the simulator panel drives the consumer's own instance.
 - The Android game backend talks to Play Games v2 through JNI and `OnCompleteListener` proxies so the package compiles without the SDK; the postprocessor adds the SDK only when `GamePlatform.PlayGamesProjectId` is set.
+- Cloud saves share the game platform opt-in. `CloudSaveService` owns validation, availability and conflict resolution (policy, resolver, newest-first ordering) so both platforms behave alike.
+- Cloud save backends only list, load every stored version, resolve to a chosen version, save, and delete, and report failures as `CloudSaveException`. The Android backend uses JNI like the sign-in backend.
+- The iOS bridge (`CloudSave.m`) replies with tagged strings decoded by `CloudSaveProtocol` and holds its own `UIBackgroundTask` during saves, because Unity's main loop is paused while backgrounded.
 - `Plugins/iOS/GamePlatform.m` links GameKit only when `GL_GAME_CENTER` is defined (Game Center capability on). The `_GameLoversGamePlatform*` exports and their callback signature change together with the C# callers.
 - `IBackgroundTaskService` is iOS-only in effect. `Plugins/iOS/BackgroundTask.m` must end the system task before its expiration handler returns, on the main thread; handle members are readable from any thread; the `_GameLoversBackgroundTask*` exports, C# `DllImport` signatures, and the expiration callback signature change together. Android and Editor return a pass-through handle.
 - One haptic play replaces the previous play and cancels its pending auto-stop. Negative preset duration loops until explicit stop; `StopCurrentHaptic()` is idempotent.

@@ -69,6 +69,16 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | `IncrementAchievementAsync` returns `false` on iOS | Pass `totalSteps`; Game Center tracks a percentage and needs the total to convert steps. |
 | Progress calls return `false` and log that a signed-in player is needed | Call `AuthenticateAsync` first and check its result. |
 
+## Cloud save
+
+| Symptom | Fix |
+|---------|-----|
+| `CloudSaveException` with `NotAuthenticated` | Call `IGamePlatformServices.AuthenticateAsync` first and check its result. |
+| `CloudUnavailable` on iOS | The player needs an iCloud account for the app. Turn on **Cloud Save** in the Mobile Services Config so the iCloud Documents capability is added, and enable iCloud for the App ID and provisioning profile. |
+| `CloudUnavailable` after enabling Game Center | Cloud saves need the **Game Center** capability compiled in; check the *Game platform* section. |
+| Android saves fail with `Io` | Enable **Saved Games** for the Play Games project in the Play Console. |
+| `LoadAsync` throws `Conflict` | `ConflictPolicy` is `Manual` and `ConflictResolver` is null or returned null. Set a resolver or use `MostRecent`. |
+
 ## Media
 
 | Symptom | Fix |

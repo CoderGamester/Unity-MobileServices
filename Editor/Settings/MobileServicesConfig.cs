@@ -81,6 +81,12 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] public bool GameCenter;
 
 		/// <summary>
+		/// Adds the iCloud Documents capability that Game Center saved games need on iOS. Cloud saves also need Game Center
+		/// and, on Android, the Play Games project id with Saved Games enabled in the Play Console.
+		/// </summary>
+		[SerializeField] public bool CloudSave;
+
+		/// <summary>
 		/// The numeric Google Play Console project id. Entering it adds the Play Games Services SDK and the
 		/// <c>APP_ID</c> manifest entry to Android builds; leaving it empty keeps the SDK out.
 		/// </summary>
@@ -101,6 +107,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		internal void CollectValidationErrors(string prefix, List<string> errors)
 		{
+			if (CloudSave && !GameCenter && !PlayGamesEnabled)
+			{
+				errors.Add($"{prefix}.CloudSave is enabled but neither GameCenter nor PlayGamesProjectId is set; cloud saves need a game service to sign in to.");
+			}
 			if (PlayGamesEnabled && !IsAllDigits(PlayGamesProjectId.Trim()))
 			{
 				errors.Add($"{prefix}.PlayGamesProjectId must be the numeric Play Console project id: '{PlayGamesProjectId}'.");

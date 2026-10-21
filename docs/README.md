@@ -14,6 +14,7 @@ This folder contains the full API reference for each subsystem, plus the editor-
 | Gestures | [gestures.md](gestures.md) |
 | Device (umbrella + children, plus a separate router) | [device.md](device.md) |
 | Game Platform (Game Center and Play Games) | [game-platform.md](game-platform.md) |
+| Cloud Save (saved games) | [cloud-save.md](cloud-save.md) |
 
 ## Editor tooling
 

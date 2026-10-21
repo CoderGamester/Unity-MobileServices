@@ -161,7 +161,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var pbxChanged = EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
 			ApplyNativeGroupDefines(pbx, plist.root, settings);
 			pbxChanged = true;
-			var capabilityNeeded = settings.Capabilities.PushNotifications || settings.GamePlatform.GameCenter ||
+			var capabilityNeeded = settings.Capabilities.PushNotifications || settings.GamePlatform.GameCenter || settings.GamePlatform.CloudSave ||
 				(settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0);
 			if (capabilityNeeded)
 			{
@@ -176,6 +176,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				var capability = new ProjectCapabilityManager(pbxPath, entitlementsName, null, mainTargetGuid);
 				if (settings.Capabilities.PushNotifications) capability.AddPushNotifications(true);
 				if (settings.GamePlatform.GameCenter) capability.AddGameCenter();
+				if (settings.GamePlatform.CloudSave) capability.AddiCloud(false, true, false, true, null);
 				if (settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0)
 					capability.AddAssociatedDomains(settings.Capabilities.AssociatedDomainList.ToArray());
 				capability.WriteToFile();

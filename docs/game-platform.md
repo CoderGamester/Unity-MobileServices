@@ -1,6 +1,6 @@
 # Game Platform
 
-`GamePlatformServices` (`IGamePlatformServices`, namespace `GameLovers.MobileServices.GamePlatform`) gives one API for the platform game services: **Game Center** on iOS and **Google Play Games Services v2** on Android. It covers sign-in, leaderboards and achievements.
+`GamePlatformServices` (`IGamePlatformServices`, namespace `GameLovers.MobileServices.GamePlatform`) gives one API for the platform game services: **Game Center** on iOS and **Google Play Games Services v2** on Android. It covers sign-in, leaderboards and achievements, and `CloudSave` stores slot-based saves on the same sign-in (see [cloud-save.md](cloud-save.md)).
 
 It is **opt-in**. Nothing is added to a build until you enable it in the Mobile Services Config, and the package needs no Apple or Google Unity plugin.
 

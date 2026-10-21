@@ -88,7 +88,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			gamePlatformHint.style.fontSize = 10;
 			gamePlatformHint.style.unityFontStyleAndWeight = FontStyle.Italic;
 			root.Add(gamePlatformHint);
-			AddRelative(root, "_gamePlatform", "GameCenter", "PlayGamesProjectId", "PlayGamesDependencyCoordinate");
+			AddRelative(root, "_gamePlatform", "GameCenter", "PlayGamesProjectId", "PlayGamesDependencyCoordinate", "CloudSave");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.GamePlatform(config));
 
 			root.Add(MakeSection("Store review"));

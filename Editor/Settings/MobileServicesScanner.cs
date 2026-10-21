@@ -16,6 +16,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		public bool UsesDeepLinks;
 		public bool UsesNativeUiShare;
 		public bool UsesGamePlatform;
+		public bool UsesCloudSave;
 
 		/// <summary>Returns advisory mismatches without changing the persisted config.</summary>
 		public IReadOnlyList<string> GetConfigurationWarnings(MobileServicesConfig config)
@@ -37,6 +38,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 			if (UsesGamePlatform && !config.GamePlatform.GameCenter && !config.GamePlatform.PlayGamesEnabled)
 			{
 				warnings.Add("Game platform services are referenced but neither Game Center nor a Play Games project id is configured; every call fails at runtime.");
+			}
+			if (UsesCloudSave && !config.GamePlatform.CloudSave)
+			{
+				warnings.Add("Cloud saves are referenced but the Cloud Save toggle is disabled; iOS saved games need the iCloud capability and fail with CloudUnavailable without it.");
 			}
 			if (UsesNativeUiShare && !config.AndroidManifest.IncludeShareQueriesBlock)
 			{
@@ -81,6 +86,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			var nativeUiType = typeof(MobileServices.NativeUi.NativeUiService);
 			var gamePlatformType = typeof(MobileServices.GamePlatform.GamePlatformServices);
 			var gamePlatformInterface = typeof(MobileServices.GamePlatform.IGamePlatformServices);
+			var cloudSaveInterface = typeof(MobileServices.GamePlatform.ICloudSaveService);
 
 			// Walk every user assembly. Built-in / package assemblies are skipped to keep the scan fast.
 			var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
@@ -125,6 +131,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 						}
 					}
 					if (TypeReferences(type, nativeUiType))           result.UsesNativeUiShare = true;
+					if (TypeReferences(type, cloudSaveInterface))   result.UsesCloudSave = true;
 					if (TypeReferences(type, gamePlatformType) ||
 					    TypeReferences(type, gamePlatformInterface))  result.UsesGamePlatform = true;
 				}

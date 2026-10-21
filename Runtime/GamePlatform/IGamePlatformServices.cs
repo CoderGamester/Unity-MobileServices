@@ -69,6 +69,9 @@ namespace GameLovers.MobileServices.GamePlatform
 		/// <summary>The signed-in player, or null when nobody is signed in.</summary>
 		GamePlayer LocalPlayer { get; }
 
+		/// <summary>Slot-based cloud saves on Game Center saved games (iOS) or Google Play Games saved games (Android).</summary>
+		ICloudSaveService CloudSave { get; }
+
 		/// <summary>
 		/// Signs the player in, showing the platform's sign-in UI when needed. Returns immediately when already signed in.
 		/// </summary>

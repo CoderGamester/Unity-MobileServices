@@ -92,6 +92,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			var lines = new List<string>();
 			var settings = config.GamePlatform;
 			if (settings.GameCenter) lines.Add("iOS: Game Center entitlement and the GameKit bridge compiled in");
+			if (settings.CloudSave) lines.Add("iOS entitlement: iCloud Documents with the default container (Game Center saved games)");
 			if (settings.PlayGamesEnabled)
 			{
 				lines.Add($"Android Gradle: implementation '{settings.ResolvePlayGamesCoordinate()}'");

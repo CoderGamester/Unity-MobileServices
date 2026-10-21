@@ -17,13 +17,17 @@ namespace GameLovers.MobileServices.GamePlatform
 		/// <inheritdoc />
 		public GamePlayer LocalPlayer => IsAuthenticated ? _backend.LocalPlayer : null;
 
-		public GamePlatformServices() : this(CreateBackend())
+		/// <inheritdoc />
+		public ICloudSaveService CloudSave { get; }
+
+		public GamePlatformServices() : this(CreateBackend(), null, CreateCloudSaveBackend())
 		{
 		}
 
-		internal GamePlatformServices(IGamePlatformBackend backend)
+		internal GamePlatformServices(IGamePlatformBackend backend, ICloudSaveService cloudSave = null, ICloudSaveBackend cloudSaveBackend = null)
 		{
 			_backend = backend;
+			CloudSave = cloudSave ?? new CloudSaveService(() => IsAuthenticated, cloudSaveBackend ?? new NoOpCloudSaveBackend());
 		}
 
 		/// <inheritdoc />
@@ -125,6 +129,19 @@ namespace GameLovers.MobileServices.GamePlatform
 			return new AndroidGamePlatformBackend();
 #else
 			return new NoOpGamePlatformBackend();
+#endif
+		}
+
+		private static ICloudSaveBackend CreateCloudSaveBackend()
+		{
+#if UNITY_EDITOR
+			return new EditorCloudSaveBackend();
+#elif UNITY_IOS
+			return new IosCloudSaveBackend();
+#elif UNITY_ANDROID
+			return new AndroidCloudSaveBackend();
+#else
+			return new NoOpCloudSaveBackend();
 #endif
 		}
 
