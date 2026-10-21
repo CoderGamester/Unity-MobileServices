@@ -613,7 +613,6 @@ namespace GameLovers.MobileServices.NativeUi
 			}
 			catch (Exception e)
 			{
-				// Custom Tabs are missing (the dependency is turned off) or the launch failed; the external browser still works.
 				Debug.LogWarning($"[GameLovers.MobileServices] The in-app browser is unavailable ({e.Message}); opening the external browser.");
 				Application.OpenURL(url);
 			}

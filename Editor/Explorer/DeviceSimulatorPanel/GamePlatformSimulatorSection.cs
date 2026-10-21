@@ -1,20 +1,22 @@
 using GameLovers.MobileServices.GamePlatform.Internal;
-using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 {
-	/// <summary>
-	/// Device Simulator foldout that drives the process-wide Editor game-service simulation every
-	/// <c>GamePlatformServices</c> in the Editor reads, so it acts on the game's own instance.
-	/// </summary>
-	internal static class GamePlatformSimulatorSection
+	/// <summary>Device Simulator foldout that drives the process-wide Editor game-service simulation.</summary>
+	internal sealed class GamePlatformSimulatorSection : Foldout
 	{
-		public static VisualElement Build()
+		private readonly Toggle _signedIn;
+		private readonly Toggle _signInSucceeds;
+		private readonly TextField _playerName;
+		private readonly Label _activity;
+
+		public GamePlatformSimulatorSection()
 		{
-			var foldout = new Foldout { text = "Game Platform", value = false };
-			foldout.AddToClassList("msp-foldout");
+			text = "Game Platform";
+			value = false;
+			AddToClassList("msp-foldout");
 
 			var banner = new VisualElement();
 			banner.AddToClassList("msp-banner");
@@ -22,51 +24,50 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				"Sign-in, scores and achievements are recorded below instead of reaching a platform.");
 			bannerLabel.AddToClassList("msp-banner-label");
 			banner.Add(bannerLabel);
-			foldout.Add(banner);
+			Add(banner);
 
-			var signedIn = new Toggle("Signed in") { value = EditorGamePlatformState.SignedIn };
-			signedIn.RegisterValueChangedCallback(evt =>
+			_signedIn = new Toggle("Signed in");
+			_signedIn.RegisterValueChangedCallback(evt =>
 			{
 				if (evt.newValue != EditorGamePlatformState.SignedIn) EditorGamePlatformState.SetSignedIn(evt.newValue);
 			});
-			foldout.Add(signedIn);
+			Add(_signedIn);
 
-			var succeeds = new Toggle("Next sign-in succeeds") { value = EditorGamePlatformState.SignInSucceeds };
-			succeeds.RegisterValueChangedCallback(evt => EditorGamePlatformState.SignInSucceeds = evt.newValue);
-			foldout.Add(succeeds);
+			_signInSucceeds = new Toggle("Next sign-in succeeds");
+			_signInSucceeds.RegisterValueChangedCallback(evt => EditorGamePlatformState.SignInSucceeds = evt.newValue);
+			Add(_signInSucceeds);
 
-			var playerName = new TextField("Player name") { value = EditorGamePlatformState.PlayerName };
-			playerName.RegisterValueChangedCallback(evt => EditorGamePlatformState.PlayerName = evt.newValue);
-			foldout.Add(playerName);
+			_playerName = new TextField("Player name");
+			_playerName.RegisterValueChangedCallback(evt => EditorGamePlatformState.PlayerName = evt.newValue);
+			Add(_playerName);
 
-			var activity = new Label();
-			activity.style.whiteSpace = WhiteSpace.Normal;
-			activity.style.fontSize = 10;
-			activity.style.marginTop = 4;
-			foldout.Add(activity);
+			_activity = new Label();
+			_activity.style.whiteSpace = WhiteSpace.Normal;
+			_activity.style.fontSize = 10;
+			_activity.style.marginTop = 4;
+			Add(_activity);
 
 			var reset = new Button(EditorGamePlatformState.Reset) { text = "Sign out and clear activity" };
 			reset.style.marginTop = 2;
-			foldout.Add(reset);
+			Add(reset);
 
-			void Refresh()
-			{
-				signedIn.SetValueWithoutNotify(EditorGamePlatformState.SignedIn);
-				succeeds.SetValueWithoutNotify(EditorGamePlatformState.SignInSucceeds);
-				playerName.SetValueWithoutNotify(EditorGamePlatformState.PlayerName);
-				activity.text = EditorGamePlatformState.Activity.Count == 0
-					? "No game-service activity yet."
-					: "Recent activity:\n- " + string.Join("\n- ", EditorGamePlatformState.Activity);
-			}
-
-			foldout.RegisterCallback<AttachToPanelEvent>(_ =>
+			RegisterCallback<AttachToPanelEvent>(_ =>
 			{
 				EditorGamePlatformState.Changed += Refresh;
 				Refresh();
 			});
-			foldout.RegisterCallback<DetachFromPanelEvent>(_ => EditorGamePlatformState.Changed -= Refresh);
+			RegisterCallback<DetachFromPanelEvent>(_ => EditorGamePlatformState.Changed -= Refresh);
 			Refresh();
-			return foldout;
+		}
+
+		private void Refresh()
+		{
+			_signedIn.SetValueWithoutNotify(EditorGamePlatformState.SignedIn);
+			_signInSucceeds.SetValueWithoutNotify(EditorGamePlatformState.SignInSucceeds);
+			_playerName.SetValueWithoutNotify(EditorGamePlatformState.PlayerName);
+			_activity.text = EditorGamePlatformState.Activity.Count == 0
+				? "No game-service activity yet."
+				: "Recent activity:\n- " + string.Join("\n- ", EditorGamePlatformState.Activity);
 		}
 	}
 }

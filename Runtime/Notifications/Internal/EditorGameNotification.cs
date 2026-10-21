@@ -31,6 +31,7 @@ namespace GameLovers.MobileServices.Notifications
 		public string SmallIcon { get; set; }
 		/// <inheritdoc />
 		public string LargeIcon { get; set; }
+		/// <inheritdoc />
 		public string Data { get; set; }
 	}
 }

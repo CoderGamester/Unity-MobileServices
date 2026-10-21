@@ -9,6 +9,7 @@ namespace GameLovers.MobileServices.Device.Internal
 #if UNITY_ANDROID && !UNITY_EDITOR
 		private static int _current = -1;
 
+		/// <summary>The device API level, or 0 when it cannot be read.</summary>
 		public static int Current
 		{
 			get
@@ -27,6 +28,7 @@ namespace GameLovers.MobileServices.Device.Internal
 			}
 		}
 #else
+		/// <summary>The device API level, which is always 0 away from an Android device.</summary>
 		public static int Current => 0;
 #endif
 	}

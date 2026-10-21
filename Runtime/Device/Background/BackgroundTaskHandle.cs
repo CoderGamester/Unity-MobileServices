@@ -17,7 +17,7 @@ namespace GameLovers.MobileServices.Device
 		/// <summary>The label passed to <see cref="IBackgroundTaskService.Begin"/>.</summary>
 		public string Name { get; }
 
-		/// <summary>True when the system has run out of time for this task and is about to suspend the application.</summary>
+		/// <summary>True when the system has run out of time and is about to suspend the application.</summary>
 		public bool IsExpired => !_disposed && _isExpired();
 
 		/// <summary>True until the task is disposed or expires.</summary>
@@ -37,7 +37,9 @@ namespace GameLovers.MobileServices.Device
 			_isExpired = isExpired;
 		}
 
-		/// <summary>Ends the task. Calling it again has no effect.</summary>
+		/// <summary>
+		/// Ends the task. Calling it again has no effect.
+		/// </summary>
 		public void Dispose()
 		{
 			if (_disposed)

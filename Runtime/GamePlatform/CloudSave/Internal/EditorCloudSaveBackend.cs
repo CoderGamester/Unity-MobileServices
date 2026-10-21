@@ -15,13 +15,14 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 	{
 		private const string ConflictSuffix = ".conflict";
 
-		/// <summary>Whether the simulated cloud storage is available, so the unavailable path can be exercised.</summary>
+		/// <summary>Whether the simulated cloud storage is available, to exercise the unavailable path.</summary>
 		public static bool Available = true;
 
 		/// <summary>The folder that holds the simulated saves.</summary>
 		public static string Folder =>
 			Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "GameLovers", "SimulatedCloudSave");
 
+		/// <summary>Lists the simulated slots.</summary>
 		public static IReadOnlyList<CloudSaveSlot> ListSlots()
 		{
 			var slots = new List<CloudSaveSlot>();
@@ -36,6 +37,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return slots;
 		}
 
+		/// <summary>Reads every stored version of a slot, newest first.</summary>
 		public static IReadOnlyList<CloudSaveVersion> ReadVersions(string slot)
 		{
 			var versions = new List<CloudSaveVersion>();
@@ -45,6 +47,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return versions;
 		}
 
+		/// <summary>Stores bytes for a slot, or as its conflicting version.</summary>
 		public static void Write(string slot, byte[] data, string description, DateTime modifiedUtc, bool asConflict = false)
 		{
 			var key = asConflict ? slot + ConflictSuffix : slot;
@@ -54,12 +57,14 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			File.WriteAllText(Path.Combine(Folder, key + ".json"), JsonUtility.ToJson(stored));
 		}
 
+		/// <summary>Deletes a slot and its conflicting version.</summary>
 		public static void Delete(string slot)
 		{
 			DeleteFiles(slot);
 			DeleteFiles(slot + ConflictSuffix);
 		}
 
+		/// <summary>Deletes every simulated save.</summary>
 		public static void DeleteAll()
 		{
 			if (Directory.Exists(Folder)) Directory.Delete(Folder, true);
@@ -108,12 +113,16 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 	/// <summary>Editor backend that stores saves on disk instead of calling a platform.</summary>
 	internal sealed class EditorCloudSaveBackend : ICloudSaveBackend
 	{
+		/// <inheritdoc />
 		public bool IsAvailable => EditorCloudSaveState.Available;
 
+		/// <inheritdoc />
 		public Awaitable<IReadOnlyList<CloudSaveSlot>> ListAsync() => Completed(EditorCloudSaveState.ListSlots());
 
+		/// <inheritdoc />
 		public Awaitable<IReadOnlyList<CloudSaveVersion>> LoadVersionsAsync(string slot) => Completed(EditorCloudSaveState.ReadVersions(slot));
 
+		/// <inheritdoc />
 		public Awaitable ResolveAsync(string slot, CloudSaveVersion chosen)
 		{
 			EditorCloudSaveState.Delete(slot);
@@ -121,6 +130,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return Completed();
 		}
 
+		/// <inheritdoc />
 		public Awaitable SaveAsync(string slot, byte[] data, string description)
 		{
 			EditorCloudSaveState.Delete(slot);
@@ -128,6 +138,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return Completed();
 		}
 
+		/// <inheritdoc />
 		public Awaitable DeleteAsync(string slot)
 		{
 			EditorCloudSaveState.Delete(slot);

@@ -15,26 +15,31 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 		private static readonly Dictionary<int, AwaitableCompletionSource<string>> _requests = new Dictionary<int, AwaitableCompletionSource<string>>();
 		private static int _nextRequestId = 1;
 
+		/// <inheritdoc />
 		public bool IsAvailable => _GameLoversCloudSaveIsAvailable() != 0;
 
+		/// <inheritdoc />
 		public async Awaitable<IReadOnlyList<CloudSaveSlot>> ListAsync()
 		{
 			var reply = await Request(id => _GameLoversCloudSaveList(id, OnNativeResult));
 			return CloudSaveProtocol.ParseSlots(CloudSaveProtocol.ReadPayload(reply));
 		}
 
+		/// <inheritdoc />
 		public async Awaitable<IReadOnlyList<CloudSaveVersion>> LoadVersionsAsync(string slot)
 		{
 			var reply = await Request(id => _GameLoversCloudSaveLoadVersions(slot, id, OnNativeResult));
 			return CloudSaveProtocol.ParseVersions(CloudSaveProtocol.ReadPayload(reply));
 		}
 
+		/// <inheritdoc />
 		public async Awaitable ResolveAsync(string slot, CloudSaveVersion chosen)
 		{
 			var encoded = Convert.ToBase64String(chosen.Data);
 			CloudSaveProtocol.ReadPayload(await Request(id => _GameLoversCloudSaveResolve(slot, encoded, id, OnNativeResult)));
 		}
 
+		/// <inheritdoc />
 		public async Awaitable SaveAsync(string slot, byte[] data, string description)
 		{
 			// Game Center saved games carry no description, so it is not sent.
@@ -42,6 +47,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			CloudSaveProtocol.ReadPayload(await Request(id => _GameLoversCloudSaveSave(slot, encoded, id, OnNativeResult)));
 		}
 
+		/// <inheritdoc />
 		public async Awaitable DeleteAsync(string slot)
 		{
 			CloudSaveProtocol.ReadPayload(await Request(id => _GameLoversCloudSaveDelete(slot, id, OnNativeResult)));

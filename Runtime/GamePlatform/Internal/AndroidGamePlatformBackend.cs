@@ -17,8 +17,10 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 		private bool _authenticated;
 		private GamePlayer _player;
 
+		/// <inheritdoc />
 		public bool IsAuthenticated => _authenticated;
 
+		/// <inheritdoc />
 		public GamePlayer LocalPlayer => _player;
 
 		public AndroidGamePlatformBackend()
@@ -36,6 +38,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			}
 		}
 
+		/// <inheritdoc />
 		public Awaitable<bool> AuthenticateAsync()
 		{
 			var completion = new AwaitableCompletionSource<bool>();
@@ -52,34 +55,44 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 
 					AndroidTaskListeners.Listen(client.Call<AndroidJavaObject>("signIn"), signInTask =>
 					{
-						if (IsAuthenticatedResult(signInTask)) LoadPlayer(completion);
-						else Complete(completion, false);
+						if (!IsAuthenticatedResult(signInTask))
+						{
+							completion.TrySetResult(false);
+							return;
+						}
+
+						LoadPlayer(completion);
 					});
 				});
 			}
 			catch (Exception exception)
 			{
 				Debug.LogError($"[GameLovers.MobileServices] Play Games sign-in failed: {exception.Message}");
-				Complete(completion, false);
+				completion.TrySetResult(false);
 			}
 			return NativeCompletion.ToMainThread(completion);
 		}
 
+		/// <inheritdoc />
 		public Awaitable<bool> ReportScoreAsync(string leaderboardId, long score) =>
 			Succeeded(() => GetClient("getLeaderboardsClient").Call<AndroidJavaObject>("submitScoreImmediate", leaderboardId, score));
 
+		/// <inheritdoc />
 		public Awaitable<bool> UnlockAchievementAsync(string achievementId) =>
 			Succeeded(() => GetClient("getAchievementsClient").Call<AndroidJavaObject>("unlockImmediate", achievementId));
 
+		/// <inheritdoc />
 		public Awaitable<bool> IncrementAchievementAsync(string achievementId, int steps, int totalSteps) =>
 			Succeeded(() => GetClient("getAchievementsClient").Call<AndroidJavaObject>("incrementImmediate", achievementId, steps));
 
+		/// <inheritdoc />
 		public void ShowLeaderboards(string leaderboardId)
 		{
 			var hasId = !string.IsNullOrEmpty(leaderboardId);
 			ShowUi("getLeaderboardsClient", hasId ? "getLeaderboardIntent" : "getAllLeaderboardsIntent", hasId ? new object[] { leaderboardId } : Array.Empty<object>());
 		}
 
+		/// <inheritdoc />
 		public void ShowAchievements() => ShowUi("getAchievementsClient", "getAchievementsIntent", Array.Empty<object>());
 
 		private static AndroidJavaObject CurrentActivity()
@@ -102,8 +115,6 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return result != null && result.Call<bool>("isAuthenticated");
 		}
 
-		private static void Complete(AwaitableCompletionSource<bool> completion, bool result) => completion.TrySetResult(result);
-
 		private void LoadPlayer(AwaitableCompletionSource<bool> completion)
 		{
 			AndroidTaskListeners.Listen(GetClient("getPlayersClient").Call<AndroidJavaObject>("getCurrentPlayer"), task =>
@@ -112,14 +123,14 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 				{
 					_authenticated = false;
 					_player = null;
-					Complete(completion, false);
+					completion.TrySetResult(false);
 					return;
 				}
 
 				using var player = task.Call<AndroidJavaObject>("getResult");
 				_player = new GamePlayer(player.Call<string>("getPlayerId"), player.Call<string>("getDisplayName"));
 				_authenticated = true;
-				Complete(completion, true);
+				completion.TrySetResult(true);
 			});
 		}
 
@@ -128,12 +139,12 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			var completion = new AwaitableCompletionSource<bool>();
 			try
 			{
-				AndroidTaskListeners.Listen(startTask(), task => Complete(completion, task.Call<bool>("isSuccessful")));
+				AndroidTaskListeners.Listen(startTask(), task => completion.TrySetResult(task.Call<bool>("isSuccessful")));
 			}
 			catch (Exception exception)
 			{
 				Debug.LogError($"[GameLovers.MobileServices] Play Games request failed: {exception.Message}");
-				Complete(completion, false);
+				completion.TrySetResult(false);
 			}
 			return NativeCompletion.ToMainThread(completion);
 		}

@@ -30,7 +30,6 @@ namespace GameLovers.MobileServices.Device
 			var taskId = _GameLoversBackgroundTaskBegin(label, OnNativeExpired);
 			if (taskId == 0)
 			{
-				// The system refused the task (for example the application is already suspended).
 				return new BackgroundTaskHandle(label, () => { }, () => TimeSpan.Zero, () => true);
 			}
 

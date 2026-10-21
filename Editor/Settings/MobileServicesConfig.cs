@@ -67,7 +67,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] public List<string> AssociatedDomainList = new List<string>();
 	}
 
-	/// <summary>Game Center and Google Play Games settings for <c>GamePlatformServices</c>; both are off until filled in.</summary>
+	/// <summary>
+	/// Game Center and Google Play Games settings for <c>GamePlatformServices</c>; both are off until filled in.
+	/// </summary>
 	[Serializable]
 	public sealed class GamePlatformSettings
 	{
@@ -105,6 +107,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		public string ResolvePlayGamesCoordinate() =>
 			string.IsNullOrWhiteSpace(PlayGamesDependencyCoordinate) ? DefaultPlayGamesCoordinate : PlayGamesDependencyCoordinate.Trim();
 
+		/// <summary>Appends malformed explicitly configured values to the supplied error collection.</summary>
 		internal void CollectValidationErrors(string prefix, List<string> errors)
 		{
 			if (CloudSave && !GameCenter && !PlayGamesEnabled)
@@ -145,7 +148,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// </summary>
 		[SerializeField] public bool ReadMediaImages;
 
-		/// <summary>Adds <c>WRITE_EXTERNAL_STORAGE</c> up to API 28, needed to save to the gallery on Android 9 and older.</summary>
+		/// <summary>
+		/// Adds <c>WRITE_EXTERNAL_STORAGE</c> up to API 28, needed to save to the gallery on Android 9 and older.
+		/// </summary>
 		[SerializeField] public bool WriteExternalStorageLegacy;
 
 		/// <summary>Adds <c>POST_NOTIFICATIONS</c> (API 33+).</summary>
@@ -160,7 +165,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Adds <c>CAMERA</c>.</summary>
 		[SerializeField] public bool Camera;
 
-		/// <summary>Adds <c>ACCESS_FINE_LOCATION</c> and <c>ACCESS_COARSE_LOCATION</c>, which Android 12+ requires together.</summary>
+		/// <summary>
+		/// Adds <c>ACCESS_FINE_LOCATION</c> and <c>ACCESS_COARSE_LOCATION</c>, which Android 12+ requires together.
+		/// </summary>
 		[SerializeField] public bool AccessFineLocation;
 
 		/// <summary>Adds <c>ACCESS_COARSE_LOCATION</c> for apps that only need approximate location.</summary>
@@ -189,20 +196,15 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// </summary>
 		[SerializeField] public bool IncludeMediaPicker;
 
-		/// <summary>The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.</summary>
+		/// <summary>
+		/// The <c>uses-permission</c> declarations the enabled toggles add, with their optional <c>maxSdkVersion</c>.
+		/// </summary>
 		internal IEnumerable<(string Permission, int? MaxSdkVersion)> GetPermissions()
 		{
 			if (Camera) yield return ("android.permission.CAMERA", null);
 			if (RecordAudio) yield return ("android.permission.RECORD_AUDIO", null);
-			if (AccessFineLocation)
-			{
-				yield return ("android.permission.ACCESS_FINE_LOCATION", null);
-				yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
-			}
-			else if (AccessCoarseLocation)
-			{
-				yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
-			}
+			if (AccessFineLocation) yield return ("android.permission.ACCESS_FINE_LOCATION", null);
+			if (AccessFineLocation || AccessCoarseLocation) yield return ("android.permission.ACCESS_COARSE_LOCATION", null);
 			if (AccessBackgroundLocation) yield return ("android.permission.ACCESS_BACKGROUND_LOCATION", null);
 			if (ReadMediaImages)
 			{
@@ -386,7 +388,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Default Maven coordinate for the Play In-App Review library injected on Android builds.</summary>
 		public const string DefaultPlayReviewCoordinate = "com.google.android.play:review:2.0.2";
 
-		/// <summary>Default Maven coordinate for the Chrome Custom Tabs library behind the in-app browser on Android.</summary>
+		/// <summary>Default Maven coordinate for the Custom Tabs library behind the Android in-app browser.</summary>
 		public const string DefaultCustomTabsCoordinate = "androidx.browser:browser:1.8.0";
 
 		private static MobileServicesConfig _cached;
@@ -700,7 +702,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			}
 			_deepLinks?.CollectValidationErrors(nameof(DeepLinks), errors);
 			if (_gamePlatform == null) errors.Add("GamePlatform is null.");
-			else _gamePlatform.CollectValidationErrors(nameof(GamePlatform), errors);
+			_gamePlatform?.CollectValidationErrors(nameof(GamePlatform), errors);
 			if (_includeCustomTabsDependency && !IsValidMavenCoordinate(CustomTabsDependencyCoordinate))
 			{
 				errors.Add($"CustomTabsDependencyCoordinate is invalid: '{CustomTabsDependencyCoordinate}'.");
@@ -720,6 +722,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return errors.Count == 0;
 		}
 
+		/// <summary>True for a <c>group:artifact:version</c> coordinate whose three parts are all non-empty.</summary>
 		internal static bool IsValidMavenCoordinate(string coordinate)
 		{
 			if (string.IsNullOrWhiteSpace(coordinate)) return false;

@@ -210,7 +210,6 @@ namespace GameLovers.MobileServices.Editor.Simulation
 		/// <summary>Closes any active simulator-overlay dialog without firing a button callback.</summary>
 		public static void DismissAllOverlays() => MobileSimulatorState.PushDismissAll();
 
-		// Stands in for the device gallery: saved files land in Library/GameLovers/SimulatedGallery.
 		private static bool SaveToSimulatedGallery(string filePath, MediaType mediaType)
 		{
 			var folder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "GameLovers", "SimulatedGallery");

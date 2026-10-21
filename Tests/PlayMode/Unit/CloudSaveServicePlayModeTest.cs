@@ -80,19 +80,6 @@ namespace GameLoversEditor.MobileServices.Tests
 			_service = new CloudSaveService(() => _authenticated, _backend);
 		}
 
-		private static async Awaitable<Exception> Catch(Func<Awaitable> action)
-		{
-			try
-			{
-				await action();
-				return null;
-			}
-			catch (Exception exception)
-			{
-				return exception;
-			}
-		}
-
 		private static async Awaitable<Exception> Catch<T>(Func<Awaitable<T>> action)
 		{
 			try
@@ -104,29 +91,6 @@ namespace GameLoversEditor.MobileServices.Tests
 			{
 				return exception;
 			}
-		}
-
-		private static CloudSaveVersion Version(string text, int minutesAgo) =>
-			new CloudSaveVersion(System.Text.Encoding.UTF8.GetBytes(text), string.Empty, DateTime.UtcNow.AddMinutes(-minutesAgo), "device");
-
-		private IEnumerator AssertFailsWith(CloudSaveFailure reason)
-		{
-			var results = new[]
-			{
-				Catch(() => _service.ListAsync()),
-				Catch(() => _service.LoadAsync("slot1")),
-				Catch(() => _service.SaveAsync("slot1", new byte[] { 1 })),
-				Catch(() => _service.DeleteAsync("slot1")),
-			};
-			foreach (var result in results) yield return result;
-
-			foreach (var result in results)
-			{
-				var exception = result.GetAwaiter().GetResult() as CloudSaveException;
-				Assert.IsNotNull(exception, "An operation did not throw a CloudSaveException.");
-				Assert.AreEqual(reason, exception.Reason);
-			}
-			Assert.IsEmpty(_backend.Calls);
 		}
 
 		[UnityTest]
@@ -288,6 +252,42 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.IsNotNull(exception);
 			Assert.AreEqual(CloudSaveFailure.Conflict, exception.Reason);
 			CollectionAssert.DoesNotContain(_backend.Calls, "resolve:slot1");
+		}
+
+		private static async Awaitable<Exception> Catch(Func<Awaitable> action)
+		{
+			try
+			{
+				await action();
+				return null;
+			}
+			catch (Exception exception)
+			{
+				return exception;
+			}
+		}
+
+		private static CloudSaveVersion Version(string text, int minutesAgo) =>
+			new CloudSaveVersion(System.Text.Encoding.UTF8.GetBytes(text), string.Empty, DateTime.UtcNow.AddMinutes(-minutesAgo), "device");
+
+		private IEnumerator AssertFailsWith(CloudSaveFailure reason)
+		{
+			var results = new[]
+			{
+				Catch(() => _service.ListAsync()),
+				Catch(() => _service.LoadAsync("slot1")),
+				Catch(() => _service.SaveAsync("slot1", new byte[] { 1 })),
+				Catch(() => _service.DeleteAsync("slot1")),
+			};
+			foreach (var result in results) yield return result;
+
+			foreach (var result in results)
+			{
+				var exception = result.GetAwaiter().GetResult() as CloudSaveException;
+				Assert.IsNotNull(exception, "An operation did not throw a CloudSaveException.");
+				Assert.AreEqual(reason, exception.Reason);
+			}
+			Assert.IsEmpty(_backend.Calls);
 		}
 	}
 }

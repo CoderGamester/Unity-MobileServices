@@ -11,7 +11,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 	/// </summary>
 	internal static class CloudSaveProtocol
 	{
-		/// <summary>Returns the payload of a successful reply, or throws the <see cref="CloudSaveException"/> it carries.</summary>
+		/// <summary>Returns a successful reply's payload, or throws the failure the reply carries.</summary>
 		public static string ReadPayload(string reply)
 		{
 			if (string.IsNullOrEmpty(reply))
@@ -36,6 +36,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			}
 		}
 
+		/// <summary>Decodes the slot list of a successful reply.</summary>
 		public static IReadOnlyList<CloudSaveSlot> ParseSlots(string json)
 		{
 			var slots = new List<CloudSaveSlot>();

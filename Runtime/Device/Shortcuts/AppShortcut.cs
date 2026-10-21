@@ -13,7 +13,7 @@ namespace GameLovers.MobileServices.Device
 		/// <summary>The label shown in the menu.</summary>
 		public string Title { get; }
 
-		/// <summary>The absolute deep-link URI opened when the shortcut is tapped, for example <c>mygame://daily</c>.</summary>
+		/// <summary>The absolute deep-link URI opened on tap, for example <c>mygame://daily</c>.</summary>
 		public string Uri { get; }
 
 		/// <summary>An optional second line: the subtitle on iOS, the long label on Android.</summary>

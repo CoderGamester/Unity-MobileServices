@@ -54,27 +54,6 @@ namespace GameLoversEditor.MobileServices.Tests
 			UnityEngine.Object.Destroy(_host);
 		}
 
-		private static EditorGameNotification Opened(int id, string data) =>
-			new EditorGameNotification { Id = id, Title = "t" + id, Data = data };
-
-		private void Refocus() => _host.SendMessage("OnApplicationFocus", true);
-
-		[UnityTest]
-		// ADMIT: GameNotificationsMonoBehaviour could report the cold-start notification as a fresh open too, so the game routes the same tap twice.
-		// RCR: GameNotificationsMonoBehaviour.cs AttachPlatform — launch key not remembered → RED (Expected: 0 But was: 1). 2026-10-21
-		public IEnumerator AttachPlatform_StartedFromNotification_ExposesLaunchWithoutRaisingOpened()
-		{
-			_platform.LastOpened = Opened(5, "game://launch");
-
-			_service.AttachPlatform(_platform);
-			Refocus();
-			yield return null;
-
-			Assert.IsNotNull(_service.LaunchNotification);
-			Assert.AreEqual("game://launch", _service.LaunchNotification.Notification.Data);
-			Assert.AreEqual(0, _openedCount);
-		}
-
 		[UnityTest]
 		// ADMIT: GameNotificationsMonoBehaviour could expose a launch notification when the app was started normally.
 		// RCR: GameNotificationsMonoBehaviour.cs LaunchNotification — default launch value set → RED (Expected: null But was: <GameLovers.MobileServices.Notifications.PendingNotification>). 2026-10-21
@@ -131,6 +110,27 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			Assert.AreEqual(2, _openedCount);
 			Assert.AreEqual("game://b", _lastOpened.Notification.Data);
+		}
+
+		private static EditorGameNotification Opened(int id, string data) =>
+			new EditorGameNotification { Id = id, Title = "t" + id, Data = data };
+
+		private void Refocus() => _host.SendMessage("OnApplicationFocus", true);
+
+		[UnityTest]
+		// ADMIT: GameNotificationsMonoBehaviour could report the cold-start notification as a fresh open too, so the game routes the same tap twice.
+		// RCR: GameNotificationsMonoBehaviour.cs AttachPlatform — launch key not remembered → RED (Expected: 0 But was: 1). 2026-10-21
+		public IEnumerator AttachPlatform_StartedFromNotification_ExposesLaunchWithoutRaisingOpened()
+		{
+			_platform.LastOpened = Opened(5, "game://launch");
+
+			_service.AttachPlatform(_platform);
+			Refocus();
+			yield return null;
+
+			Assert.IsNotNull(_service.LaunchNotification);
+			Assert.AreEqual("game://launch", _service.LaunchNotification.Notification.Data);
+			Assert.AreEqual(0, _openedCount);
 		}
 	}
 }

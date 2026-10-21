@@ -5,7 +5,9 @@ using UnityEngine;
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.GamePlatform
 {
-	/// <summary>Why a cloud save operation failed.</summary>
+	/// <summary>
+	/// Why a cloud save operation failed.
+	/// </summary>
 	public enum CloudSaveFailure
 	{
 		NotAuthenticated, // No player is signed in to the platform's game service.
@@ -14,14 +16,18 @@ namespace GameLovers.MobileServices.GamePlatform
 		Io // The platform failed to read or write the save.
 	}
 
-	/// <summary>How a cloud save conflict between devices is decided.</summary>
+	/// <summary>
+	/// How a cloud save conflict between devices is decided.
+	/// </summary>
 	public enum CloudSaveConflictPolicy
 	{
 		MostRecent, // Keep the most recently modified version.
-		Manual // Ask <see cref="ICloudSaveService.ConflictResolver"/>.
+		Manual // Ask the conflict resolver.
 	}
 
-	/// <summary>Thrown by <see cref="ICloudSaveService"/> when the platform cannot complete an operation.</summary>
+	/// <summary>
+	/// Thrown by <see cref="ICloudSaveService"/> when the platform cannot complete an operation.
+	/// </summary>
 	public sealed class CloudSaveException : Exception
 	{
 		/// <summary>The category of failure.</summary>
@@ -33,7 +39,9 @@ namespace GameLovers.MobileServices.GamePlatform
 		}
 	}
 
-	/// <summary>One cloud save slot as listed by <see cref="ICloudSaveService.ListAsync"/>.</summary>
+	/// <summary>
+	/// One cloud save slot as listed by <see cref="ICloudSaveService.ListAsync"/>.
+	/// </summary>
 	public sealed class CloudSaveSlot
 	{
 		/// <summary>The slot name.</summary>
@@ -57,7 +65,9 @@ namespace GameLovers.MobileServices.GamePlatform
 		}
 	}
 
-	/// <summary>One stored version of a slot: its bytes and who saved it.</summary>
+	/// <summary>
+	/// One stored version of a slot: its bytes and who saved it.
+	/// </summary>
 	public sealed class CloudSaveVersion
 	{
 		/// <summary>The saved bytes.</summary>
@@ -81,7 +91,9 @@ namespace GameLovers.MobileServices.GamePlatform
 		}
 	}
 
-	/// <summary>Two or more versions of one slot that devices saved independently.</summary>
+	/// <summary>
+	/// Two or more versions of one slot that devices saved independently.
+	/// </summary>
 	public sealed class CloudSaveConflict
 	{
 		/// <summary>The slot in conflict.</summary>
@@ -111,7 +123,9 @@ namespace GameLovers.MobileServices.GamePlatform
 		/// <summary>True when a player is signed in and the platform's cloud storage is available.</summary>
 		bool IsAvailable { get; }
 
-		/// <summary>How a conflict between devices is decided. Defaults to <see cref="CloudSaveConflictPolicy.MostRecent"/>.</summary>
+		/// <summary>
+		/// How a conflict between devices is decided. Defaults to <see cref="CloudSaveConflictPolicy.MostRecent"/>.
+		/// </summary>
 		CloudSaveConflictPolicy ConflictPolicy { get; set; }
 
 		/// <summary>
@@ -120,21 +134,29 @@ namespace GameLovers.MobileServices.GamePlatform
 		/// </summary>
 		Func<CloudSaveConflict, CloudSaveVersion> ConflictResolver { get; set; }
 
-		/// <summary>Lists the saved slots.</summary>
+		/// <summary>
+		/// Lists the saved slots.
+		/// </summary>
 		Awaitable<IReadOnlyList<CloudSaveSlot>> ListAsync();
 
-		/// <summary>Reads a slot, resolving a conflict by <see cref="ConflictPolicy"/> first.</summary>
+		/// <summary>
+		/// Reads a slot, resolving a conflict by <see cref="ConflictPolicy"/> first.
+		/// </summary>
 		/// <param name="slot">The slot name.</param>
 		/// <returns>The saved bytes, or null when the slot does not exist.</returns>
 		Awaitable<byte[]> LoadAsync(string slot);
 
-		/// <summary>Writes a slot, replacing its previous content. On iOS the write continues if the app is backgrounded.</summary>
+		/// <summary>
+		/// Writes a slot, replacing its previous content. On iOS the write continues if the app is backgrounded.
+		/// </summary>
 		/// <param name="slot">The slot name.</param>
 		/// <param name="data">The bytes to save.</param>
 		/// <param name="description">An optional description; Game Center ignores it.</param>
 		Awaitable SaveAsync(string slot, byte[] data, string description = null);
 
-		/// <summary>Deletes a slot. Deleting a slot that does not exist does nothing.</summary>
+		/// <summary>
+		/// Deletes a slot. Deleting a slot that does not exist does nothing.
+		/// </summary>
 		Awaitable DeleteAsync(string slot);
 	}
 }

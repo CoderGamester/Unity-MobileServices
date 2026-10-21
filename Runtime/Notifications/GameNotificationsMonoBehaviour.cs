@@ -436,7 +436,7 @@ namespace GameLovers.MobileServices.Notifications
             return result;
         }
 
-        // Hands the host a platform and starts the foreground flow; a null platform leaves the host inert.
+        /// <summary>Hands the host a platform and starts the foreground flow; null leaves it inert.</summary>
         internal void AttachPlatform(IGameNotificationsPlatform platform)
         {
             Initialized = true;

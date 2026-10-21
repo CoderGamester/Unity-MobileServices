@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using GameLovers.MobileServices.Device;
+using GameLovers.MobileServices.Editor.NativeBuild;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -25,6 +27,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 	[CustomEditor(typeof(MobileServicesConfig))]
 	internal sealed class MobileServicesConfigEditor : UnityEditor.Editor
 	{
+		private const string AndroidPermissionPrefix = "android.permission.";
+
 		private HelpBox _statusBox;
 
 		/// <summary>
@@ -61,25 +65,25 @@ namespace GameLovers.MobileServices.Editor.Settings
 			AddRelative(root, "_capabilities", "AppTracking");
 			AddRelative(root, "_androidManifest", "Camera", "RecordAudio", "AccessFineLocation", "AccessCoarseLocation",
 				"AccessBackgroundLocation", "ReadMediaImages");
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.Permissions(config));
+			AddSummary(root, summaries, () => DescribePermissions(config));
 
 			root.Add(MakeSection("Notifications"));
 			AddRelative(root, "_capabilities", "PushNotifications");
 			AddRelative(root, "_androidManifest", "PostNotifications", "Vibrate");
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.Notifications(config));
+			AddSummary(root, summaries, () => DescribeNotifications(config));
 
 			root.Add(MakeSection("Deep links"));
 			AddRelative(root, "_capabilities", "AssociatedDomains", "AssociatedDomainList");
 			root.Add(new PropertyField(serializedObject.FindProperty("_deepLinks"), "Deep-link registrations"));
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.DeepLinks(config));
+			AddSummary(root, summaries, () => DescribeDeepLinks(config));
 
 			root.Add(MakeSection("Sharing"));
 			AddRelative(root, "_androidManifest", "IncludeShareQueriesBlock", "IncludeShareFileProvider");
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.Sharing(config));
+			AddSummary(root, summaries, () => DescribeSharing(config));
 
 			root.Add(MakeSection("Media (gallery and picker)"));
 			AddRelative(root, "_androidManifest", "IncludeMediaPicker", "WriteExternalStorageLegacy");
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.Media(config));
+			AddSummary(root, summaries, () => DescribeMedia(config));
 
 			root.Add(MakeSection("Game platform (Game Center and Play Games)"));
 			var gamePlatformHint = new Label("Opt-in. Game Center needs the capability on your App ID and provisioning profile. " +
@@ -89,17 +93,17 @@ namespace GameLovers.MobileServices.Editor.Settings
 			gamePlatformHint.style.unityFontStyleAndWeight = FontStyle.Italic;
 			root.Add(gamePlatformHint);
 			AddRelative(root, "_gamePlatform", "GameCenter", "PlayGamesProjectId", "PlayGamesDependencyCoordinate", "CloudSave");
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.GamePlatform(config));
+			AddSummary(root, summaries, () => DescribeGamePlatform(config));
 
 			root.Add(MakeSection("In-app browser"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includeCustomTabsDependency"), "Include Custom Tabs Dependency"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_customTabsDependencyCoordinate"), "Custom Tabs Coordinate"));
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.InAppBrowser(config));
+			AddSummary(root, summaries, () => DescribeInAppBrowser(config));
 
 			root.Add(MakeSection("Store review"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_playReviewDependencyCoordinate"), "Play Review Coordinate"));
-			AddSummary(root, summaries, () => MobileServicesBuildSummary.StoreReview(config));
+			AddSummary(root, summaries, () => DescribeStoreReview(config));
 
 			root.Add(MakeSection("Build behaviour"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_manageNativeBuildManually"), "Manage Native Build Manually"));
@@ -204,6 +208,116 @@ namespace GameLovers.MobileServices.Editor.Settings
 				count++;
 			}
 			return count;
+		}
+
+		private static IReadOnlyList<string> DescribePermissions(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			var plistKeys = new List<string>();
+			foreach (var row in config.PermissionDescriptions)
+			{
+				var key = row == null ? null : MobileServicesConfig.GetIosUsageKey(row.Permission);
+				if (key != null && !string.IsNullOrWhiteSpace(config.GetUsageDescriptionEn(row.Permission))) plistKeys.Add(key);
+			}
+			if (config.Capabilities.AppTracking && !string.IsNullOrWhiteSpace(config.GetAttUsageDescriptionEn()))
+			{
+				plistKeys.Add("NSUserTrackingUsageDescription");
+			}
+			if (plistKeys.Count > 0) lines.Add("iOS Info.plist: " + string.Join(", ", plistKeys.Distinct()));
+
+			var groups = IosPermissionGroups.All
+				.Where(group => group.PlistKeys.Any(plistKeys.Contains))
+				.Select(group => group.Name)
+				.ToList();
+			lines.Add(groups.Count == 0
+				? "iOS permission code compiled in: none from this config (keys already in Player Settings or Info.plist also count)"
+				: "iOS permission code compiled in: " + string.Join(", ", groups) + " (undeclared groups stay out of the binary)");
+
+			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission != "POST_NOTIFICATIONS" && permission != "VIBRATE" && permission != "WRITE_EXTERNAL_STORAGE");
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeMedia(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.PermissionDescriptions.Any(row => row != null && row.Permission == AppPermission.PhotoLibraryAddOnly &&
+				!string.IsNullOrWhiteSpace(config.GetUsageDescriptionEn(AppPermission.PhotoLibraryAddOnly))))
+			{
+				lines.Add("iOS: gallery saving compiled in (NSPhotoLibraryAddUsageDescription is declared)");
+			}
+			if (config.AndroidManifest.IncludeMediaPicker) lines.Add("Android manifest: GameLoversMediaPickerActivity (image picker host)");
+			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission == "WRITE_EXTERNAL_STORAGE");
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeNotifications(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.Capabilities.PushNotifications) lines.Add("iOS entitlement: Push Notifications (aps-environment)");
+			AddAndroidPermissions(lines, config.AndroidManifest, permission => permission == "POST_NOTIFICATIONS" || permission == "VIBRATE");
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeDeepLinks(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			var iosSchemes = config.DeepLinks.IosUrlSchemes.Where(scheme => !string.IsNullOrWhiteSpace(scheme)).ToList();
+			if (iosSchemes.Count > 0) lines.Add("iOS Info.plist URL schemes: " + string.Join(", ", iosSchemes));
+			if (config.Capabilities.AssociatedDomains && config.Capabilities.AssociatedDomainList.Count > 0)
+			{
+				lines.Add("iOS entitlement: Associated Domains (" + string.Join(", ", config.Capabilities.AssociatedDomainList) + ")");
+			}
+			foreach (var filter in config.DeepLinks.AndroidIntentFilters.Where(filter => filter != null))
+			{
+				lines.Add($"Android intent filter: {filter.Scheme}://{filter.Host}{filter.PathPrefix}{(filter.AutoVerify ? " (autoVerify)" : string.Empty)}");
+			}
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeSharing(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.AndroidManifest.IncludeShareQueriesBlock) lines.Add("Android manifest: <queries> entry for ACTION_SEND share targets");
+			if (config.AndroidManifest.IncludeShareFileProvider) lines.Add("Android manifest: GameLoversFileProvider (images can be shared on Android 7+) and res/xml/gamelovers_file_paths.xml");
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeGamePlatform(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			var settings = config.GamePlatform;
+			if (settings.GameCenter) lines.Add("iOS: Game Center entitlement and the GameKit bridge compiled in");
+			if (settings.CloudSave) lines.Add("iOS entitlement: iCloud Documents with the default container (Game Center saved games)");
+			if (settings.PlayGamesEnabled)
+			{
+				lines.Add($"Android Gradle: implementation '{settings.ResolvePlayGamesCoordinate()}'");
+				lines.Add("Android manifest: com.google.android.gms.games.APP_ID meta-data and res/values/gamelovers_play_games_project_id.xml");
+			}
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeStoreReview(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.IncludePlayReviewDependency) lines.Add($"Android Gradle: implementation '{config.PlayReviewDependencyCoordinate}'");
+			return lines;
+		}
+
+		private static IReadOnlyList<string> DescribeInAppBrowser(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.IncludeCustomTabsDependency) lines.Add($"Android Gradle: implementation '{config.CustomTabsDependencyCoordinate}'");
+			return lines;
+		}
+
+		private static void AddAndroidPermissions(List<string> lines, AndroidManifestToggles toggles, Func<string, bool> filter)
+		{
+			var permissions = toggles.GetPermissions()
+				.Select(entry => (Name: entry.Permission.StartsWith(AndroidPermissionPrefix, StringComparison.Ordinal) ? entry.Permission.Substring(AndroidPermissionPrefix.Length) : entry.Permission, entry.MaxSdkVersion))
+				.Where(entry => filter(entry.Name))
+				.Select(entry => entry.MaxSdkVersion.HasValue ? $"{entry.Name} (up to API {entry.MaxSdkVersion.Value})" : entry.Name)
+				.ToList();
+			if (permissions.Count > 0) lines.Add("Android manifest: " + string.Join(", ", permissions));
 		}
 
 		private Button BuildScanButton(MobileServicesConfig config)

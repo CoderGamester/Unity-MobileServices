@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 using GameLovers.MobileServices.Device;
 using NSubstitute;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 // ReSharper disable once CheckNamespace
 
@@ -135,5 +138,146 @@ namespace GameLoversEditor.MobileServices.Tests
 			Screen.sleepTimeout = SleepTimeout.SystemSetting;
 			Assert.IsFalse(DeviceService.KeepAwake);
 		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could keep the `id` prefix twice, producing a store link that opens a missing app.
+		// RCR: DeviceService.cs BuildStoreUrl — `id` prefix stripping removed → RED (Expected: "https://apps.apple.com/app/id123456789" But was: null). 2026-10-22
+		[TestCase("123456789", "https://apps.apple.com/app/id123456789")]
+		[TestCase("id123456789", "https://apps.apple.com/app/id123456789")]
+		[TestCase("  ID123456789  ", "https://apps.apple.com/app/id123456789")]
+		public void BuildStoreUrl_IosAppId_NormalizesThePrefix(string appId, string expected)
+		{
+			Assert.AreEqual(expected, DeviceService.BuildStoreUrl(RuntimePlatform.IPhonePlayer, appId, null, false));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could build an App Store link from a non-numeric id, opening a broken page.
+		// RCR: DeviceService.cs BuildStoreUrl — digits check removed → RED (Expected: null But was: "https://apps.apple.com/app/idcom.example.game"). 2026-10-22
+		[TestCase(null)]
+		[TestCase("")]
+		[TestCase("id")]
+		[TestCase("com.example.game")]
+		public void BuildStoreUrl_IosAppIdNotNumeric_ReturnsNull(string appId)
+		{
+			Assert.IsNull(DeviceService.BuildStoreUrl(RuntimePlatform.IPhonePlayer, appId, "com.example.game", false));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could ignore the write-review request on iOS.
+		// RCR: DeviceService.cs BuildStoreUrl — review action dropped → RED (Expected string length 51 but was 31. Strings differ at index 31.). 2026-10-22
+		public void BuildStoreUrl_IosWriteReview_AddsTheReviewAction()
+		{
+			Assert.AreEqual(
+				"https://apps.apple.com/app/id42?action=write-review",
+				DeviceService.BuildStoreUrl(RuntimePlatform.IPhonePlayer, "42", null, true));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could append the iOS review action to an Android link Google Play does not understand.
+		// RCR: DeviceService.cs BuildStoreUrl — review action appended on Android → RED (Expected string length 62 but was 82. Strings differ at index 62.). 2026-10-22
+		public void BuildStoreUrl_Android_UsesThePackageAndIgnoresWriteReview()
+		{
+			Assert.AreEqual(
+				"https://play.google.com/store/apps/details?id=com.example.game",
+				DeviceService.BuildStoreUrl(RuntimePlatform.Android, "42", "com.example.game", true));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could leave a package name unescaped, corrupting the query string.
+		// RCR: DeviceService.cs BuildStoreUrl — package left unescaped → RED (Expected string length 51 but was 49. Strings differ at index 47.). 2026-10-22
+		public void BuildStoreUrl_AndroidPackage_IsEscaped()
+		{
+			Assert.AreEqual(
+				"https://play.google.com/store/apps/details?id=a%26b",
+				DeviceService.BuildStoreUrl(RuntimePlatform.Android, null, "a&b", false));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could return a link for a platform with no store, so the Editor or desktop opens a wrong page.
+		// RCR: DeviceService.cs BuildStoreUrl — OSXEditor routed to the Android link → RED (Expected: null But was: "https://play.google.com/store/apps/details?id=com.example.game"). 2026-10-22
+		[TestCase(RuntimePlatform.OSXEditor)]
+		[TestCase(RuntimePlatform.WindowsPlayer)]
+		[TestCase(RuntimePlatform.WebGLPlayer)]
+		public void BuildStoreUrl_PlatformWithoutStore_ReturnsNull(RuntimePlatform platform)
+		{
+			Assert.IsNull(DeviceService.BuildStoreUrl(platform, "42", "com.example.game", false));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.BuildStoreUrl could build an Android link from an empty package name.
+		// RCR: DeviceService.cs BuildStoreUrl — empty-package guard removed → RED (Expected: null But was: "https://play.google.com/store/apps/details?id="). 2026-10-22
+		public void BuildStoreUrl_AndroidWithoutPackage_ReturnsNull()
+		{
+			Assert.IsNull(DeviceService.BuildStoreUrl(RuntimePlatform.Android, "42", "  ", false));
+		}
+
+		[Test]
+		// ADMIT: DeviceService.NormalizeShortcuts could reorder valid shortcuts, so the OS menu does not match the order the game set.
+		// RCR: DeviceService.cs NormalizeShortcuts — shortcuts inserted at the front → RED (Expected and actual are both <System.String[3]> Values differ at index [0]). 2026-10-22
+		public void NormalizeShortcuts_ValidShortcuts_KeepTheirOrder()
+		{
+			var result = DeviceService.NormalizeShortcuts(new[] { Shortcut("b"), Shortcut("a"), Shortcut("c") });
+
+			CollectionAssert.AreEqual(new[] { "b", "a", "c" }, result.Select(shortcut => shortcut.Id).ToArray());
+		}
+
+		[Test]
+		// ADMIT: DeviceService.NormalizeShortcuts could pass a shortcut with no id, title or absolute URI to the OS, which rejects or crashes on it.
+		// RCR: DeviceService.cs NormalizeShortcuts — absolute-URI check removed → RED (Expected is <System.String[1]>, actual is <System.String[2]> Values differ at index [0]). 2026-10-22
+		public void NormalizeShortcuts_IncompleteShortcuts_AreSkipped()
+		{
+			LogAssert.Expect(LogType.Warning, new Regex("Skipped shortcut ''"));
+			LogAssert.Expect(LogType.Warning, new Regex("Skipped shortcut 'no-title'"));
+			LogAssert.Expect(LogType.Warning, new Regex("Skipped shortcut 'relative'"));
+			LogAssert.Expect(LogType.Warning, new Regex("Skipped shortcut ''"));
+
+			var result = DeviceService.NormalizeShortcuts(new[]
+			{
+				new AppShortcut(string.Empty, "Title", "mygame://x"),
+				new AppShortcut("no-title", " ", "mygame://x"),
+				new AppShortcut("relative", "Title", "daily/reward"),
+				null,
+				Shortcut("ok"),
+			});
+
+			CollectionAssert.AreEqual(new[] { "ok" }, result.Select(shortcut => shortcut.Id).ToArray());
+		}
+
+		[Test]
+		// ADMIT: DeviceService.NormalizeShortcuts could keep a repeated id, which the OS collapses unpredictably.
+		// RCR: DeviceService.cs NormalizeShortcuts — repeated-id check disabled → RED (Expected: 1 But was: 2). 2026-10-22
+		public void NormalizeShortcuts_RepeatedId_KeepsTheFirst()
+		{
+			LogAssert.Expect(LogType.Warning, new Regex("the id is already used"));
+
+			var result = DeviceService.NormalizeShortcuts(
+				new[] { new AppShortcut("a", "First", "mygame://1"), new AppShortcut("a", "Second", "mygame://2") });
+
+			Assert.AreEqual(1, result.Count);
+			Assert.AreEqual("First", result[0].Title);
+		}
+
+		[Test]
+		// ADMIT: DeviceService.NormalizeShortcuts could pass more shortcuts than the platforms show, so the extras are dropped by the OS in an unknown order.
+		// RCR: DeviceService.cs NormalizeShortcuts — limit check disabled → RED (Expected is <System.String[4]>, actual is <System.String[5]> Values differ at index [4]). 2026-10-22
+		public void NormalizeShortcuts_MoreThanTheLimit_KeepsTheFirstOnes()
+		{
+			LogAssert.Expect(LogType.Warning, new Regex("Skipped shortcut 'e'"));
+
+			var result = DeviceService.NormalizeShortcuts(
+				new[] { Shortcut("a"), Shortcut("b"), Shortcut("c"), Shortcut("d"), Shortcut("e") });
+
+			CollectionAssert.AreEqual(new[] { "a", "b", "c", "d" }, result.Select(shortcut => shortcut.Id).ToArray());
+		}
+
+		[Test]
+		// ADMIT: DeviceService.NormalizeShortcuts could throw on a null list instead of clearing to nothing.
+		// RCR: DeviceService.cs NormalizeShortcuts — null guard removed → RED (System.NullReferenceException : Object reference not set to an instance of an object). 2026-10-22
+		public void NormalizeShortcuts_Null_ReturnsEmpty()
+		{
+			Assert.AreEqual(0, DeviceService.NormalizeShortcuts(null).Count);
+		}
+
+		private static AppShortcut Shortcut(string id) => new AppShortcut(id, "Title " + id, "mygame://" + id);
 	}
 }

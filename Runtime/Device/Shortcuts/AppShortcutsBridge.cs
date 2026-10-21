@@ -17,6 +17,7 @@ namespace GameLovers.MobileServices.Device.Internal
 		[DllImport("__Internal")] private static extern IntPtr _GameLoversShortcutTakePending();
 #endif
 
+		/// <summary>Publishes the shortcuts to the OS, replacing the previous set.</summary>
 		public static void Set(IReadOnlyList<AppShortcut> shortcuts)
 		{
 #if UNITY_EDITOR
@@ -36,6 +37,7 @@ namespace GameLovers.MobileServices.Device.Internal
 #endif
 		}
 
+		/// <summary>Removes every shortcut the app published.</summary>
 		public static void Clear()
 		{
 #if UNITY_EDITOR

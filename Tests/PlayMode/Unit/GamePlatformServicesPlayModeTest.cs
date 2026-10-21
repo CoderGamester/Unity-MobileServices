@@ -69,14 +69,7 @@ namespace GameLoversEditor.MobileServices.Tests
 			_service = new GamePlatformServices(_backend);
 		}
 
-		private static Regex Warning(string text) => new Regex(Regex.Escape(text));
-
 		// Lets completed awaitables resume; asserting IsCompleted afterwards reports a stuck call instead of hanging the run.
-		private static IEnumerator Settle()
-		{
-			for (var i = 0; i < 3; i++) yield return null;
-		}
-
 		[UnityTest]
 		// ADMIT: GamePlatformServices.AuthenticateAsync could start a second sign-in when the player is already signed in.
 		// RCR: GamePlatformServices.cs AuthenticateAsync — already-signed-in shortcut disabled → RED (Expected: True But was: False). 2026-10-21
@@ -239,6 +232,13 @@ namespace GameLoversEditor.MobileServices.Tests
 			_service.ShowAchievements();
 
 			CollectionAssert.AreEqual(new[] { "leaderboards:board", "leaderboards:", "achievements" }, _backend.Calls);
+		}
+
+		private static Regex Warning(string text) => new Regex(Regex.Escape(text));
+
+		private static IEnumerator Settle()
+		{
+			for (var i = 0; i < 3; i++) yield return null;
 		}
 	}
 }

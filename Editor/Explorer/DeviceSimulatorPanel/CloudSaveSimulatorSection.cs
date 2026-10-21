@@ -5,16 +5,18 @@ using UnityEngine.UIElements;
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 {
-	/// <summary>
-	/// Device Simulator foldout that drives the process-wide Editor cloud save simulation every
-	/// <c>CloudSaveService</c> in the Editor reads, so it acts on the game's own instance.
-	/// </summary>
-	internal static class CloudSaveSimulatorSection
+	/// <summary>Device Simulator foldout that drives the process-wide Editor cloud save simulation.</summary>
+	internal sealed class CloudSaveSimulatorSection : Foldout
 	{
-		public static VisualElement Build()
+		private readonly Toggle _available;
+		private readonly Label _list;
+		private readonly Label _status;
+
+		public CloudSaveSimulatorSection()
 		{
-			var foldout = new Foldout { text = "Cloud Save", value = false };
-			foldout.AddToClassList("msp-foldout");
+			text = "Cloud Save";
+			value = false;
+			AddToClassList("msp-foldout");
 
 			var banner = new VisualElement();
 			banner.AddToClassList("msp-banner");
@@ -22,36 +24,20 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				"Sign the simulated player in under Game Platform first; saves also need cloud storage available.");
 			bannerLabel.AddToClassList("msp-banner-label");
 			banner.Add(bannerLabel);
-			foldout.Add(banner);
+			Add(banner);
 
-			var status = new Label();
-			status.style.whiteSpace = WhiteSpace.Normal;
-			status.style.fontSize = 10;
-			status.style.marginTop = 4;
-
-			var list = new Label();
-			list.style.whiteSpace = WhiteSpace.Normal;
-			list.style.fontSize = 10;
-			list.style.marginTop = 4;
-
-			var available = new Toggle("Cloud storage available") { value = EditorCloudSaveState.Available };
-			available.RegisterValueChangedCallback(evt => EditorCloudSaveState.Available = evt.newValue);
-			foldout.Add(available);
+			_available = new Toggle("Cloud storage available");
+			_available.RegisterValueChangedCallback(evt => EditorCloudSaveState.Available = evt.newValue);
+			Add(_available);
 
 			var slot = new TextField("Slot") { value = "slot1" };
-			foldout.Add(slot);
+			Add(slot);
 			var conflictData = new TextField("Conflicting data") { value = "saved on another device" };
-			foldout.Add(conflictData);
+			Add(conflictData);
 
-			var inject = new Button(() =>
-			{
-				var injected = EditorCloudSaveState.InjectConflict(slot.value, Encoding.UTF8.GetBytes(conflictData.value));
-				status.text = injected
-					? $"Injected a newer conflicting version of '{slot.value}'. The next load resolves it by the conflict policy."
-					: $"Slot '{slot.value}' has no save to conflict with; save it from the game first.";
-			}) { text = "Inject conflicting version" };
+			var inject = new Button(() => InjectConflict(slot.value, conflictData.value)) { text = "Inject conflicting version" };
 			inject.style.marginTop = 2;
-			foldout.Add(inject);
+			Add(inject);
 
 			var clear = new Button(() =>
 			{
@@ -59,30 +45,45 @@ namespace GameLovers.MobileServices.Editor.Explorer.DeviceSimulatorPanel
 				Refresh();
 			}) { text = "Delete all simulated saves" };
 			clear.style.marginTop = 2;
-			foldout.Add(clear);
+			Add(clear);
 
-			foldout.Add(list);
-			foldout.Add(status);
+			_list = new Label();
+			_list.style.whiteSpace = WhiteSpace.Normal;
+			_list.style.fontSize = 10;
+			_list.style.marginTop = 4;
+			Add(_list);
 
-			void Refresh()
+			_status = new Label();
+			_status.style.whiteSpace = WhiteSpace.Normal;
+			_status.style.fontSize = 10;
+			_status.style.marginTop = 4;
+			Add(_status);
+
+			schedule.Execute(Refresh).Every(1000);
+			Refresh();
+		}
+
+		private void InjectConflict(string slot, string data)
+		{
+			var injected = EditorCloudSaveState.InjectConflict(slot, Encoding.UTF8.GetBytes(data));
+			_status.text = injected
+				? $"Injected a newer conflicting version of '{slot}'. The next load resolves it by the conflict policy."
+				: $"Slot '{slot}' has no save to conflict with; save it from the game first.";
+		}
+
+		private void Refresh()
+		{
+			_available.SetValueWithoutNotify(EditorCloudSaveState.Available);
+			var slots = EditorCloudSaveState.ListSlots();
+			if (slots.Count == 0)
 			{
-				available.SetValueWithoutNotify(EditorCloudSaveState.Available);
-				var slots = EditorCloudSaveState.ListSlots();
-				if (slots.Count == 0)
-				{
-					list.text = "No simulated saves.";
-					return;
-				}
-
-				var builder = new StringBuilder("Saved slots:");
-				foreach (var item in slots) builder.Append($"\n- {item.Name} ({item.ModifiedUtc.ToLocalTime():HH:mm:ss})");
-				list.text = builder.ToString();
+				_list.text = "No simulated saves.";
+				return;
 			}
 
-			// The saves live on disk, so a light poll keeps the list current while the panel is open.
-			foldout.schedule.Execute(Refresh).Every(1000);
-			Refresh();
-			return foldout;
+			var builder = new StringBuilder("Saved slots:");
+			foreach (var item in slots) builder.Append($"\n- {item.Name} ({item.ModifiedUtc.ToLocalTime():HH:mm:ss})");
+			_list.text = builder.ToString();
 		}
 	}
 }

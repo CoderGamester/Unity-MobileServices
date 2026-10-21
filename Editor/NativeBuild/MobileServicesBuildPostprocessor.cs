@@ -193,10 +193,6 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			Debug.Log($"[GameLovers.MobileServices] iOS native processing completed for '{buildPath}'.");
 		}
 
-		// Compiles only the native code that is opted in: the permission groups whose purpose string the generated
-		// Info.plist declares (from this config, the player settings, or the project's own plist), so the binary
-		// references no privacy API that App Store validation would flag as missing its usage description, and the
-		// GameKit bridge when Game Center is enabled.
 		private static void ApplyNativeGroupDefines(PBXProject pbx, PlistElementDict plistRoot, MobileServicesConfig settings)
 		{
 			var add = new List<string> { "GL_PERMISSIONS_DECLARED_ONLY=1" };
@@ -524,7 +520,6 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			return true;
 		}
 
-		// The share cache and the app's own files directories, so any path Unity hands out can be shared.
 		private static bool WriteShareFileProviderPaths(string manifestDirectory)
 		{
 			var file = Path.Combine(manifestDirectory, "res", "xml", ShareFileProviderPathsResource + ".xml");
@@ -577,7 +572,6 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 		private static string GetAndroidAttribute(XElement element, string localName) => element?.Attribute(_androidNamespace + localName)?.Value;
 
-		// Adds `implementation '<coordinate>'` to the generated module unless any Gradle file already declares the artifact.
 		private static string EnsureGradleDependency(string path, string artifactKey, string coordinate, string optOutHint)
 		{
 			string[] gradleFiles;

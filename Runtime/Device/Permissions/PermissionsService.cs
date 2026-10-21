@@ -17,7 +17,7 @@ namespace GameLovers.MobileServices.Device
 	public sealed class PermissionsService : IPermissionsService
 	{
 #if UNITY_ANDROID && !UNITY_EDITOR
-		private const string RequestedKeyPrefix = "GameLovers.MobileServices.Permissions.Requested.";
+		private const string RequestedKeyPrefix = nameof(PermissionsService) + ".Requested.";
 		private static readonly SemaphoreSlim _androidRequestGate = new SemaphoreSlim(1, 1);
 #endif
 

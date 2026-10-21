@@ -16,17 +16,6 @@ namespace GameLoversEditor.MobileServices.Tests
 		private const int Api33 = 33;
 		private const int Api34 = 34;
 
-		private static PermissionStatus Resolve(
-			AppPermission permission,
-			int apiLevel,
-			bool wasRequested = false,
-			bool showRationale = false,
-			params string[] granted)
-		{
-			var grants = new HashSet<string>(granted);
-			return AndroidPermissionPolicy.Resolve(permission, apiLevel, grants.Contains, wasRequested, showRationale);
-		}
-
 		[Test]
 		// ADMIT: AndroidPermissionPolicy.GetForegroundRequest could request only precise location, which Android 12+ ignores.
 		// RCR: AndroidPermissionPolicy.cs GetForegroundRequest — location request without CoarseLocation → RED (Expected: equivalent to < "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION" > But was: <...). 2026-10-21
@@ -180,6 +169,17 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			CollectionAssert.AreEqual(new[] { AndroidPermissionPolicy.Camera }, AndroidPermissionPolicy.GetForegroundRequest(AppPermission.Camera, Api33));
 			CollectionAssert.AreEqual(new[] { AndroidPermissionPolicy.RecordAudio }, AndroidPermissionPolicy.GetForegroundRequest(AppPermission.Microphone, Api33).ToArray());
+		}
+
+		private static PermissionStatus Resolve(
+			AppPermission permission,
+			int apiLevel,
+			bool wasRequested = false,
+			bool showRationale = false,
+			params string[] granted)
+		{
+			var grants = new HashSet<string>(granted);
+			return AndroidPermissionPolicy.Resolve(permission, apiLevel, grants.Contains, wasRequested, showRationale);
 		}
 	}
 }

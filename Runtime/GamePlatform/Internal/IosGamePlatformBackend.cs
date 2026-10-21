@@ -16,10 +16,13 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 
 		private GamePlayer _player;
 
+		/// <inheritdoc />
 		public bool IsAuthenticated => _GameLoversGamePlatformIsAuthenticated() != 0;
 
+		/// <inheritdoc />
 		public GamePlayer LocalPlayer => _player;
 
+		/// <inheritdoc />
 		public async Awaitable<bool> AuthenticateAsync()
 		{
 			var completion = new AwaitableCompletionSource<string>();
@@ -29,6 +32,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return _player != null;
 		}
 
+		/// <inheritdoc />
 		public async Awaitable<bool> ReportScoreAsync(string leaderboardId, long score)
 		{
 			var completion = new AwaitableCompletionSource<string>();
@@ -36,6 +40,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return await NativeCompletion.ToMainThread(completion) != null;
 		}
 
+		/// <inheritdoc />
 		public async Awaitable<bool> UnlockAchievementAsync(string achievementId)
 		{
 			var completion = new AwaitableCompletionSource<string>();
@@ -43,6 +48,7 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return await NativeCompletion.ToMainThread(completion) != null;
 		}
 
+		/// <inheritdoc />
 		public async Awaitable<bool> IncrementAchievementAsync(string achievementId, int steps, int totalSteps)
 		{
 			var completion = new AwaitableCompletionSource<string>();
@@ -50,8 +56,10 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return await NativeCompletion.ToMainThread(completion) != null;
 		}
 
+		/// <inheritdoc />
 		public void ShowLeaderboards(string leaderboardId) => _GameLoversGamePlatformShowLeaderboards(leaderboardId);
 
+		/// <inheritdoc />
 		public void ShowAchievements() => _GameLoversGamePlatformShowAchievements();
 
 		[DllImport("__Internal")] private static extern void _GameLoversGamePlatformAuthenticate(int requestId, GamePlatformCallback callback);

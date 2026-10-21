@@ -10,19 +10,32 @@ namespace GameLovers.MobileServices.Device.Internal
 	/// </summary>
 	internal static class AndroidPermissionPolicy
 	{
+		/// <summary>Android 10, which added scoped storage and the separate background location permission.</summary>
 		public const int ApiLevelQ = 29;
+		/// <summary>Android 13, which introduced the notification and granular media permissions.</summary>
 		public const int ApiLevelTiramisu = 33;
+		/// <summary>Android 14, which introduced partial photo access.</summary>
 		public const int ApiLevelUpsideDownCake = 34;
 
+		/// <summary>Manifest permission <c>CAMERA</c>.</summary>
 		public const string Camera = "android.permission.CAMERA";
+		/// <summary>Manifest permission <c>RECORD_AUDIO</c>.</summary>
 		public const string RecordAudio = "android.permission.RECORD_AUDIO";
+		/// <summary>Manifest permission <c>ACCESS_FINE_LOCATION</c>.</summary>
 		public const string FineLocation = "android.permission.ACCESS_FINE_LOCATION";
+		/// <summary>Manifest permission <c>ACCESS_COARSE_LOCATION</c>.</summary>
 		public const string CoarseLocation = "android.permission.ACCESS_COARSE_LOCATION";
+		/// <summary>Manifest permission <c>ACCESS_BACKGROUND_LOCATION</c>.</summary>
 		public const string BackgroundLocation = "android.permission.ACCESS_BACKGROUND_LOCATION";
+		/// <summary>Manifest permission <c>READ_MEDIA_IMAGES</c>.</summary>
 		public const string ReadMediaImages = "android.permission.READ_MEDIA_IMAGES";
+		/// <summary>Manifest permission <c>READ_MEDIA_VISUAL_USER_SELECTED</c>.</summary>
 		public const string ReadMediaVisualUserSelected = "android.permission.READ_MEDIA_VISUAL_USER_SELECTED";
+		/// <summary>Manifest permission <c>READ_EXTERNAL_STORAGE</c>.</summary>
 		public const string ReadExternalStorage = "android.permission.READ_EXTERNAL_STORAGE";
+		/// <summary>Manifest permission <c>WRITE_EXTERNAL_STORAGE</c>.</summary>
 		public const string WriteExternalStorage = "android.permission.WRITE_EXTERNAL_STORAGE";
+		/// <summary>Manifest permission <c>POST_NOTIFICATIONS</c>.</summary>
 		public const string PostNotifications = "android.permission.POST_NOTIFICATIONS";
 
 		/// <summary>
@@ -61,13 +74,9 @@ namespace GameLovers.MobileServices.Device.Internal
 			permission == AppPermission.LocationAlways && apiLevel >= ApiLevelQ;
 
 		/// <summary>
-		/// Folds the individual grant states into one status.
+		/// Folds the individual grant states into one status; a refusal is reported once the dialog was shown or the OS
+		/// rationale flag is set.
 		/// </summary>
-		/// <param name="permission">The permission being checked.</param>
-		/// <param name="apiLevel">The device API level.</param>
-		/// <param name="isGranted">Reports whether a manifest permission is currently granted.</param>
-		/// <param name="wasRequested">Whether this app has already shown the system dialog for it.</param>
-		/// <param name="showRationale">The OS rationale flag, which is true after a denial that can be asked again.</param>
 		public static PermissionStatus Resolve(
 			AppPermission permission,
 			int apiLevel,

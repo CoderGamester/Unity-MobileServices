@@ -11,11 +11,13 @@ using System.Collections.Generic;
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.NativeUi
 {
-	/// <summary>The kind of media <see cref="NativeMediaService.SaveToGalleryAsync"/> saves.</summary>
+	/// <summary>
+	/// The kind of media <see cref="NativeMediaService.SaveToGalleryAsync"/> saves.
+	/// </summary>
 	public enum MediaType
 	{
-		Image,
-		Video
+		Image, // A still image such as a PNG or JPEG.
+		Video // A video file such as an MP4.
 	}
 
 	/// <summary>
@@ -25,7 +27,10 @@ namespace GameLovers.MobileServices.NativeUi
 	public static class NativeMediaService
 	{
 #if UNITY_EDITOR
+		/// <summary>Editor simulator hook that stands in for the gallery; true when the file was saved.</summary>
 		internal static Func<string, MediaType, bool> EditorSaveToGalleryOverride;
+
+		/// <summary>Editor simulator hook that stands in for the picker; returns the chosen path or null.</summary>
 		internal static Func<string> EditorPickImageOverride;
 #endif
 
@@ -63,15 +68,15 @@ namespace GameLovers.MobileServices.NativeUi
 			}
 
 #if UNITY_EDITOR
-			if (EditorSaveToGalleryOverride == null)
+			var simulatedSave = EditorSaveToGalleryOverride;
+			if (simulatedSave == null)
 			{
 				Debug.Log($"[GameLovers.MobileServices] SaveToGallery is not available in the editor unless the Mobile Services simulator is engaged ({filePath}).");
 				completion.SetResult(null);
+				return ToSaved(completion);
 			}
-			else
-			{
-				completion.SetResult(EditorSaveToGalleryOverride(filePath, mediaType) ? "ok" : null);
-			}
+
+			completion.SetResult(simulatedSave(filePath, mediaType) ? "ok" : null);
 #elif UNITY_IOS
 			MediaSave(filePath, mediaType == MediaType.Video ? 1 : 0, Register(completion), OnNativeResult);
 #elif UNITY_ANDROID
@@ -92,15 +97,15 @@ namespace GameLovers.MobileServices.NativeUi
 		{
 			var completion = new AwaitableCompletionSource<string>();
 #if UNITY_EDITOR
-			if (EditorPickImageOverride == null)
+			var simulatedPick = EditorPickImageOverride;
+			if (simulatedPick == null)
 			{
 				Debug.Log("[GameLovers.MobileServices] PickImage is not available in the editor unless the Mobile Services simulator is engaged.");
 				completion.SetResult(null);
+				return NativeCompletion.ToMainThread(completion);
 			}
-			else
-			{
-				completion.SetResult(EditorPickImageOverride());
-			}
+
+			completion.SetResult(simulatedPick());
 #elif UNITY_IOS
 			MediaPickImage(Register(completion), OnNativeResult);
 #elif UNITY_ANDROID
@@ -198,7 +203,6 @@ namespace GameLovers.MobileServices.NativeUi
 			lock (_androidCallbacks) _androidCallbacks.Remove(callback);
 		}
 
-		// One proxy serves both Java callback interfaces: each takes a single nullable string.
 		private sealed class ResultProxy : AndroidJavaProxy
 		{
 			private readonly string _methodName;

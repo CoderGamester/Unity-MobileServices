@@ -24,7 +24,7 @@ namespace GameLovers.MobileServices.Device
 		/// <summary>OS deep link delivery with cold-start link queueing.</summary>
 		IDeepLinkService DeepLink { get; }
 
-		/// <summary>Extra execution time when the application moves to the background (iOS; pass-through on Android).</summary>
+		/// <summary>Extra execution time when the app moves to the background (iOS; pass-through on Android).</summary>
 		IBackgroundTaskService BackgroundTasks { get; }
 	}
 }

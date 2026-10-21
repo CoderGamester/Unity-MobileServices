@@ -10,7 +10,7 @@ namespace GameLovers.MobileServices.GamePlatform
 	/// <inheritdoc />
 	public sealed class CloudSaveService : ICloudSaveService
 	{
-		/// <summary>The largest save accepted: the Google Play Games snapshot limit, applied on both platforms.</summary>
+		/// <summary>The largest save accepted: the Play Games snapshot limit, applied on both platforms.</summary>
 		public const int MaxDataBytes = 3 * 1024 * 1024;
 
 		private static readonly Regex _slotName = new Regex("^[A-Za-z0-9._~-]{1,100}$", RegexOptions.Compiled);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
 
@@ -9,8 +10,11 @@ namespace GameLovers.MobileServices.Device
 	/// <inheritdoc />
 	public sealed class DeviceService : IDeviceService, IDisposable
 	{
+		/// <summary>The most dynamic shortcuts both platforms reliably show.</summary>
+		internal const int MaxShortcuts = 4;
+
 #if UNITY_EDITOR
-		// Editor-only simulator hook, installed and removed symmetrically by EditorPlatformSimulator.
+		/// <summary>Editor simulator hook that stands in for the OS Settings page.</summary>
 		internal static Action EditorOpenAppSettingsOverride;
 #endif
 
@@ -66,33 +70,22 @@ namespace GameLovers.MobileServices.Device
 		{
 		}
 
-		private static (IBatteryService,
-			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService, IBackgroundTaskService) BuildDefaults()
-		{
-			var host = DeviceServicesHost.Instance;
-			return (
-				new BatteryService(host),
-				new IosAudioSessionService(),
-				new PermissionsService(),
-				new AttService(),
-				new DeepLinkService(),
-				new BackgroundTaskService());
-		}
-
 		/// <summary>
 		/// Replaces the home-screen quick actions on the app icon. Tapping one opens the app and delivers the shortcut's
 		/// URI through <see cref="IDeepLinkService"/>, including as the cold-start link when the tap launched the app.
 		/// </summary>
 		/// <remarks>
-		/// At most four shortcuts are kept; entries without an id, title or absolute
-		/// URI, and repeated ids, are skipped with a log message. Android needs API 25 or newer.
+		/// At most four shortcuts are kept; entries without an id, title or absolute URI, and repeated ids, are skipped
+		/// with a log message. Android needs API 25 or newer.
 		/// </remarks>
 		public static void SetShortcuts(IReadOnlyList<AppShortcut> shortcuts)
 		{
-			AppShortcutsBridge.Set(AppShortcutRules.Normalize(shortcuts));
+			AppShortcutsBridge.Set(NormalizeShortcuts(shortcuts));
 		}
 
-		/// <summary>Removes every shortcut set with <see cref="SetShortcuts"/>.</summary>
+		/// <summary>
+		/// Removes every shortcut set with <see cref="SetShortcuts"/>.
+		/// </summary>
 		public static void ClearShortcuts()
 		{
 			AppShortcutsBridge.Clear();
@@ -108,7 +101,7 @@ namespace GameLovers.MobileServices.Device
 		/// </param>
 		public static void OpenStorePage(string iosAppId, string androidPackage = null, bool writeReview = false)
 		{
-			var url = StoreLinks.Build(Application.platform, iosAppId, androidPackage ?? Application.identifier, writeReview);
+			var url = BuildStoreUrl(Application.platform, iosAppId, androidPackage ?? Application.identifier, writeReview);
 			if (url == null)
 			{
 				Debug.LogWarning($"[GameLovers.MobileServices] OpenStorePage has no store page to open on {Application.platform} " +
@@ -160,6 +153,77 @@ namespace GameLovers.MobileServices.Device
 		{
 			(Battery as IDisposable)?.Dispose();
 			(DeepLink as IDisposable)?.Dispose();
+		}
+
+		/// <summary>Builds the store page link for a platform, or null when there is no store or identifier.</summary>
+		internal static string BuildStoreUrl(RuntimePlatform platform, string iosAppId, string androidPackage, bool writeReview)
+		{
+			switch (platform)
+			{
+				case RuntimePlatform.IPhonePlayer:
+				{
+					var id = (iosAppId ?? string.Empty).Trim();
+					if (id.StartsWith("id", StringComparison.OrdinalIgnoreCase)) id = id.Substring(2);
+					if (id.Length == 0 || !id.All(character => character >= '0' && character <= '9')) return null;
+					return "https://apps.apple.com/app/id" + id + (writeReview ? "?action=write-review" : string.Empty);
+				}
+				case RuntimePlatform.Android:
+				{
+					var package = (androidPackage ?? string.Empty).Trim();
+					return package.Length == 0 ? null : "https://play.google.com/store/apps/details?id=" + Uri.EscapeDataString(package);
+				}
+				default:
+					return null;
+			}
+		}
+
+		/// <summary>Keeps the usable shortcuts in order, dropping incomplete, repeated and surplus ones.</summary>
+		internal static IReadOnlyList<AppShortcut> NormalizeShortcuts(IReadOnlyList<AppShortcut> shortcuts)
+		{
+			var result = new List<AppShortcut>();
+			if (shortcuts == null)
+			{
+				return result;
+			}
+
+			var ids = new HashSet<string>();
+			foreach (var shortcut in shortcuts)
+			{
+				if (shortcut == null || string.IsNullOrWhiteSpace(shortcut.Id) || string.IsNullOrWhiteSpace(shortcut.Title) ||
+					!Uri.TryCreate(shortcut.Uri, UriKind.Absolute, out _))
+				{
+					Debug.LogWarning($"[GameLovers.MobileServices] Skipped shortcut '{shortcut?.Id}': it needs an id, a title and an absolute URI.");
+					continue;
+				}
+
+				if (!ids.Add(shortcut.Id))
+				{
+					Debug.LogWarning($"[GameLovers.MobileServices] Skipped shortcut '{shortcut.Id}': the id is already used.");
+					continue;
+				}
+
+				if (result.Count == MaxShortcuts)
+				{
+					Debug.LogWarning($"[GameLovers.MobileServices] Skipped shortcut '{shortcut.Id}': at most {MaxShortcuts} shortcuts are supported.");
+					continue;
+				}
+
+				result.Add(shortcut);
+			}
+			return result;
+		}
+
+		private static (IBatteryService,
+			IIosAudioSessionService, IPermissionsService, IAttService, IDeepLinkService, IBackgroundTaskService) BuildDefaults()
+		{
+			var host = DeviceServicesHost.Instance;
+			return (
+				new BatteryService(host),
+				new IosAudioSessionService(),
+				new PermissionsService(),
+				new AttService(),
+				new DeepLinkService(),
+				new BackgroundTaskService());
 		}
 	}
 }

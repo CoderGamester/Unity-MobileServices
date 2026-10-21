@@ -16,12 +16,14 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 
 		private readonly Dictionary<string, PendingConflict> _conflicts = new Dictionary<string, PendingConflict>();
 
+		/// <inheritdoc />
 		public bool IsAvailable => true;
 
+		/// <inheritdoc />
 		public Awaitable<IReadOnlyList<CloudSaveSlot>> ListAsync()
 		{
 			var completion = new AwaitableCompletionSource<IReadOnlyList<CloudSaveSlot>>();
-			Run(completion, () => ListMetadata(completion, metadata =>
+			Guard(completion, () => ListMetadata(completion, metadata =>
 			{
 				var slots = new List<CloudSaveSlot>();
 				foreach (var item in metadata) slots.Add(ToSlot(item));
@@ -30,10 +32,11 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return NativeCompletion.ToMainThread(completion);
 		}
 
+		/// <inheritdoc />
 		public Awaitable<IReadOnlyList<CloudSaveVersion>> LoadVersionsAsync(string slot)
 		{
 			var completion = new AwaitableCompletionSource<IReadOnlyList<CloudSaveVersion>>();
-			Run(completion, () => ListMetadata(completion, metadata =>
+			Guard(completion, () => ListMetadata(completion, metadata =>
 			{
 				var match = Find(metadata, slot);
 				if (match == null)
@@ -49,10 +52,11 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return NativeCompletion.ToMainThread(completion);
 		}
 
+		/// <inheritdoc />
 		public Awaitable ResolveAsync(string slot, CloudSaveVersion chosen)
 		{
 			var completion = new AwaitableCompletionSource<bool>();
-			Run(completion, () =>
+			Guard(completion, () =>
 			{
 				PendingConflict pending;
 				lock (_conflicts)
@@ -78,10 +82,11 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return Void(NativeCompletion.ToMainThread(completion));
 		}
 
+		/// <inheritdoc />
 		public Awaitable SaveAsync(string slot, byte[] data, string description)
 		{
 			var completion = new AwaitableCompletionSource<bool>();
-			Run(completion, () =>
+			Guard(completion, () =>
 			{
 				var client = Client();
 				AndroidTaskListeners.Listen(client.Call<AndroidJavaObject>("open", slot, true, ResolutionPolicy("RESOLUTION_POLICY_MOST_RECENTLY_MODIFIED")), task =>
@@ -109,10 +114,11 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 			return Void(NativeCompletion.ToMainThread(completion));
 		}
 
+		/// <inheritdoc />
 		public Awaitable DeleteAsync(string slot)
 		{
 			var completion = new AwaitableCompletionSource<bool>();
-			Run(completion, () => ListMetadata(completion, metadata =>
+			Guard(completion, () => ListMetadata(completion, metadata =>
 			{
 				var match = Find(metadata, slot);
 				if (match == null)
@@ -152,9 +158,6 @@ namespace GameLovers.MobileServices.GamePlatform.Internal
 		{
 			await operation;
 		}
-
-		// Starts an operation; an exception thrown while starting it fails the awaitable instead of escaping.
-		private static void Run<T>(AwaitableCompletionSource<T> completion, Action start) => Guard(completion, start);
 
 		private static void Guard<T>(AwaitableCompletionSource<T> completion, Action action)
 		{

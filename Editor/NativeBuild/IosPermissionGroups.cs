@@ -1,10 +1,10 @@
 // ReSharper disable once CheckNamespace
 namespace GameLovers.MobileServices.Editor.NativeBuild
 {
-	/// <summary>The iOS permission groups of the <c>Plugins/iOS</c> bridges (see <c>GLPermissionGroups.h</c>) and the Info.plist keys that declare each.</summary>
+	/// <summary>The iOS permission groups of the native bridges and the Info.plist keys that declare each.</summary>
 	internal static class IosPermissionGroups
 	{
-		/// <summary>Each define gates one group in the native bridges; the group compiles when any plist key is present.</summary>
+		/// <summary>Each define gates one native group, which compiles when any of its plist keys is present.</summary>
 		public static readonly (string Define, string Name, string[] PlistKeys)[] All =
 		{
 			("GL_PERMISSION_CAMERA", "camera", new[] { "NSCameraUsageDescription" }),
