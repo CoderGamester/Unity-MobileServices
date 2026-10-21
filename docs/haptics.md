@@ -36,7 +36,7 @@ public enum HapticPreset
 }
 ```
 
-The per-preset `(timings_ms, amplitudes_0_to_255)` envelopes live in `Runtime/Haptics/Internal/HapticEnvelopes.cs` and feed both `AndroidHapticsBackend` and the [Device Simulator panel](explorer.md)'s Haptics envelope graph — single source of truth.
+The per-preset `(timings_ms, amplitudes_0_to_255)` envelopes live in `Runtime/Haptics/Internal/HapticEnvelopes.cs` and feed both `AndroidHapticsBackend` and the [Device Simulator panel](device-simulator.md)'s Haptics envelope graph — single source of truth.
 
 ## Looping semantics
 

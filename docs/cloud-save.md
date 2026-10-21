@@ -48,6 +48,6 @@ cloud.ConflictResolver = conflict =>
 
 ## Editor
 
-In the Editor the service stores saves under `Library/GameLovers/SimulatedCloudSave`. The **Cloud Save** foldout of the [Device Simulator panel](explorer.md) toggles storage availability, injects a newer conflicting version of a slot (so both conflict policies can be exercised), lists the saved slots, and deletes them. Sign the simulated player in under **Game Platform** first.
+In the Editor the service stores saves under `Library/GameLovers/SimulatedCloudSave`. The **Cloud Save** foldout of the [Device Simulator panel](device-simulator.md) toggles storage availability, injects a newer conflicting version of a slot (so both conflict policies can be exercised), lists the saved slots, and deletes them. Sign the simulated player in under **Game Platform** first.
 
 On other platforms (Standalone, WebGL) every call throws `CloudUnavailable`.

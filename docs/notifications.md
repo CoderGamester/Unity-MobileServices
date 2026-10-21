@@ -118,7 +118,7 @@ In `UNITY_EDITOR`:
 
 - `CreateNotification` returns an `EditorGameNotification` (in-memory POCO).
 - `ScheduleNotification` assigns a hashed-`DateTime` id if `Id == null` and returns a `PendingNotification` wrapper — the OS layer is NOT touched.
-- Scheduling remains passive until the simulator explicitly drives delivery. With no active target, the [Device Simulator panel](explorer.md)'s **Show heads-up banner** button renders a generic preview only.
+- Scheduling remains passive until the simulator explicitly drives delivery. With no active target, the [Device Simulator panel](device-simulator.md)'s **Show heads-up banner** button renders a generic preview only.
 - When `NotificationsScheduler.unity` is running in Play Mode, its sample-scoped editor adapter connects the sample-owned service to the panel. **Deliver next pending** invokes the service's editor-only delivery path, raises `OnLocalNotificationDeliveredEvent`, removes the pending row, and paints the exact notification title/body/channel in the in-Game-view overlay. The panel also checks once per poll for the earliest notification whose delivery time has elapsed.
 - Tapping the simulated heads-up banner raises `OnNotificationOpened` for that notification, so tap routing can be exercised in Play Mode.
 - The bridge is editor-only and transient; no simulator registration, editor overlay, or simulation method is included in player builds.

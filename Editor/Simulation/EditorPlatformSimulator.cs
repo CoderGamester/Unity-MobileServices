@@ -15,7 +15,7 @@ namespace GameLovers.MobileServices.Editor.Simulation
 	/// <summary>
 	/// Editor-only façade for driving platform state (battery, connectivity, deep links,
 	/// permissions, ATT) from edit-mode tests and the Device Simulator panel. See
-	/// <c>docs/explorer.md</c> for the comparison with Unity's Device Simulator.
+	/// <c>docs/device-simulator.md</c> for the comparison with Unity's Device Simulator.
 	/// </summary>
 	public static class EditorPlatformSimulator
 	{

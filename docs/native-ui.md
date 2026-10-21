@@ -70,7 +70,7 @@ The overload without `isDismissible` preserves the original dismissible behavior
 `RequestReview()`:
 
 - **iOS**: `SKStoreReviewController`. Modern `requestReviewInScene:` on iOS 14+, fallback to `requestReview` on iOS 10.3–13. The OS throttles the prompt frequency — calling this every launch is safe.
-- **Android**: Play Core `ReviewManagerFactory` + `launchReviewFlow`. The `com.google.android.play:review` dependency is **auto-injected at build time** (default ON — see [build pipeline](build-pipeline.md)), so no manual `mainTemplate.gradle` editing is needed. It never throws.
+- **Android**: Play Core `ReviewManagerFactory` + `launchReviewFlow`. The `com.google.android.play:review` dependency is **auto-injected at build time** (default ON — see [build configuration](build-configuration.md)), so no manual `mainTemplate.gradle` editing is needed. It never throws.
 
 **Fire-and-forget — no store-page fallback.** Neither platform exposes a "was actually shown" signal: the OS may silently suppress the prompt under its own throttling quota, and that is normal, not an error. Because there is no success callback, the package **logs when the prompt is requested**:
 
@@ -132,4 +132,4 @@ string picked = await NativeMediaService.PickImageAsync();                      
 
 In `UNITY_EDITOR`, alerts render through the in-Game-view simulator overlay and invoke their real button callbacks. The other methods log to console and return unless their Device Simulator override is engaged. On unsupported player platforms (Standalone, WebGL), `ShowAlertPopUp` and `ShowToastMessage` throw `SystemException`; `RequestReview` and `Share` are safe no-ops, and `SaveToGalleryAsync` and `PickImageAsync` return `false` and `null`.
 
-The [Device Simulator panel](explorer.md) selects the platform skin and renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor without device builds. Alerts also render in a plain Game view when the panel is closed.
+The [Device Simulator panel](device-simulator.md) selects the platform skin and renders platform-shaped mocks for every native UI surface so designers / engineers can iterate in the editor without device builds. Alerts also render in a plain Game view when the panel is closed.

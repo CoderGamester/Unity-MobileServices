@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Removed**:
 - Removed `ISafeAreaService`, `SafeAreaService`, and the `SafeAreaContainer` UI Toolkit element; `IDeviceService` no longer exposes a `SafeArea` child and `EditorPlatformSimulator` no longer exposes safe-area overrides. For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`SafeAreaContainer`).
 
+**Docs**:
+- The root README is now the documentation index and lists common issues. `docs/build-pipeline.md` is now `docs/build-configuration.md`, `docs/explorer.md` is now `docs/device-simulator.md`, and `docs/README.md` is removed.
+
 **Migration**:
 - Replace `IDeviceService.SafeArea` and `SafeAreaContainer` with `com.gamelovers.uiservice` `SafeAreaPanelView`/`SafeAreaContainer`.
 - Add `Data`, `OnNotificationOpened`, `TryGetLaunchNotification`, `BackgroundTasks` and the new `INativeUiService` methods to custom implementations and mocks, and pass an `IBackgroundTaskService` to the `DeviceService` constructor.

@@ -372,7 +372,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 	/// UX (including the per-locale usage-description lists), and a single instance is located ANYWHERE
 	/// in the project via <see cref="Instance"/> / <see cref="GetOrCreateAsset"/>. Open it from
 	/// <c>Tools &gt; GameLovers &gt; Mobile Services &gt; Select Mobile Services Config</c>.
-	/// See <c>docs/build-pipeline.md</c> for the schema and behaviour.
+	/// See <c>docs/build-configuration.md</c> for the schema and behaviour.
 	/// </summary>
 	/// <remarks>
 	/// The type lives in the Editor assembly, so the asset is editor-only (keep it under an

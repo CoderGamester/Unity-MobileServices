@@ -64,6 +64,6 @@ Google may require the app's signing certificate to be registered with the Play 
 
 ## Editor
 
-In the Editor `GamePlatformServices` uses a simulation. The **Game Platform** foldout of the [Device Simulator panel](explorer.md) signs the simulated player in and out, makes the next sign-in fail, renames the player, and lists the scores, achievements and UI requests the game reported. The simulation is process-wide, so it drives the game's own `GamePlatformServices` instance.
+In the Editor `GamePlatformServices` uses a simulation. The **Game Platform** foldout of the [Device Simulator panel](device-simulator.md) signs the simulated player in and out, makes the next sign-in fail, renames the player, and lists the scores, achievements and UI requests the game reported. The simulation is process-wide, so it drives the game's own `GamePlatformServices` instance.
 
 On other platforms (Standalone, WebGL) every call fails after a log message.

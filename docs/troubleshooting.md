@@ -6,7 +6,7 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 
 | Symptom | Fix |
 |---------|-----|
-| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](explorer.md) to preview platform-shaped mocks inside the simulated phone. |
+| `ShowAlertPopUp` does nothing in editor | Editor short-circuit logs to console. Open `Window > General > Device Simulator` and use the [Mobile Services panel](device-simulator.md) to preview platform-shaped mocks inside the simulated phone. |
 | `ShowAlertPopUp` throws `SystemException` | Running on an unsupported platform (Standalone, WebGL). Mobile-only API. |
 | iOS alert button callback fires the wrong handler | Two buttons in the same alert share their `Text`. iOS matches by text — keep button texts unique within a single alert. |
 | `RequestReview()` does nothing on Android | The generated Gradle project does not contain `com.google.android.play:review` (or the config opted out). The call logs an error and returns; it does NOT throw. |

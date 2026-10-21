@@ -89,7 +89,7 @@ namespace GameLovers.MobileServices.Editor.Explorer.Overlays
 
 	/// <summary>
 	/// Editor-only broker decoupling the Device Simulator plugin and <c>EditorPlatformSimulator</c>
-	/// from the in-Game-view overlay that paints the mock dialogs. See <c>docs/explorer.md</c>.
+	/// from the in-Game-view overlay that paints the mock dialogs. See <c>docs/device-simulator.md</c>.
 	/// </summary>
 	/// <remarks>
 	/// There is now a single renderer surface (the <c>MobileSimulatorRuntimeOverlay</c>), so push

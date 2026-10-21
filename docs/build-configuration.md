@@ -1,4 +1,4 @@
-# Build Pipeline & Config
+# Build Configuration
 
 The package ships a consumer-wide postprocessor (`Editor/NativeBuild/MobileServicesBuildPostprocessor.cs`) and a `MobileServicesConfig` asset that together automate the iOS Info.plist / .entitlements / Android manifest / gradle mutations the framework's permission and capability surface needs. Sample-only build tools live inside the optional **Mobile Services Samples** bundle.
 
