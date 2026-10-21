@@ -108,6 +108,13 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return lines;
 		}
 
+		public static IReadOnlyList<string> InAppBrowser(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			if (config.IncludeCustomTabsDependency) lines.Add($"Android Gradle: implementation '{config.CustomTabsDependencyCoordinate}'");
+			return lines;
+		}
+
 		private static void AddAndroidPermissions(List<string> lines, AndroidManifestToggles toggles, Func<string, bool> filter)
 		{
 			var permissions = toggles.GetPermissions()

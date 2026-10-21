@@ -386,6 +386,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 		/// <summary>Default Maven coordinate for the Play In-App Review library injected on Android builds.</summary>
 		public const string DefaultPlayReviewCoordinate = "com.google.android.play:review:2.0.2";
 
+		/// <summary>Default Maven coordinate for the Chrome Custom Tabs library behind the in-app browser on Android.</summary>
+		public const string DefaultCustomTabsCoordinate = "androidx.browser:browser:1.8.0";
+
 		private static MobileServicesConfig _cached;
 		private static bool _cachedIsTransient;
 
@@ -399,6 +402,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private bool _enableHapticsDebugLogs;
 		[SerializeField] private bool _includePlayReviewDependency = true;
 		[SerializeField] private string _playReviewDependencyCoordinate = DefaultPlayReviewCoordinate;
+		[SerializeField] private bool _includeCustomTabsDependency = true;
+		[SerializeField] private string _customTabsDependencyCoordinate = DefaultCustomTabsCoordinate;
 		[SerializeField] private bool _manageNativeBuildManually;
 
 		private void OnEnable()
@@ -414,6 +419,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_deepLinks.IosUrlSchemes ??= new List<string>();
 			_deepLinks.AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			_playReviewDependencyCoordinate ??= DefaultPlayReviewCoordinate;
+			_customTabsDependencyCoordinate ??= DefaultCustomTabsCoordinate;
 			ApplyEditorRuntimeSettings();
 		}
 
@@ -528,6 +534,37 @@ namespace GameLovers.MobileServices.Editor.Settings
 		}
 
 		/// <summary>
+		/// When <c>true</c> (the default), the Android build postprocessor injects the <c>androidx.browser</c> library so
+		/// <c>NativeUiService.OpenInAppBrowser</c> can show Chrome Custom Tabs. It is skipped when the library is already
+		/// declared. Turn it off to keep the library out; the browser call then opens the external browser.
+		/// </summary>
+		public bool IncludeCustomTabsDependency
+		{
+			get => _includeCustomTabsDependency;
+			set
+			{
+				_includeCustomTabsDependency = value;
+				Persist();
+			}
+		}
+
+		/// <summary>
+		/// The full <c>group:artifact:version</c> Maven coordinate injected for Custom Tabs, for pinning a version or
+		/// using an internal mirror. Falls back to <see cref="DefaultCustomTabsCoordinate"/> when blank.
+		/// </summary>
+		public string CustomTabsDependencyCoordinate
+		{
+			get => string.IsNullOrWhiteSpace(_customTabsDependencyCoordinate)
+				? DefaultCustomTabsCoordinate
+				: _customTabsDependencyCoordinate;
+			set
+			{
+				_customTabsDependencyCoordinate = value;
+				Persist();
+			}
+		}
+
+		/// <summary>
 		/// When <c>true</c>, the package performs NO native build configuration — it writes nothing to
 		/// the iOS Info.plist / entitlements / capabilities or the Android manifest / gradle, and skips
 		/// the fail-fast iOS usage-description validation. Turn it on when your team manages the native
@@ -602,6 +639,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		{
 			var config = CreateInstance<MobileServicesConfig>();
 			config._includePlayReviewDependency = false;
+			config._includeCustomTabsDependency = false;
 			config.hideFlags = HideFlags.HideAndDontSave;
 			return config;
 		}
@@ -663,6 +701,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_deepLinks?.CollectValidationErrors(nameof(DeepLinks), errors);
 			if (_gamePlatform == null) errors.Add("GamePlatform is null.");
 			else _gamePlatform.CollectValidationErrors(nameof(GamePlatform), errors);
+			if (_includeCustomTabsDependency && !IsValidMavenCoordinate(CustomTabsDependencyCoordinate))
+			{
+				errors.Add($"CustomTabsDependencyCoordinate is invalid: '{CustomTabsDependencyCoordinate}'.");
+			}
 			if (_includePlayReviewDependency && !IsValidMavenCoordinate(PlayReviewDependencyCoordinate))
 			{
 				errors.Add($"PlayReviewDependencyCoordinate is invalid: '{PlayReviewDependencyCoordinate}'.");

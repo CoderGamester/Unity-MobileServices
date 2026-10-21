@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
 
@@ -76,6 +77,25 @@ namespace GameLovers.MobileServices.Device
 				new AttService(),
 				new DeepLinkService(),
 				new BackgroundTaskService());
+		}
+
+		/// <summary>
+		/// Replaces the home-screen quick actions on the app icon. Tapping one opens the app and delivers the shortcut's
+		/// URI through <see cref="IDeepLinkService"/>, including as the cold-start link when the tap launched the app.
+		/// </summary>
+		/// <remarks>
+		/// At most four shortcuts are kept; entries without an id, title or absolute
+		/// URI, and repeated ids, are skipped with a log message. Android needs API 25 or newer.
+		/// </remarks>
+		public static void SetShortcuts(IReadOnlyList<AppShortcut> shortcuts)
+		{
+			AppShortcutsBridge.Set(AppShortcutRules.Normalize(shortcuts));
+		}
+
+		/// <summary>Removes every shortcut set with <see cref="SetShortcuts"/>.</summary>
+		public static void ClearShortcuts()
+		{
+			AppShortcutsBridge.Clear();
 		}
 
 		/// <summary>

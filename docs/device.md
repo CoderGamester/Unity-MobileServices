@@ -1,6 +1,6 @@
 # Device
 
-`IDeviceService` is an umbrella facade aggregating six independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless conveniences (screen wake, opening OS Settings, opening the store page) are available directly on `DeviceService`.
+`IDeviceService` is an umbrella facade aggregating six independently mockable sub-services. Each child interface is also independently registerable for testing. Stateless conveniences (screen wake, opening OS Settings, opening the store page, home-screen shortcuts) are available directly on `DeviceService`.
 
 ```csharp
 IDeviceService device = new DeviceService();
@@ -50,6 +50,29 @@ DeviceService.OpenAppSettings();                                    // this app'
 ```
 
 `OpenStorePage` builds an `https://apps.apple.com/app/id...` or `https://play.google.com/store/apps/details?id=...` link and opens it with `Application.OpenURL`, so the store app handles it when installed. On iOS the numeric App Store id is required (with or without an `id` prefix); on Android `androidPackage` defaults to `Application.identifier`. Android has no review deep link, so `writeReview` opens the store page there. In the Editor it logs the link instead of opening it. This is a link, not the in-app review prompt: use `NativeUiService.RequestReview()` for that.
+
+## App shortcuts
+
+```csharp
+DeviceService.SetShortcuts(new[]
+{
+    new AppShortcut("daily", "Daily reward", "mygame://rewards/daily"),
+    new AppShortcut("versus", "Play versus", "mygame://play/versus", subtitle: "Ranked match"),
+});
+
+// Taps arrive as ordinary deep links, including as the cold-start link when the tap launched the app.
+device.DeepLink.OnLinkActivated += uri => router.TryDispatch(uri);
+
+DeviceService.ClearShortcuts();
+```
+
+`SetShortcuts` replaces the quick actions shown when the player long-presses the app icon. Each `AppShortcut` has a stable `Id`, a `Title`, an absolute `Uri` and an optional `Subtitle`. Taps are delivered through `IDeepLinkService`, so the same [router](#deep-link-router) that handles web links handles shortcuts.
+
+- **Limits** — at most four shortcuts are kept. Entries without an id, title or absolute URI, and repeated ids, are skipped with a log message.
+- **Android** — dynamic shortcuts through `ShortcutManager` (API 25+, otherwise a logged no-op). Each shortcut launches this app's activity with an `ACTION_VIEW` intent carrying the URI, which Unity reports as a deep link. Shortcuts use the app icon.
+- **iOS** — `UIApplication.shortcutItems`. The package hooks `application:performActionForShortcutItem:completionHandler:` on `UnityAppController` at load time and chains to any implementation another SDK already installed. A tapped shortcut is held natively and collected when `DeepLinkService` is constructed and whenever the app returns to the foreground. The hook covers the app-delegate lifecycle; it does not see shortcuts delivered through a UIScene lifecycle.
+- **Cold start** — construct `DeepLinkService` early, as for web links: a shortcut tapped before anyone subscribed is replayed to the first subscriber.
+- **Editor** — setting shortcuts logs; drive taps with `EditorPlatformSimulator.SimulateDeepLink(uri, yourService)`.
 
 ## Background tasks
 

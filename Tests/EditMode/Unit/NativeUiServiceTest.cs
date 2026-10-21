@@ -169,5 +169,21 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			Assert.AreEqual(expected, NativeUiService.GetImageMimeType(path));
 		}
+
+		[Test]
+		// ADMIT: NativeUiService.IsWebUrl could accept a non-web URL, which SFSafariViewController rejects by throwing.
+		// RCR: NativeUiService.cs IsWebUrl — scheme check removed → RED (Expected: False But was: True). 2026-10-21
+		[TestCase("https://example.com/terms", true)]
+		[TestCase("http://example.com", true)]
+		[TestCase("HTTPS://EXAMPLE.COM", true)]
+		[TestCase("ftp://example.com", false)]
+		[TestCase("mygame://deep/link", false)]
+		[TestCase("example.com/terms", false)]
+		[TestCase("", false)]
+		[TestCase(null, false)]
+		public void IsWebUrl_AcceptsOnlyAbsoluteHttpAndHttps(string url, bool expected)
+		{
+			Assert.AreEqual(expected, NativeUiService.IsWebUrl(url));
+		}
 	}
 }

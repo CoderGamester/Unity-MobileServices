@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <StoreKit/StoreKit.h>
+#import <SafariServices/SafariServices.h>
 
 extern UIViewController *UnityGetGLViewController();
 
@@ -145,5 +146,20 @@ void _GameLoversShare(const char *text, const char *url, const char *imagePath)
         }
 
         [root presentViewController:activityVc animated:YES completion:nil];
+    });
+}
+
+// In-app browser. SFSafariViewController only accepts http and https URLs, which the managed caller guarantees.
+void _GameLoversOpenInAppBrowser(const char *url)
+{
+    NSURL *target = [NSURL URLWithString:[NSString stringWithUTF8String:url]];
+    if (target == nil)
+    {
+        return;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        SFSafariViewController *browser = [[SFSafariViewController alloc] initWithURL:target];
+        [UnityGetGLViewController() presentViewController:browser animated:YES completion:nil];
     });
 }

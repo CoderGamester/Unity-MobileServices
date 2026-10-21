@@ -33,6 +33,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private const string ShareFileProviderClass = "com.gamelovers.mobileservices.GameLoversFileProvider";
 		private const string ShareFileProviderPathsResource = "gamelovers_file_paths";
 		private const string MediaPickerActivityClass = "com.gamelovers.mobileservices.GameLoversMediaPickerActivity";
+		private const string CustomTabsArtifactKey = "androidx.browser:browser";
 		private const string PlayGamesArtifactKey = "com.google.android.gms:play-services-games-v2";
 		private const string PlayGamesAppIdMetaData = "com.google.android.gms.games.APP_ID";
 		private const string PlayGamesProjectIdResource = "gamelovers_play_games_project_id";
@@ -70,10 +71,13 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var playReview = settings.IncludePlayReviewDependency
 				? EnsureGradleDependency(path, PlayReviewArtifactKey, settings.PlayReviewDependencyCoordinate, "disable Include Play Review Dependency")
 				: "disabled";
+			var customTabs = settings.IncludeCustomTabsDependency
+				? EnsureGradleDependency(path, CustomTabsArtifactKey, settings.CustomTabsDependencyCoordinate, "disable Include Custom Tabs Dependency")
+				: "disabled";
 			var playGames = settings.GamePlatform.PlayGamesEnabled
 				? EnsureGradleDependency(path, PlayGamesArtifactKey, settings.GamePlatform.ResolvePlayGamesCoordinate(), "clear the Play Games project id")
 				: "disabled";
-			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} playGames={playGames} scannerWarnings={warnings.Count}.");
+			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} customTabs={customTabs} playGames={playGames} scannerWarnings={warnings.Count}.");
 		}
 #endif
 

@@ -45,6 +45,9 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc cref="NativeUiService.ShareScreenshotAsync(string,string,string)"/>
 		Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null);
 
+		/// <inheritdoc cref="NativeUiService.OpenInAppBrowser(string)"/>
+		void OpenInAppBrowser(string url);
+
 		/// <inheritdoc cref="NativeMediaService.SaveToGalleryAsync(string,MediaType)"/>
 		Awaitable<bool> SaveToGalleryAsync(string filePath, MediaType mediaType = MediaType.Image);
 
@@ -97,6 +100,9 @@ namespace GameLovers.MobileServices.NativeUi
 		/// <inheritdoc />
 		public Awaitable ShareScreenshotAsync(string text = null, string url = null, string title = null)
 			=> NativeUiService.ShareScreenshotAsync(text, url, title);
+
+		/// <inheritdoc />
+		public void OpenInAppBrowser(string url) => NativeUiService.OpenInAppBrowser(url);
 
 		/// <inheritdoc />
 		public Awaitable<bool> SaveToGalleryAsync(string filePath, MediaType mediaType = MediaType.Image)

@@ -100,6 +100,17 @@ await NativeUiService.ShareScreenshotAsync("New high score!", "https://example.c
 
 `ShareScreenshotAsync(text, url, title)` waits for the end of the frame, captures what the player sees, writes a PNG to `Application.temporaryCachePath`, and opens the share sheet with it. On Android it needs the same **Include Share FileProvider** toggle.
 
+## In-app browser
+
+```csharp
+NativeUiService.OpenInAppBrowser("https://example.com/terms");
+```
+
+`OpenInAppBrowser(url)` shows a web page in a browser sheet over the game, so the player returns with one tap: `SFSafariViewController` on iOS and Chrome Custom Tabs on Android (also on `INativeUiService`). Use it for terms of service, patch notes or a survey; for anything that needs two-way messaging with the page, use a WebView package.
+
+- Only absolute `http` and `https` URLs are accepted; anything else is logged and ignored.
+- On Android the sheet needs the `androidx.browser` library. The build postprocessor injects it unless **Include Custom Tabs Dependency** is turned off (it is skipped when already declared; `CustomTabsDependencyCoordinate` pins a version or mirror). Without the library, and on other platforms and in the Editor, the page opens in the external browser with `Application.OpenURL`.
+
 ## Gallery and image picker
 
 ```csharp

@@ -220,6 +220,33 @@ namespace GameLovers.MobileServices.NativeUi
 		}
 
 		/// <summary>
+		/// Opens a web page in an in-app browser sheet over the game: <c>SFSafariViewController</c> on iOS and Chrome Custom
+		/// Tabs on Android. Use it for terms of service, patch notes or a survey, where the player should return to the game
+		/// with one tap.
+		/// </summary>
+		/// <remarks>
+		/// Only http and https addresses are accepted; anything else is logged and ignored. On Android the sheet needs the
+		/// <c>androidx.browser</c> library, which the build adds unless <c>Include Custom Tabs Dependency</c> is turned off;
+		/// without it, and on other platforms, the page opens in the external browser instead.
+		/// </remarks>
+		public static void OpenInAppBrowser(string url)
+		{
+			if (!IsWebUrl(url))
+			{
+				Debug.LogWarning($"[GameLovers.MobileServices] OpenInAppBrowser needs an absolute http or https URL, got '{url}'.");
+				return;
+			}
+
+#if UNITY_IOS && !UNITY_EDITOR
+			OpenInAppBrowserNative(url);
+#elif UNITY_ANDROID && !UNITY_EDITOR
+			OpenInAppBrowserAndroid(url);
+#else
+			Application.OpenURL(url);
+#endif
+		}
+
+		/// <summary>
 		/// Captures the current frame and opens the OS share sheet with it. Any of <paramref name="text"/>,
 		/// <paramref name="url"/> and <paramref name="title"/> may be null. The capture happens at the end of the
 		/// frame, so it includes everything the player currently sees.
@@ -241,6 +268,10 @@ namespace GameLovers.MobileServices.NativeUi
 
 			Share(text, url, path, title);
 		}
+
+		/// <summary>True for an absolute http or https URL, the only kind an in-app browser can show.</summary>
+		internal static bool IsWebUrl(string url) =>
+			Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
 		/// <summary>The MIME type for a shared image file, falling back to any image type.</summary>
 		internal static string GetImageMimeType(string imagePath)
@@ -568,6 +599,26 @@ namespace GameLovers.MobileServices.NativeUi
 			}
 		}
 
+		private static void OpenInAppBrowserAndroid(string url)
+		{
+			try
+			{
+				using var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+				using var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+				using var builder = new AndroidJavaObject("androidx.browser.customtabs.CustomTabsIntent$Builder");
+				using var tab = builder.Call<AndroidJavaObject>("build");
+				using var uriClass = new AndroidJavaClass("android.net.Uri");
+				using var uri = uriClass.CallStatic<AndroidJavaObject>("parse", url);
+				tab.Call("launchUrl", activity, uri);
+			}
+			catch (Exception e)
+			{
+				// Custom Tabs are missing (the dependency is turned off) or the launch failed; the external browser still works.
+				Debug.LogWarning($"[GameLovers.MobileServices] The in-app browser is unavailable ({e.Message}); opening the external browser.");
+				Application.OpenURL(url);
+			}
+		}
+
 		// Android 7+ rejects file:// URIs, so the image travels through the package FileProvider.
 		private static bool TryAttachShareImage(AndroidJavaObject activity, AndroidJavaObject intent, AndroidJavaClass intentClass, string imagePath)
 		{
@@ -651,6 +702,9 @@ namespace GameLovers.MobileServices.NativeUi
 
 		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversShare")]
 		private static extern void ShareNative(string text, string url, string imagePath);
+
+		[System.Runtime.InteropServices.DllImport("__Internal", EntryPoint = "_GameLoversOpenInAppBrowser")]
+		private static extern void OpenInAppBrowserNative(string url);
 
 		[AOT.MonoPInvokeCallback(typeof(AlertButtonDelegate))]
 		private static void AlertButtonCallback(string buttonText)

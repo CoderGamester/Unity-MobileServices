@@ -1,4 +1,5 @@
 using System;
+using GameLovers.MobileServices.Device.Internal;
 using UnityEngine;
 
 // ReSharper disable once CheckNamespace
@@ -9,6 +10,9 @@ namespace GameLovers.MobileServices.Device
 	{
 		private Action<Uri> _onLinkActivated;
 		private Uri _pendingColdStartLink;
+#if UNITY_IOS && !UNITY_EDITOR
+		private readonly DeviceServicesHost _shortcutHost;
+#endif
 
 		/// <inheritdoc />
 		public Uri PendingColdStartLink => _pendingColdStartLink;
@@ -40,12 +44,23 @@ namespace GameLovers.MobileServices.Device
 			{
 				_pendingColdStartLink = TryParse(Application.absoluteURL);
 			}
+
+#if UNITY_IOS && !UNITY_EDITOR
+			// iOS delivers a tapped home-screen shortcut natively, not through Unity's deep-link callback, so it is collected
+			// at start-up (a cold start) and whenever the app returns to the foreground.
+			_shortcutHost = DeviceServicesHost.Instance;
+			_shortcutHost.RegisterFocusChanged(OnShortcutFocusChanged);
+			DeliverPendingShortcut();
+#endif
 		}
 
 		/// <inheritdoc />
 		public void Dispose()
 		{
 			Application.deepLinkActivated -= OnDeepLinkActivated;
+#if UNITY_IOS && !UNITY_EDITOR
+			if (_shortcutHost != null) _shortcutHost.UnregisterFocusChanged(OnShortcutFocusChanged);
+#endif
 			_onLinkActivated = null;
 			_pendingColdStartLink = null;
 		}
@@ -64,6 +79,30 @@ namespace GameLovers.MobileServices.Device
 			}
 			_pendingColdStartLink = null;
 			_onLinkActivated?.Invoke(uri);
+		}
+#endif
+
+#if UNITY_IOS && !UNITY_EDITOR
+		private void OnShortcutFocusChanged(bool focused)
+		{
+			if (focused) DeliverPendingShortcut();
+		}
+
+		private void DeliverPendingShortcut()
+		{
+			var uri = TryParse(AppShortcutsBridge.TakePendingLink());
+			if (uri == null)
+			{
+				return;
+			}
+
+			// Unlike a runtime link, a shortcut that arrives before anyone subscribed is kept for the first subscriber.
+			if (_onLinkActivated == null)
+			{
+				_pendingColdStartLink = uri;
+				return;
+			}
+			_onLinkActivated.Invoke(uri);
 		}
 #endif
 

@@ -69,6 +69,15 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | `IncrementAchievementAsync` returns `false` on iOS | Pass `totalSteps`; Game Center tracks a percentage and needs the total to convert steps. |
 | Progress calls return `false` and log that a signed-in player is needed | Call `AuthenticateAsync` first and check its result. |
 
+## Shortcuts and in-app browser
+
+| Symptom | Fix |
+|---------|-----|
+| Android shortcuts do not appear | They need API 25 or newer and a launcher that supports dynamic shortcuts. Check the log for entries skipped by validation (id, title and absolute URI are required; four at most). |
+| A tapped shortcut does nothing in the game | Construct `DeepLinkService` early and subscribe to `OnLinkActivated`; on iOS the tap is collected at construction and on each return to the foreground. Verify the app uses the app-delegate lifecycle, not UIScene. |
+| `OpenInAppBrowser` opens the external browser on Android | The `androidx.browser` library is missing. Turn on **Include Custom Tabs Dependency** in the Mobile Services Config and rebuild. |
+| `OpenInAppBrowser` logs that it needs an http or https URL | The in-app browser only shows web pages; use `Application.OpenURL` or a deep-link route for other schemes. |
+
 ## Cloud save
 
 | Symptom | Fix |

@@ -74,10 +74,10 @@ For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`S
 
 | Area | Provides |
 | --- | --- |
-| Native UI | Dismissible or blocking alerts, action sheets, toasts, review requests, and sharing (including screenshots), gallery saving, and image picking |
+| Native UI | Dismissible or blocking alerts, action sheets, toasts, review requests, and sharing (including screenshots), gallery saving, image picking, and an in-app browser |
 | Notifications | Local notification channels, scheduling, custom data, and opened-notification routing |
 | Haptics | Presets, custom output, and bounded loops |
-| Device | Permissions, ATT, deep links, background tasks, store and Settings links, and device helpers |
+| Device | Permissions, ATT, deep links, background tasks, home-screen shortcuts, store and Settings links, and device helpers |
 | Game Platform | Opt-in Game Center and Google Play Games sign-in, leaderboards, achievements and slot-based cloud saves |
 | Gestures | Gesture controller for explicit gesture input ownership |
 | Editor tooling | Device Simulator integration, optional haptics diagnostics, and build helpers |

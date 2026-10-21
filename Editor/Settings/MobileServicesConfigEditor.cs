@@ -91,6 +91,11 @@ namespace GameLovers.MobileServices.Editor.Settings
 			AddRelative(root, "_gamePlatform", "GameCenter", "PlayGamesProjectId", "PlayGamesDependencyCoordinate", "CloudSave");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.GamePlatform(config));
 
+			root.Add(MakeSection("In-app browser"));
+			root.Add(new PropertyField(serializedObject.FindProperty("_includeCustomTabsDependency"), "Include Custom Tabs Dependency"));
+			root.Add(new PropertyField(serializedObject.FindProperty("_customTabsDependencyCoordinate"), "Custom Tabs Coordinate"));
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.InAppBrowser(config));
+
 			root.Add(MakeSection("Store review"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_playReviewDependencyCoordinate"), "Play Review Coordinate"));

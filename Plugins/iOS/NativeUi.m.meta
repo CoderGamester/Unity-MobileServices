@@ -21,7 +21,7 @@ PluginImporter:
     iOS:
       enabled: 1
       settings:
-        FrameworkDependencies: StoreKit;
+        FrameworkDependencies: StoreKit;SafariServices;
     tvOS:
       enabled: 1
       settings: {}
