@@ -1,6 +1,6 @@
 # GameLovers Mobile Services
 
-Unity 6 services for local notifications, native UI, haptics, permissions, App Tracking Transparency, deep links, gestures, and mobile build tooling.
+Unity 6 services for local notifications, native UI, media, haptics, permissions, App Tracking Transparency, deep links, shortcuts, game services and cloud saves, gestures, and mobile build tooling.
 
 [![Unity](https://img.shields.io/badge/Unity-6000.0%20%7C%206000.3%20%7C%206000.5-blue.svg)](https://unity.com/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
@@ -8,7 +8,7 @@ Unity 6 services for local notifications, native UI, haptics, permissions, App T
 
 ## Scope
 
-Use Mobile Services to isolate platform-specific behavior behind Unity-friendly APIs. It provides **local** notifications, not remote push delivery; it also does not provide connectivity or store fallback services. The package is pipeline-neutral.
+Use Mobile Services to isolate platform-specific behavior behind Unity-friendly APIs. It provides **local** notifications, not remote push delivery; it also does not provide in-app purchases, connectivity, a JavaScript-bridged WebView, or store fallback services. Game Center and Google Play Games (sign-in, leaderboards, achievements, cloud saves) are opt-in through the Mobile Services Config. The package is pipeline-neutral.
 
 ## Unity compatibility
 
@@ -32,7 +32,7 @@ Use Mobile Services to isolate platform-specific behavior behind Unity-friendly 
 ```json
 {
   "dependencies": {
-    "com.gamelovers.mobileservices": "https://github.com/CoderGamester/Unity-MobileServices.git#1.2.0"
+    "com.gamelovers.mobileservices": "https://github.com/CoderGamester/Unity-MobileServices.git#2.0.0"
   }
 }
 ```
