@@ -81,6 +81,16 @@ namespace GameLovers.MobileServices.Editor.Settings
 			AddRelative(root, "_androidManifest", "IncludeMediaPicker", "WriteExternalStorageLegacy");
 			AddSummary(root, summaries, () => MobileServicesBuildSummary.Media(config));
 
+			root.Add(MakeSection("Game platform (Game Center and Play Games)"));
+			var gamePlatformHint = new Label("Opt-in. Game Center needs the capability on your App ID and provisioning profile. " +
+				"Entering the Play Games project id adds the Play Games Services SDK to Android builds.");
+			gamePlatformHint.style.whiteSpace = WhiteSpace.Normal;
+			gamePlatformHint.style.fontSize = 10;
+			gamePlatformHint.style.unityFontStyleAndWeight = FontStyle.Italic;
+			root.Add(gamePlatformHint);
+			AddRelative(root, "_gamePlatform", "GameCenter", "PlayGamesProjectId", "PlayGamesDependencyCoordinate");
+			AddSummary(root, summaries, () => MobileServicesBuildSummary.GamePlatform(config));
+
 			root.Add(MakeSection("Store review"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_includePlayReviewDependency"), "Include Play Review Dependency"));
 			root.Add(new PropertyField(serializedObject.FindProperty("_playReviewDependencyCoordinate"), "Play Review Coordinate"));

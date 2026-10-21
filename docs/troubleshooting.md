@@ -59,6 +59,16 @@ Symptom-to-fix mapping for the documented behaviours and gotchas. For architectu
 | iOS `RequestAsync` returns `NotDetermined` and the log says a permission group is not compiled | The generated `Info.plist` has no usage description for it, so the group was left out of the binary. Add the description in the Mobile Services Config. |
 | iOS Camera prompt shows blank text | Missing `NSCameraUsageDescription`. Open `Tools > GameLovers > Mobile Services > Select Mobile Services Config` or rely on the build postprocessor to fail the build (default). |
 
+## Game platform
+
+| Symptom | Fix |
+|---------|-----|
+| `AuthenticateAsync` returns `false` on iOS and the log says Game Center is not enabled | Turn on **Game Center** in the Mobile Services Config and rebuild. The App ID and provisioning profile need Game Center too. |
+| Play Games calls fail on Android and the log says the SDK is unavailable | Enter the **Play Games Project Id** in the Mobile Services Config so the build includes `play-services-games-v2`, then rebuild. |
+| Play Games sign-in fails although the SDK is present | Check in the Play Console that the app's package name and signing certificate are registered with the Play Games project. |
+| `IncrementAchievementAsync` returns `false` on iOS | Pass `totalSteps`; Game Center tracks a percentage and needs the total to convert steps. |
+| Progress calls return `false` and log that a signed-in player is needed | Call `AuthenticateAsync` first and check its result. |
+
 ## Media
 
 | Symptom | Fix |

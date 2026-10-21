@@ -5,7 +5,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 ## Scope
 
 - Package: `com.gamelovers.mobileservices`; minimum Unity version and dependencies are authoritative in `package.json`.
-- Runtime subsystems: Native UI, notifications, gestures, haptics, and device services (battery, audio session, permissions, ATT, deep links, and background tasks).
+- Runtime subsystems: Native UI, notifications, gestures, haptics, device services (battery, audio session, permissions, ATT, deep links, and background tasks), and the opt-in game platform (Game Center and Play Games).
 - Consumers must enable the Input System or Both. The gesture contract uses EnhancedTouch.
 - This package is render-pipeline-neutral and has no dependency on GameLovers Services.
 
@@ -28,6 +28,9 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - Android image sharing goes through the package FileProvider: the Java class `GameLoversFileProvider` (`Plugins/Android/`), the authority suffix `NativeUiService.AndroidShareProviderAuthoritySuffix`, and the postprocessor's provider and `res/xml` paths file change together. Without the toggle an image share degrades to text with a warning.
 - `NativeMediaService` needs no permission. iOS saves through `PHPhotoLibrary` only when `NSPhotoLibraryAddUsageDescription` is declared (`GL_PERMISSION_PHOTOS_ADD`) and picks through `PHPickerViewController`. Android saves through `MediaStore` (legacy storage below API 29) and picks through the transparent `GameLoversMediaPickerActivity`, which the postprocessor declares behind `IncludeMediaPicker`.
 - Picked images are always a private copy the caller may delete. The `_GameLoversMedia*` exports, their callback signature, and the Java `ResultCallback` and `PathCallback` interfaces change together with their C# callers.
+- `GamePlatformServices` is opt-in and holds one `IGamePlatformBackend` per platform. Its guards (signed-in player, non-empty id, positive steps, one shared sign-in) live in the service, not the backends. The Editor backend and `EditorGamePlatformState` are process-wide, so the simulator panel drives the consumer's own instance.
+- The Android game backend talks to Play Games v2 through JNI and `OnCompleteListener` proxies so the package compiles without the SDK; the postprocessor adds the SDK only when `GamePlatform.PlayGamesProjectId` is set.
+- `Plugins/iOS/GamePlatform.m` links GameKit only when `GL_GAME_CENTER` is defined (Game Center capability on). The `_GameLoversGamePlatform*` exports and their callback signature change together with the C# callers.
 - `IBackgroundTaskService` is iOS-only in effect. `Plugins/iOS/BackgroundTask.m` must end the system task before its expiration handler returns, on the main thread; handle members are readable from any thread; the `_GameLoversBackgroundTask*` exports, C# `DllImport` signatures, and the expiration callback signature change together. Android and Editor return a pass-through handle.
 - One haptic play replaces the previous play and cancels its pending auto-stop. Negative preset duration loops until explicit stop; `StopCurrentHaptic()` is idempotent.
 - `DeviceServicesHost` is the shared polling host. Do not create per-service update GameObjects when the host can own the callback.

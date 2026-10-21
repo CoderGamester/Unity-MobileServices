@@ -12,7 +12,8 @@ This folder contains the full API reference for each subsystem, plus the editor-
 | Notifications | [notifications.md](notifications.md) |
 | Haptics | [haptics.md](haptics.md) |
 | Gestures | [gestures.md](gestures.md) |
-| Device (umbrella + 7 children, plus a separate router) | [device.md](device.md) |
+| Device (umbrella + children, plus a separate router) | [device.md](device.md) |
+| Game Platform (Game Center and Play Games) | [game-platform.md](game-platform.md) |
 
 ## Editor tooling
 

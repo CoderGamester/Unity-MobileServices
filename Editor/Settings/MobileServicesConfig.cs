@@ -67,6 +67,61 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] public List<string> AssociatedDomainList = new List<string>();
 	}
 
+	/// <summary>Game Center and Google Play Games settings for <c>GamePlatformServices</c>; both are off until filled in.</summary>
+	[Serializable]
+	public sealed class GamePlatformSettings
+	{
+		/// <summary>Default Maven coordinate for the Play Games Services v2 SDK.</summary>
+		public const string DefaultPlayGamesCoordinate = "com.google.android.gms:play-services-games-v2:20.1.2";
+
+		/// <summary>
+		/// Adds the Game Center capability and compiles the GameKit bridge into iOS builds. The App ID and provisioning
+		/// profile must also have Game Center enabled.
+		/// </summary>
+		[SerializeField] public bool GameCenter;
+
+		/// <summary>
+		/// The numeric Google Play Console project id. Entering it adds the Play Games Services SDK and the
+		/// <c>APP_ID</c> manifest entry to Android builds; leaving it empty keeps the SDK out.
+		/// </summary>
+		[SerializeField] public string PlayGamesProjectId;
+
+		/// <summary>
+		/// Overrides the Play Games Services Maven coordinate, for example to pin a version or use an internal mirror.
+		/// Blank uses <see cref="DefaultPlayGamesCoordinate"/>.
+		/// </summary>
+		[SerializeField] public string PlayGamesDependencyCoordinate;
+
+		/// <summary>True when a Play Games project id is set, which switches the Android integration on.</summary>
+		public bool PlayGamesEnabled => !string.IsNullOrWhiteSpace(PlayGamesProjectId);
+
+		/// <summary>The coordinate to inject: the override when set, otherwise the default.</summary>
+		public string ResolvePlayGamesCoordinate() =>
+			string.IsNullOrWhiteSpace(PlayGamesDependencyCoordinate) ? DefaultPlayGamesCoordinate : PlayGamesDependencyCoordinate.Trim();
+
+		internal void CollectValidationErrors(string prefix, List<string> errors)
+		{
+			if (PlayGamesEnabled && !IsAllDigits(PlayGamesProjectId.Trim()))
+			{
+				errors.Add($"{prefix}.PlayGamesProjectId must be the numeric Play Console project id: '{PlayGamesProjectId}'.");
+			}
+			if (PlayGamesEnabled && !MobileServicesConfig.IsValidMavenCoordinate(ResolvePlayGamesCoordinate()))
+			{
+				errors.Add($"{prefix}.PlayGamesDependencyCoordinate is invalid: '{PlayGamesDependencyCoordinate}'.");
+			}
+		}
+
+		private static bool IsAllDigits(string value)
+		{
+			if (value.Length == 0) return false;
+			foreach (var character in value)
+			{
+				if (character < '0' || character > '9') return false;
+			}
+			return true;
+		}
+	}
+
 	/// <summary>
 	/// Android <c>&lt;uses-permission&gt;</c> / <c>&lt;queries&gt;</c> entries to inject into the
 	/// manifest template.
@@ -329,6 +384,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		[SerializeField] private CapabilityToggles _capabilities = new CapabilityToggles();
 		[SerializeField] private AndroidManifestToggles _androidManifest = new AndroidManifestToggles();
 		[SerializeField] private NativeDeepLinkSettings _deepLinks = new NativeDeepLinkSettings();
+		[SerializeField] private GamePlatformSettings _gamePlatform = new GamePlatformSettings();
 		[Tooltip("Logs Editor haptics play and stop calls to the Unity console. Disabled by default.")]
 		[SerializeField] private bool _enableHapticsDebugLogs;
 		[SerializeField] private bool _includePlayReviewDependency = true;
@@ -344,6 +400,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			_capabilities.AssociatedDomainList ??= new List<string>();
 			_androidManifest ??= new AndroidManifestToggles();
 			_deepLinks ??= new NativeDeepLinkSettings();
+			_gamePlatform ??= new GamePlatformSettings();
 			_deepLinks.IosUrlSchemes ??= new List<string>();
 			_deepLinks.AndroidIntentFilters ??= new List<AndroidDeepLinkRegistration>();
 			_playReviewDependencyCoordinate ??= DefaultPlayReviewCoordinate;
@@ -408,6 +465,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 
 		/// <summary>iOS URL scheme and Android intent-filter declarations applied at build time.</summary>
 		public NativeDeepLinkSettings DeepLinks => _deepLinks ??= new NativeDeepLinkSettings();
+
+		/// <summary>Game Center and Google Play Games settings applied at build time.</summary>
+		public GamePlatformSettings GamePlatform => _gamePlatform ??= new GamePlatformSettings();
 
 		/// <summary>Whether Editor haptics calls write diagnostic messages to the Unity console.</summary>
 		public bool EnableHapticsDebugLogs
@@ -591,7 +651,9 @@ namespace GameLovers.MobileServices.Editor.Settings
 				errors.Add("Capabilities.AssociatedDomains is enabled but AssociatedDomainList is empty.");
 			}
 			_deepLinks?.CollectValidationErrors(nameof(DeepLinks), errors);
-			if (_includePlayReviewDependency && !IsValidPlayReviewCoordinate(PlayReviewDependencyCoordinate))
+			if (_gamePlatform == null) errors.Add("GamePlatform is null.");
+			else _gamePlatform.CollectValidationErrors(nameof(GamePlatform), errors);
+			if (_includePlayReviewDependency && !IsValidMavenCoordinate(PlayReviewDependencyCoordinate))
 			{
 				errors.Add($"PlayReviewDependencyCoordinate is invalid: '{PlayReviewDependencyCoordinate}'.");
 			}
@@ -606,7 +668,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return errors.Count == 0;
 		}
 
-		private static bool IsValidPlayReviewCoordinate(string coordinate)
+		internal static bool IsValidMavenCoordinate(string coordinate)
 		{
 			if (string.IsNullOrWhiteSpace(coordinate)) return false;
 			var pieces = coordinate.Split(':');

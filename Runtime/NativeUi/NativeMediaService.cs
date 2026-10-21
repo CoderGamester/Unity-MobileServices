@@ -109,20 +109,12 @@ namespace GameLovers.MobileServices.NativeUi
 			Debug.LogWarning("[GameLovers.MobileServices] PickImage is only available on iOS and Android.");
 			completion.SetResult(null);
 #endif
-			return ToMainThread(completion);
+			return NativeCompletion.ToMainThread(completion);
 		}
 
 		private static async Awaitable<bool> ToSaved(AwaitableCompletionSource<string> completion)
 		{
-			return await ToMainThread(completion) != null;
-		}
-
-		// Native callbacks can arrive on any thread, so the result is handed back on Unity's main thread.
-		private static async Awaitable<string> ToMainThread(AwaitableCompletionSource<string> completion)
-		{
-			var result = await completion.Awaitable;
-			await Awaitable.MainThreadAsync();
-			return result;
+			return await NativeCompletion.ToMainThread(completion) != null;
 		}
 
 #if UNITY_IOS && !UNITY_EDITOR

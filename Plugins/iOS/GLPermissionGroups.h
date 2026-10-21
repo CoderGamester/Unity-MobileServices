@@ -1,6 +1,7 @@
 #ifndef GLPermissionGroups_h
 #define GLPermissionGroups_h
 
+// GL_GAME_CENTER gates the GameKit bridge the same way; the postprocessor defines it when the Game Center capability is enabled.
 // Each GL_PERMISSION_<GROUP> gates the code that references a privacy-protected iOS API. Without the build
 // postprocessor every group compiles. When it sets GL_PERMISSIONS_DECLARED_ONLY it also defines GL_PERMISSION_<GROUP>=1
 // for each group whose usage description is present in the final Info.plist (see IosPermissionGroups.cs), so the
@@ -11,6 +12,7 @@
 #define GL_PERMISSION_LOCATION 1
 #define GL_PERMISSION_PHOTOS 1
 #define GL_PERMISSION_PHOTOS_ADD 1
+#define GL_GAME_CENTER 1
 #endif
 
 #endif

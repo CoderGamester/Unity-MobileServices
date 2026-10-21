@@ -78,6 +78,7 @@ For safe-area UI padding, use `com.gamelovers.uiservice` (`SafeAreaPanelView`/`S
 | Notifications | Local notification channels, scheduling, custom data, and opened-notification routing |
 | Haptics | Presets, custom output, and bounded loops |
 | Device | Permissions, ATT, deep links, background tasks, store and Settings links, and device helpers |
+| Game Platform | Opt-in Game Center and Google Play Games sign-in, leaderboards and achievements |
 | Gestures | Gesture controller for explicit gesture input ownership |
 | Editor tooling | Device Simulator integration, optional haptics diagnostics, and build helpers |
 

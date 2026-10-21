@@ -33,6 +33,9 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 		private const string ShareFileProviderClass = "com.gamelovers.mobileservices.GameLoversFileProvider";
 		private const string ShareFileProviderPathsResource = "gamelovers_file_paths";
 		private const string MediaPickerActivityClass = "com.gamelovers.mobileservices.GameLoversMediaPickerActivity";
+		private const string PlayGamesArtifactKey = "com.google.android.gms:play-services-games-v2";
+		private const string PlayGamesAppIdMetaData = "com.google.android.gms.games.APP_ID";
+		private const string PlayGamesProjectIdResource = "gamelovers_play_games_project_id";
 		private static readonly XNamespace _androidNamespace = "http://schemas.android.com/apk/res/android";
 #endif
 
@@ -67,7 +70,10 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var playReview = settings.IncludePlayReviewDependency
 				? EnsureGradleDependency(path, PlayReviewArtifactKey, settings.PlayReviewDependencyCoordinate, "disable Include Play Review Dependency")
 				: "disabled";
-			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} scannerWarnings={warnings.Count}.");
+			var playGames = settings.GamePlatform.PlayGamesEnabled
+				? EnsureGradleDependency(path, PlayGamesArtifactKey, settings.GamePlatform.ResolvePlayGamesCoordinate(), "clear the Play Games project id")
+				: "disabled";
+			Debug.Log($"[GameLovers.MobileServices] Native build summary: platform=Android source={DescribeSource(settings)} permissions={settings.PermissionDescriptions.Count} androidDeepLinks={settings.DeepLinks.AndroidIntentFilters.Count} playReview={playReview} playGames={playGames} scannerWarnings={warnings.Count}.");
 		}
 #endif
 
@@ -153,9 +159,9 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 
 			var mainTargetGuid = pbx.GetUnityMainTargetGuid();
 			var pbxChanged = EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
-			ApplyPermissionGroupDefines(pbx, plist.root);
+			ApplyNativeGroupDefines(pbx, plist.root, settings);
 			pbxChanged = true;
-			var capabilityNeeded = settings.Capabilities.PushNotifications ||
+			var capabilityNeeded = settings.Capabilities.PushNotifications || settings.GamePlatform.GameCenter ||
 				(settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0);
 			if (capabilityNeeded)
 			{
@@ -169,6 +175,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				if (pbxChanged) pbx.WriteToFile(pbxPath);
 				var capability = new ProjectCapabilityManager(pbxPath, entitlementsName, null, mainTargetGuid);
 				if (settings.Capabilities.PushNotifications) capability.AddPushNotifications(true);
+				if (settings.GamePlatform.GameCenter) capability.AddGameCenter();
 				if (settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0)
 					capability.AddAssociatedDomains(settings.Capabilities.AssociatedDomainList.ToArray());
 				capability.WriteToFile();
@@ -181,13 +188,15 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			Debug.Log($"[GameLovers.MobileServices] iOS native processing completed for '{buildPath}'.");
 		}
 
-		// Compiles only the permission groups whose purpose string the generated Info.plist declares (from this
-		// config, the player settings, or the project's own plist), so the binary references no privacy API that
-		// App Store validation would flag as missing its usage description.
-		private static void ApplyPermissionGroupDefines(PBXProject pbx, PlistElementDict plistRoot)
+		// Compiles only the native code that is opted in: the permission groups whose purpose string the generated
+		// Info.plist declares (from this config, the player settings, or the project's own plist), so the binary
+		// references no privacy API that App Store validation would flag as missing its usage description, and the
+		// GameKit bridge when Game Center is enabled.
+		private static void ApplyNativeGroupDefines(PBXProject pbx, PlistElementDict plistRoot, MobileServicesConfig settings)
 		{
 			var add = new List<string> { "GL_PERMISSIONS_DECLARED_ONLY=1" };
 			var remove = new List<string>();
+			(settings.GamePlatform.GameCenter ? add : remove).Add("GL_GAME_CENTER=1");
 			foreach (var group in IosPermissionGroups.All)
 			{
 				var declared = group.PlistKeys.Any(key => plistRoot.values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value.AsString()));
@@ -383,6 +392,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			settings.AndroidManifest.IncludeShareQueriesBlock ||
 			settings.AndroidManifest.IncludeShareFileProvider ||
 			settings.AndroidManifest.IncludeMediaPicker ||
+			settings.GamePlatform.PlayGamesEnabled ||
 			settings.DeepLinks.AndroidIntentFilters.Count > 0;
 
 		private static void ProcessGeneratedAndroidManifest(string gradleProjectPath, MobileServicesConfig settings)
@@ -420,6 +430,11 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			}
 			if (settings.AndroidManifest.IncludeShareQueriesBlock) changed |= AddShareQueriesIfMissing(root);
 			if (settings.AndroidManifest.IncludeMediaPicker) changed |= AddMediaPickerActivityIfMissing(root);
+			if (settings.GamePlatform.PlayGamesEnabled)
+			{
+				changed |= AddPlayGamesMetaDataIfMissing(root);
+				changed |= WritePlayGamesProjectId(Path.GetDirectoryName(target.path), settings.GamePlatform.PlayGamesProjectId.Trim());
+			}
 			if (settings.AndroidManifest.IncludeShareFileProvider)
 			{
 				changed |= AddShareFileProviderIfMissing(root);
@@ -446,6 +461,30 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 				intent.Elements(ns + "action").Any(action => string.Equals(GetAndroidAttribute(action, "name"), "android.intent.action.SEND", StringComparison.Ordinal)) &&
 				intent.Elements(ns + "data").Any(data => string.Equals(GetAndroidAttribute(data, "mimeType"), "*/*", StringComparison.Ordinal)))) return false;
 			queries.Add(new XElement(ns + "intent", new XElement(ns + "action", new XAttribute(_androidNamespace + "name", "android.intent.action.SEND")), new XElement(ns + "data", new XAttribute(_androidNamespace + "mimeType", "*/*"))));
+			return true;
+		}
+
+		private static bool AddPlayGamesMetaDataIfMissing(XElement root)
+		{
+			var ns = root.Name.Namespace;
+			var application = root.Element(ns + "application");
+			if (application == null) throw new BuildFailedException("[GameLovers.MobileServices] The generated Android manifest has no <application> element to hold the Play Games app id.");
+			if (application.Elements(ns + "meta-data").Any(meta => string.Equals(GetAndroidAttribute(meta, "name"), PlayGamesAppIdMetaData, StringComparison.Ordinal))) return false;
+			application.Add(new XElement(ns + "meta-data",
+				new XAttribute(_androidNamespace + "name", PlayGamesAppIdMetaData),
+				new XAttribute(_androidNamespace + "value", "@string/" + PlayGamesProjectIdResource)));
+			return true;
+		}
+
+		private static bool WritePlayGamesProjectId(string manifestDirectory, string projectId)
+		{
+			var file = Path.Combine(manifestDirectory, "res", "values", PlayGamesProjectIdResource + ".xml");
+			var contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n" +
+				$"  <string name=\"{PlayGamesProjectIdResource}\" translatable=\"false\">{projectId}</string>\n" +
+				"</resources>\n";
+			if (File.Exists(file) && string.Equals(ReadTextOrThrow(file), contents, StringComparison.Ordinal)) return false;
+			Directory.CreateDirectory(Path.GetDirectoryName(file));
+			File.WriteAllText(file, contents);
 			return true;
 		}
 

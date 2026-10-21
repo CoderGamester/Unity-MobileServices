@@ -87,6 +87,19 @@ namespace GameLovers.MobileServices.Editor.Settings
 			return lines;
 		}
 
+		public static IReadOnlyList<string> GamePlatform(MobileServicesConfig config)
+		{
+			var lines = new List<string>();
+			var settings = config.GamePlatform;
+			if (settings.GameCenter) lines.Add("iOS: Game Center entitlement and the GameKit bridge compiled in");
+			if (settings.PlayGamesEnabled)
+			{
+				lines.Add($"Android Gradle: implementation '{settings.ResolvePlayGamesCoordinate()}'");
+				lines.Add("Android manifest: com.google.android.gms.games.APP_ID meta-data and res/values/gamelovers_play_games_project_id.xml");
+			}
+			return lines;
+		}
+
 		public static IReadOnlyList<string> StoreReview(MobileServicesConfig config)
 		{
 			var lines = new List<string>();

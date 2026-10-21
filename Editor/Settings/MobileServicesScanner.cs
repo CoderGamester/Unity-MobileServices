@@ -15,6 +15,7 @@ namespace GameLovers.MobileServices.Editor.Settings
 		public bool UsesNotifications;
 		public bool UsesDeepLinks;
 		public bool UsesNativeUiShare;
+		public bool UsesGamePlatform;
 
 		/// <summary>Returns advisory mismatches without changing the persisted config.</summary>
 		public IReadOnlyList<string> GetConfigurationWarnings(MobileServicesConfig config)
@@ -32,6 +33,10 @@ namespace GameLovers.MobileServices.Editor.Settings
 			if (UsesDeepLinks && config.DeepLinks.IosUrlSchemes.Count == 0 && config.DeepLinks.AndroidIntentFilters.Count == 0)
 			{
 				warnings.Add("Deep-link services are referenced but no native deep-link scheme or Android intent-filter is configured.");
+			}
+			if (UsesGamePlatform && !config.GamePlatform.GameCenter && !config.GamePlatform.PlayGamesEnabled)
+			{
+				warnings.Add("Game platform services are referenced but neither Game Center nor a Play Games project id is configured; every call fails at runtime.");
 			}
 			if (UsesNativeUiShare && !config.AndroidManifest.IncludeShareQueriesBlock)
 			{
@@ -74,6 +79,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 			var attType = typeof(AttService);
 			var attInterface = typeof(IAttService);
 			var nativeUiType = typeof(MobileServices.NativeUi.NativeUiService);
+			var gamePlatformType = typeof(MobileServices.GamePlatform.GamePlatformServices);
+			var gamePlatformInterface = typeof(MobileServices.GamePlatform.IGamePlatformServices);
 
 			// Walk every user assembly. Built-in / package assemblies are skipped to keep the scan fast.
 			var assemblies = System.AppDomain.CurrentDomain.GetAssemblies();
@@ -118,6 +125,8 @@ namespace GameLovers.MobileServices.Editor.Settings
 						}
 					}
 					if (TypeReferences(type, nativeUiType))           result.UsesNativeUiShare = true;
+					if (TypeReferences(type, gamePlatformType) ||
+					    TypeReferences(type, gamePlatformInterface))  result.UsesGamePlatform = true;
 				}
 			}
 
