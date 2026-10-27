@@ -77,6 +77,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TestCase(HapticPreset.ImpactHeavy)]
 		[TestCase(HapticPreset.ImpactRigid)]
 		[TestCase(HapticPreset.ImpactSoft)]
+		[TestCase(HapticPreset.QuickImpactHeavy)]
 		public void GetFloatEnvelope_TimingsAndAmpsHaveSameLength(HapticPreset preset)
 		{
 			var (timings, amps) = HapticEnvelopes.GetFloatEnvelopeFor(preset);
@@ -94,6 +95,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TestCase(HapticPreset.ImpactHeavy)]
 		[TestCase(HapticPreset.ImpactRigid)]
 		[TestCase(HapticPreset.ImpactSoft)]
+		[TestCase(HapticPreset.QuickImpactHeavy)]
 		public void GetFloatEnvelope_AmpsAreClamped01(HapticPreset preset)
 		{
 			var (_, amps) = HapticEnvelopes.GetFloatEnvelopeFor(preset);

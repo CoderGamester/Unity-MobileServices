@@ -15,6 +15,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 	/// <item><see cref="HapticPreset.ImpactLight"/> / <see cref="HapticPreset.ImpactMedium"/> /
 	///       <see cref="HapticPreset.ImpactHeavy"/> / <see cref="HapticPreset.ImpactRigid"/> /
 	///       <see cref="HapticPreset.ImpactSoft"/> → <c>UIImpactFeedbackGenerator</c> with the matching style</item>
+	/// <item><see cref="HapticPreset.QuickImpactHeavy"/> → the heavy <c>UIImpactFeedbackGenerator</c> style, because UIKit impacts have no length</item>
 	/// </list>
 	/// Looping is performed natively by re-firing the chosen generator on an <c>NSTimer</c> until <see cref="Stop"/>.
 	/// </summary>

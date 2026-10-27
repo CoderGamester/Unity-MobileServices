@@ -33,6 +33,7 @@ public enum HapticPreset
     ImpactHeavy = 7,      // strong impact
     ImpactRigid = 8,      // sharp short impact (snappy)
     ImpactSoft = 9,       // gentle longer impact (cushioned)
+    QuickImpactHeavy = 10, // full-strength impact at half the ImpactHeavy length
 }
 ```
 

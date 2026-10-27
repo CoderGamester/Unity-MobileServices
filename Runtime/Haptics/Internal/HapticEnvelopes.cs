@@ -33,6 +33,8 @@ namespace GameLovers.MobileServices.Haptics.Internal
 					return (new[] { 0.04f }, new[] { 1.000f });
 				case HapticPreset.ImpactSoft:
 					return (new[] { 0.16f }, new[] { 0.156f });
+				case HapticPreset.QuickImpactHeavy:
+					return (new[] { 0.08f }, new[] { 1.000f });
 				default:
 					return (new[] { 0.0f }, new[] { 0.0f });
 			}

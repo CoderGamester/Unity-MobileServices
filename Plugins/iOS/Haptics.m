@@ -12,7 +12,8 @@ typedef NS_ENUM(NSInteger, GLHapticPresetId)
     GLHapticPresetIdImpactMedium = 6,
     GLHapticPresetIdImpactHeavy  = 7,
     GLHapticPresetIdImpactRigid  = 8,
-    GLHapticPresetIdImpactSoft   = 9
+    GLHapticPresetIdImpactSoft   = 9,
+    GLHapticPresetIdQuickImpactHeavy = 10
 };
 
 // Reusable generators. Lazily created on first use; reset to nil on Stop so the next call
@@ -82,6 +83,7 @@ static void GLHapticsPlayPresetById(GLHapticPresetId presetId)
             GLHapticsPlayImpact(UIImpactFeedbackStyleMedium);
             return;
         case GLHapticPresetIdImpactHeavy:
+        case GLHapticPresetIdQuickImpactHeavy:
             GLHapticsPlayImpact(UIImpactFeedbackStyleHeavy);
             return;
         case GLHapticPresetIdImpactRigid:

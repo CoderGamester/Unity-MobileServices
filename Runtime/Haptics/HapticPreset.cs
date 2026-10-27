@@ -26,5 +26,7 @@ namespace GameLovers.MobileServices.Haptics
 		ImpactRigid = 8, // Sharp, short impact (snappy).
 
 		ImpactSoft = 9, // Gentle, longer impact (cushioned).
+
+		QuickImpactHeavy = 10, // Full-strength impact at half the ImpactHeavy length.
 	}
 }
