@@ -167,7 +167,7 @@ namespace GameLoversEditor.MobileServices.Tests
 
 			public bool IsSupported => IsSupportedValue;
 
-			public void PlayPresetOneShot(HapticPreset preset) { Operations.Add("OneShot"); }
+			public void PlayPresetOneShot(HapticPreset preset, float intensityScale) { Operations.Add("OneShot"); }
 			public void PlayPresetLoop(HapticPreset preset) { Operations.Add("Loop"); }
 
 			public void PlayCustom(float intensity01, float durationMs)

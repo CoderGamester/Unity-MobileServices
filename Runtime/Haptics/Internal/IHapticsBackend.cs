@@ -12,8 +12,10 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		/// </summary>
 		bool IsSupported { get; }
 
-		/// <summary>Play the preset's natural one-shot duration.</summary>
-		void PlayPresetOneShot(HapticPreset preset);
+		/// <summary>
+		/// Play the preset's natural one-shot duration at <paramref name="intensityScale"/> of its authored strength, in <c>(0, 1]</c>.
+		/// </summary>
+		void PlayPresetOneShot(HapticPreset preset, float intensityScale);
 
 		/// <summary>
 		/// Start looping the preset; loop continues until <see cref="Stop"/> or auto-stop coroutine fires.

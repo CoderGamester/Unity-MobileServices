@@ -57,6 +57,26 @@ namespace GameLoversEditor.MobileServices.Tests
 		}
 
 		[Test]
+		// ADMIT: HapticEnvelopes.GetEnvelopeFor could ignore intensityScale, so a far explosion vibrates at full strength on Android.
+		// RCR: HapticEnvelopes.cs GetEnvelopeFor — `amps[i] * intensityScale * 255f` → `amps[i] * 255f` → RED (amplitudes[0] expected 128 was 255).
+		public void GetEnvelope_IntensityScale_ScalesAudibleStepsAndKeepsGapsSilent()
+		{
+			var (_, amplitudes) = HapticEnvelopes.GetEnvelopeFor(HapticPreset.Warning, 0.5f);
+			Assert.AreEqual(128, amplitudes[0], "1.0 * 0.5 * 255 = 128 (rounded).");
+			Assert.AreEqual(0, amplitudes[1], "The Warning gap stays silent.");
+			Assert.AreEqual(60, amplitudes[2], "0.47 * 0.5 * 255 = 60 (rounded).");
+		}
+
+		[Test]
+		// ADMIT: HapticEnvelopes.GetEnvelopeFor could round a tiny scaled step to amplitude 0, which createWaveform plays as silence.
+		// RCR: HapticEnvelopes.cs GetEnvelopeFor — `Mathf.Max(1, amplitude)` → `amplitude` → RED (amplitudes[0] expected 1 was 0).
+		public void GetEnvelope_TinyIntensityScale_KeepsAudibleStepsAudible()
+		{
+			var (_, amplitudes) = HapticEnvelopes.GetEnvelopeFor(HapticPreset.ImpactLight, 0.001f);
+			Assert.AreEqual(1, amplitudes[0]);
+		}
+
+		[Test]
 		// ADMIT: HapticEnvelopes.GetNaturalDurationSeconds could report only the last step instead of the total, truncating HapticsService's CurrentDurationSeconds.
 		// RCR: HapticEnvelopes.cs GetNaturalDurationSeconds — `total += timesSec[i]` → `total =` → RED (Success expected 0.24 was 0.16).
 		public void GetNaturalDurationSeconds_SumsEveryStep()
@@ -78,6 +98,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TestCase(HapticPreset.ImpactRigid)]
 		[TestCase(HapticPreset.ImpactSoft)]
 		[TestCase(HapticPreset.QuickImpactHeavy)]
+		[TestCase(HapticPreset.Explosion)]
 		public void GetFloatEnvelope_TimingsAndAmpsHaveSameLength(HapticPreset preset)
 		{
 			var (timings, amps) = HapticEnvelopes.GetFloatEnvelopeFor(preset);
@@ -96,6 +117,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[TestCase(HapticPreset.ImpactRigid)]
 		[TestCase(HapticPreset.ImpactSoft)]
 		[TestCase(HapticPreset.QuickImpactHeavy)]
+		[TestCase(HapticPreset.Explosion)]
 		public void GetFloatEnvelope_AmpsAreClamped01(HapticPreset preset)
 		{
 			var (_, amps) = HapticEnvelopes.GetFloatEnvelopeFor(preset);

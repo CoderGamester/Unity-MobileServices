@@ -39,10 +39,10 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		}
 
 		/// <inheritdoc />
-		public void PlayPresetOneShot(HapticPreset preset)
+		public void PlayPresetOneShot(HapticPreset preset, float intensityScale)
 		{
 #if UNITY_ANDROID && !UNITY_EDITOR
-			PlayWaveform(preset, RepeatNone);
+			PlayWaveform(preset, RepeatNone, intensityScale);
 #endif
 		}
 
@@ -50,7 +50,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		public void PlayPresetLoop(HapticPreset preset)
 		{
 #if UNITY_ANDROID && !UNITY_EDITOR
-			PlayWaveform(preset, RepeatLoop);
+			PlayWaveform(preset, RepeatLoop, 1f);
 #endif
 		}
 
@@ -141,7 +141,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 			return _vibrator != null && _vibrationEffectClass != null;
 		}
 
-		private void PlayWaveform(HapticPreset preset, int repeatIndex)
+		private void PlayWaveform(HapticPreset preset, int repeatIndex, float intensityScale)
 		{
 			if (!IsSupported || !EnsureInitialized() || preset == HapticPreset.None)
 			{
@@ -149,7 +149,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 			}
 
 			// Envelope tables stay shared with the editor's visualizer so device playback is represented exactly.
-			var (timingsMs, amplitudes) = HapticEnvelopes.GetEnvelopeFor(preset);
+			var (timingsMs, amplitudes) = HapticEnvelopes.GetEnvelopeFor(preset, intensityScale);
 			try
 			{
 				using var effect = _vibrationEffectClass.CallStatic<AndroidJavaObject>(

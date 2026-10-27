@@ -28,5 +28,7 @@ namespace GameLovers.MobileServices.Haptics
 		ImpactSoft = 9, // Gentle, longer impact (cushioned).
 
 		QuickImpactHeavy = 10, // Full-strength impact at half the ImpactHeavy length.
+
+		Explosion = 11, // Full-strength blast that decays quadratically to a soft tail.
 	}
 }

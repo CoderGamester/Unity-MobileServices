@@ -11,7 +11,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		public bool IsSupported => false;
 
 		/// <inheritdoc />
-		public void PlayPresetOneShot(HapticPreset preset) { }
+		public void PlayPresetOneShot(HapticPreset preset, float intensityScale) { }
 
 		/// <inheritdoc />
 		public void PlayPresetLoop(HapticPreset preset) { }

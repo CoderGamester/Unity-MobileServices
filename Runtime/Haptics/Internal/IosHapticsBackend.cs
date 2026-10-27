@@ -7,7 +7,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Haptics.Internal
 {
 	/// <summary>
-	/// iOS implementation built directly on UIKit feedback generators. Maps presets as follows:
+	/// iOS implementation built on UIKit feedback generators and Core Haptics. Maps presets as follows:
 	/// <list type="bullet">
 	/// <item><see cref="HapticPreset.Selection"/> → <c>UISelectionFeedbackGenerator</c></item>
 	/// <item><see cref="HapticPreset.Success"/> / <see cref="HapticPreset.Warning"/> /
@@ -16,13 +16,17 @@ namespace GameLovers.MobileServices.Haptics.Internal
 	///       <see cref="HapticPreset.ImpactHeavy"/> / <see cref="HapticPreset.ImpactRigid"/> /
 	///       <see cref="HapticPreset.ImpactSoft"/> → <c>UIImpactFeedbackGenerator</c> with the matching style</item>
 	/// <item><see cref="HapticPreset.QuickImpactHeavy"/> → the heavy <c>UIImpactFeedbackGenerator</c> style, because UIKit impacts have no length</item>
+	/// <item><see cref="HapticPreset.Explosion"/> → a Core Haptics continuous event with a decaying intensity curve, or the heavy impact
+	///       style on hardware without Core Haptics</item>
 	/// </list>
+	/// One-shot intensity scaling reaches impact styles and <see cref="HapticPreset.Explosion"/>; selection and notification
+	/// generators have no intensity, so they play at full strength.
 	/// Looping is performed natively by re-firing the chosen generator on an <c>NSTimer</c> until <see cref="Stop"/>.
 	/// </summary>
 	internal sealed class IosHapticsBackend : IHapticsBackend
 	{
 #if UNITY_IOS && !UNITY_EDITOR
-		[DllImport("__Internal")] private static extern void _GameLoversHapticsPreset(int presetId);
+		[DllImport("__Internal")] private static extern void _GameLoversHapticsPreset(int presetId, float intensityScale);
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsLoopStart(int presetId);
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsCustom(float intensity, float durationMs);
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsStop();
@@ -42,10 +46,10 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		}
 
 		/// <inheritdoc />
-		public void PlayPresetOneShot(HapticPreset preset)
+		public void PlayPresetOneShot(HapticPreset preset, float intensityScale)
 		{
 #if UNITY_IOS && !UNITY_EDITOR
-			_GameLoversHapticsPreset((int)preset);
+			_GameLoversHapticsPreset((int)preset, intensityScale);
 #endif
 		}
 

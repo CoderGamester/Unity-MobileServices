@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **New**:
 - **Haptics**: Added `HapticPreset.QuickImpactHeavy`, a full-strength 80 ms impact for punchy one-shots that should end sooner than `ImpactHeavy`. iOS plays the heavy UIKit impact, which has no length.
+- **Haptics**: Added `HapticPreset.Explosion`, a 240 ms blast that decays quadratically from full strength to 16%. iOS plays it through Core Haptics and falls back to the heavy impact on hardware without it.
+- **Haptics**: Added `IHapticsService.PlayPreset(preset, intensityScale)` to play a one-shot at a fraction of its strength, such as attenuating feedback by distance. A zero scale plays nothing and keeps the active haptic.
+
+**Changed**:
+- **Breaking**: `IHapticsService` gained `PlayPreset(HapticPreset, float)`. Custom implementations and mocks must add it.
+- iOS builds link `CoreHaptics.framework` for the haptics bridge.
 
 ## [2.0.0] - 2026-10-22
 

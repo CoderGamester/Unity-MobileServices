@@ -44,7 +44,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		{
 			EditorHapticsBackend.DebugLoggingEnabled = false;
 
-			_backend.PlayPresetOneShot(HapticPreset.Selection);
+			_backend.PlayPresetOneShot(HapticPreset.Selection, 1f);
 			_backend.PlayPresetLoop(HapticPreset.Warning);
 			_backend.PlayCustom(0.42f, 250f);
 			_backend.Stop();
@@ -57,8 +57,8 @@ namespace GameLoversEditor.MobileServices.Tests
 		// RCR: EditorHapticsBackend.cs PlayPresetOneShot — log text `PlayPresetOneShot(` → `PlayOneShot(` → RED (LogAssert expected message not received).
 		public void PlayPresetOneShot_LogsExpected()
 		{
-			LogAssert.Expect(LogType.Log, "[Haptics] PlayPresetOneShot(Selection)");
-			_backend.PlayPresetOneShot(HapticPreset.Selection);
+			LogAssert.Expect(LogType.Log, "[Haptics] PlayPresetOneShot(Selection, intensityScale=0.50)");
+			_backend.PlayPresetOneShot(HapticPreset.Selection, 0.5f);
 		}
 
 		[Test]

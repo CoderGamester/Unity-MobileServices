@@ -38,6 +38,7 @@ This guide adds package-specific rules to the host repository guide. Consumer us
 - `OpenInAppBrowser` accepts only http and https (`SFSafariViewController` throws otherwise) and falls back to `Application.OpenURL` when Custom Tabs are unavailable. `GameLoversShortcuts.java` and the `_GameLoversShortcut*` exports change together with `AppShortcutsBridge`.
 - `IBackgroundTaskService` is iOS-only in effect. `Plugins/iOS/BackgroundTask.m` must end the system task before its expiration handler returns, on the main thread; handle members are readable from any thread; the `_GameLoversBackgroundTask*` exports, C# `DllImport` signatures, and the expiration callback signature change together. Android and Editor return a pass-through handle.
 - One haptic play replaces the previous play and cancels its pending auto-stop. Negative preset duration loops until explicit stop; `StopCurrentHaptic()` is idempotent.
+- `HapticEnvelopes` is the single source for preset envelopes; the iOS Core Haptics curve in `Plugins/iOS/Haptics.m` (`GLExplosionSteps`) mirrors its `Explosion` steps and changes with it. A zero intensity scale plays nothing and keeps the active haptic.
 - `DeviceServicesHost` is the shared polling host. Do not create per-service update GameObjects when the host can own the callback.
 - The first `DeepLinkService` subscriber receives a pending cold-start link once. Construct the service early; event names are not persistent state.
 - ATT returning `Authorized` outside iOS means “not applicable,” not an observed user decision.

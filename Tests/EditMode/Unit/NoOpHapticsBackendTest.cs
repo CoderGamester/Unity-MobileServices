@@ -17,7 +17,7 @@ namespace GameLoversEditor.MobileServices.Tests
 			var backend = new NoOpHapticsBackend();
 
 			Assert.IsFalse(backend.IsSupported);
-			Assert.DoesNotThrow(() => backend.PlayPresetOneShot(HapticPreset.Success));
+			Assert.DoesNotThrow(() => backend.PlayPresetOneShot(HapticPreset.Success, 1f));
 			Assert.DoesNotThrow(() => backend.PlayPresetLoop(HapticPreset.Selection));
 			Assert.DoesNotThrow(() => backend.PlayCustom(0.5f, 100f));
 			Assert.DoesNotThrow(backend.Stop);

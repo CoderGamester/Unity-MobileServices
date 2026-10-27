@@ -1,6 +1,6 @@
 # Haptics
 
-Zero-dependency haptic feedback. Built directly on iOS `UI*FeedbackGenerator` (iOS 10+) and Android `VibrationEffect.createWaveform` (API 26+) — no NiceVibrations, no Lofelt-runtime.
+Zero-dependency haptic feedback. Built directly on iOS `UI*FeedbackGenerator` (iOS 10+), iOS Core Haptics (iOS 13+) for envelope presets, and Android `VibrationEffect.createWaveform` (API 26+) — no NiceVibrations, no Lofelt-runtime.
 
 ## API
 
@@ -12,6 +12,7 @@ public interface IHapticsService
     bool IsPlaying { get; }        // between any Play* and the matching stop
 
     void PlayPreset(HapticPreset preset);                              // natural one-shot
+    void PlayPreset(HapticPreset preset, float intensityScale);        // natural one-shot at 0-1 of its strength
     void PlayPresetDuration(HapticPreset preset, float duration = -1f); // 0 = natural, <0 = loop, >0 = loop+auto-stop
     void PlayCustom(float intensity01, float durationMs);               // single intensity, always finite
     void StopCurrentHaptic();                                           // single stop entry point, idempotent
@@ -34,10 +35,21 @@ public enum HapticPreset
     ImpactRigid = 8,      // sharp short impact (snappy)
     ImpactSoft = 9,       // gentle longer impact (cushioned)
     QuickImpactHeavy = 10, // full-strength impact at half the ImpactHeavy length
+    Explosion = 11,        // full-strength blast decaying quadratically to a soft tail
 }
 ```
 
 The per-preset `(timings_ms, amplitudes_0_to_255)` envelopes live in `Runtime/Haptics/Internal/HapticEnvelopes.cs` and feed both `AndroidHapticsBackend` and the [Device Simulator panel](device-simulator.md)'s Haptics envelope graph — single source of truth.
+
+`Explosion` plays six 40 ms steps (100%, 70%, 46%, 29%, 19%, 16%). iOS plays the same curve as a Core Haptics continuous event and falls back to the heavy impact on hardware without Core Haptics. `Plugins/iOS/Haptics.m` mirrors the step table, so change both together.
+
+## Intensity scaling
+
+```csharp
+haptics.PlayPreset(HapticPreset.Explosion, intensityScale: 0.4f);
+```
+
+Plays a one-shot at a fraction of its authored strength, clamped to `[0, 1]`. A scale of `0` plays nothing and leaves an active haptic running, so a caller can attenuate by distance without cutting nearer feedback. Android multiplies every envelope step; silent steps stay silent and audible steps never round to silence. iOS scales impact styles through `impactOccurredWithIntensity:` and `Explosion` through its Core Haptics intensity; selection and notification presets play at full strength because UIKit gives them no intensity.
 
 ## Looping semantics
 
@@ -61,7 +73,7 @@ Always finite; `durationMs <= 0` is a no-op. Intensity is clamped to `[0, 1]`. O
 
 | Platform | Backend |
 |----------|---------|
-| iOS | `IosHapticsBackend` — UIKit `UIImpactFeedbackGenerator` / `UINotificationFeedbackGenerator` / `UISelectionFeedbackGenerator`. Looping via `NSTimer`. |
+| iOS | `IosHapticsBackend` — UIKit `UIImpactFeedbackGenerator` / `UINotificationFeedbackGenerator` / `UISelectionFeedbackGenerator`, plus Core Haptics (`CoreHaptics.framework`) for `Explosion`. Looping via `NSTimer`. |
 | Android | `AndroidHapticsBackend` — pure JNI `Vibrator.vibrate(VibrationEffect)`. Requires API 26 (Android 8.0)+. |
 | Editor | `EditorHapticsBackend` — no native output; optional console diagnostics. |
 | Other (Standalone, WebGL) | `NoOpHapticsBackend` — `IsSupported = false`. |

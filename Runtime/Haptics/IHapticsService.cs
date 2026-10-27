@@ -33,6 +33,14 @@ namespace GameLovers.MobileServices.Haptics
 		void PlayPreset(HapticPreset preset);
 
 		/// <summary>
+		/// Plays a one-shot preset at <paramref name="intensityScale"/> of its authored strength, clamped to <c>[0, 1]</c>.
+		/// A scale of <c>0</c> plays nothing and leaves an active haptic running. Android scales every envelope step;
+		/// iOS scales impact styles and <see cref="HapticPreset.Explosion"/>, while selection and notification presets
+		/// play at full strength because UIKit gives them no intensity.
+		/// </summary>
+		void PlayPreset(HapticPreset preset, float intensityScale);
+
+		/// <summary>
 		/// Plays a preset with explicit duration semantics:
 		/// <list type="bullet">
 		/// <item><c>duration == 0f</c> — play the preset's natural one-shot duration.</item>

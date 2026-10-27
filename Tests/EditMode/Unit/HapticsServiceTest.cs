@@ -123,6 +123,34 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.IsTrue(_haptics.IsPlaying);
 		}
 
+		[TestCase(0.5f, 0.5f)]
+		[TestCase(3f, 1f)]
+		// ADMIT: HapticsService.PlayPreset(preset, intensityScale) could drop or stop clamping the scale before the backend scales envelopes.
+		// RCR: HapticsService.cs PlayPreset(HapticPreset, float) — `PlayOneShot(preset, intensityScale)` → `PlayOneShot(preset, 1f)` → RED (expected 0.5 was 1).
+		public void PlayPreset_IntensityScale_ForwardsClampedScaleToOneShot(float requested, float expected)
+		{
+			_haptics.PlayPreset(HapticPreset.Explosion, requested);
+
+			Assert.AreEqual(1, _backend.OneShotCount);
+			Assert.AreEqual(expected, _backend.LastIntensityScale, 1e-6f);
+			Assert.IsTrue(_haptics.IsPlaying);
+		}
+
+		[Test]
+		// ADMIT: HapticsService.PlayPreset with a zero scale could stop the active haptic and replace it with silence.
+		// RCR: HapticsService.cs PlayPreset(HapticPreset, float) — drop `|| intensityScale <= 0f` from the guard → RED (StopCount expected 0 was 1).
+		public void PlayPreset_ZeroIntensityScale_KeepsActiveHaptic()
+		{
+			_haptics.PlayPresetDuration(HapticPreset.Warning);
+			_backend.Reset();
+
+			_haptics.PlayPreset(HapticPreset.Explosion, 0f);
+
+			Assert.AreEqual(0, _backend.StopCount);
+			Assert.AreEqual(0, _backend.OneShotCount);
+			Assert.IsTrue(_haptics.IsPlaying);
+		}
+
 		[Test]
 		// ADMIT: HapticsService.PlayPresetDuration could route duration==0 to the looping backend call instead of the one-shot.
 		// RCR: HapticsService.cs PlayPresetDuration — narrow `if (duration == 0f)` to `&& preset != HapticPreset.Success` → RED (OneShotCount expected 1 was 0); narrowed so PlayPreset_Natural stays green.
@@ -213,15 +241,17 @@ namespace GameLoversEditor.MobileServices.Tests
 			public int StopCount;
 			public HapticPreset LastPreset;
 			public float LastIntensity;
+			public float LastIntensityScale;
 			public float LastDurationMs;
 			public List<string> Operations = new List<string>();
 
 			public bool IsSupported => IsSupportedValue;
 
-			public void PlayPresetOneShot(HapticPreset preset)
+			public void PlayPresetOneShot(HapticPreset preset, float intensityScale)
 			{
 				OneShotCount++;
 				LastPreset = preset;
+				LastIntensityScale = intensityScale;
 				Operations.Add("OneShot");
 			}
 
@@ -254,6 +284,7 @@ namespace GameLoversEditor.MobileServices.Tests
 				StopCount = 0;
 				LastPreset = HapticPreset.None;
 				LastIntensity = 0f;
+				LastIntensityScale = 0f;
 				LastDurationMs = 0f;
 				Operations.Clear();
 			}
