@@ -164,6 +164,7 @@ namespace GameLovers.MobileServices.Editor.NativeBuild
 			var mainTargetGuid = pbx.GetUnityMainTargetGuid();
 			var pbxChanged = EmitLocalizedInfoPlistStrings(buildPath, settings, pbx, mainTargetGuid);
 			ApplyNativeGroupDefines(pbx, plist.root, settings);
+			pbx.SetBuildProperty(pbx.GetUnityFrameworkTargetGuid(), "GCC_ENABLE_OBJC_EXCEPTIONS", "YES");
 			pbxChanged = true;
 			var capabilityNeeded = settings.Capabilities.PushNotifications || settings.GamePlatform.GameCenter || settings.GamePlatform.CloudSave ||
 				(settings.Capabilities.AssociatedDomains && settings.Capabilities.AssociatedDomainList.Count > 0);
