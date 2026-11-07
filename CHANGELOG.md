@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking**: `IHapticsService` gained `PlayPreset(HapticPreset, float)`. Custom implementations and mocks must add it.
 - iOS builds link `CoreHaptics.framework` for the haptics bridge.
 
+**Fixed**:
+- iOS haptic cancellation no longer crashes when the system has stopped the Core Haptics engine after backgrounding or idle shutdown.
+
 ## [2.0.0] - 2026-10-22
 
 **New**:
