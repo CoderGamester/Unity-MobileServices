@@ -102,9 +102,6 @@ static CHHapticEngine *GLHapticsEngine(void) API_AVAILABLE(ios(13.0))
 
         gHapticEngine.playsHapticsOnly = YES;
         gHapticEngine.autoShutdownEnabled = YES;
-        gHapticEngine.resetHandler = ^{
-            gEnvelopePlayer = nil;
-        };
     }
 
     NSError *startError = nil;
@@ -115,10 +112,25 @@ static void GLHapticsStopEnvelope(void)
 {
     if (@available(iOS 13.0, *))
     {
-        if (gEnvelopePlayer != nil)
+        id<CHHapticPatternPlayer> player = gEnvelopePlayer;
+        gEnvelopePlayer = nil;
+        if (player == nil)
         {
-            [gEnvelopePlayer stopAtTime:CHHapticTimeImmediate error:nil];
-            gEnvelopePlayer = nil;
+            return;
+        }
+
+        // iOS may stop the engine while a completed player is still retained.
+        @try
+        {
+            NSError *error = nil;
+            if (![player stopAtTime:CHHapticTimeImmediate error:&error] && error.code != CHHapticErrorCodeEngineNotRunning)
+            {
+                NSLog(@"[GameLoversHaptics] Unable to stop haptic: %@", error);
+            }
+        }
+        @catch (NSException *exception)
+        {
+            NSLog(@"[GameLoversHaptics] Unable to stop haptic: %@", exception);
         }
     }
 }
