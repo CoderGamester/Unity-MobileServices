@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - iOS builds link `CoreHaptics.framework` for the haptics bridge.
 
 **Fixed**:
+- iOS builds enable Objective-C exceptions for the native haptics cancellation guard, preventing Xcode archive compilation failures.
 - iOS haptic cancellation no longer crashes when the system has stopped the Core Haptics engine after backgrounding or idle shutdown.
 
 ## [2.0.0] - 2026-10-22
