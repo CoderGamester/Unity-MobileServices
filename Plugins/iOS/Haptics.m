@@ -319,6 +319,65 @@ void _GameLoversHapticsCustom(float intensity, float durationMs)
     });
 }
 
+static void GLHapticsSetContinuousIntensity(float intensity) API_AVAILABLE(ios(13.0))
+{
+    CHHapticDynamicParameter *level = [[CHHapticDynamicParameter alloc]
+        initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl
+        value:intensity relativeTime:0];
+
+    if (gEnvelopePlayer != nil)
+    {
+        if ([gEnvelopePlayer sendParameters:@[level] atTime:CHHapticTimeImmediate error:nil])
+        {
+            return;
+        }
+
+        GLHapticsStopEnvelope();
+    }
+
+    CHHapticEngine *engine = GLHapticsEngine();
+    if (engine == nil)
+    {
+        return;
+    }
+
+    static const NSTimeInterval duration = 30.0;
+    CHHapticEventParameter *baseLevel = [[CHHapticEventParameter alloc]
+        initWithParameterID:CHHapticEventParameterIDHapticIntensity value:1.0f];
+    CHHapticEvent *event = [[CHHapticEvent alloc]
+        initWithEventType:CHHapticEventTypeHapticContinuous parameters:@[baseLevel] relativeTime:0 duration:duration];
+    NSError *error = nil;
+    CHHapticPattern *pattern = [[CHHapticPattern alloc] initWithEvents:@[event] parameters:@[] error:&error];
+    id<CHHapticAdvancedPatternPlayer> player = pattern != nil ? [engine createAdvancedPlayerWithPattern:pattern error:&error] : nil;
+    if (player == nil)
+    {
+        return;
+    }
+
+    player.loopEnabled = YES;
+    player.loopEnd = duration;
+    player.isMuted = YES;
+    gEnvelopePlayer = player;
+    if (![player startAtTime:CHHapticTimeImmediate error:&error] ||
+        ![player sendParameters:@[level] atTime:CHHapticTimeImmediate error:&error])
+    {
+        GLHapticsStopEnvelope();
+        return;
+    }
+
+    player.isMuted = NO;
+}
+
+void _GameLoversHapticsSetContinuousIntensity(float intensity)
+{
+    if (@available(iOS 13.0, *))
+    {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            GLHapticsSetContinuousIntensity(intensity);
+        });
+    }
+}
+
 void _GameLoversHapticsStop(void)
 {
     dispatch_async(dispatch_get_main_queue(), ^{

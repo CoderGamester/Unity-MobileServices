@@ -27,6 +27,9 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		/// </summary>
 		void PlayCustom(float intensity01, float durationMs);
 
+		/// <summary>Starts or updates sustained output at a positive normalized amplitude.</summary>
+		void SetContinuousIntensity(float intensity01);
+
 		/// <summary>Stop all active vibration immediately.</summary>
 		void Stop();
 	}

@@ -20,6 +20,9 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		public void PlayCustom(float intensity01, float durationMs) { }
 
 		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01) { }
+
+		/// <inheritdoc />
 		public void Stop() { }
 	}
 }

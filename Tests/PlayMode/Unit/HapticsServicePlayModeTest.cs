@@ -170,6 +170,8 @@ namespace GameLoversEditor.MobileServices.Tests
 			public void PlayPresetOneShot(HapticPreset preset, float intensityScale) { Operations.Add("OneShot"); }
 			public void PlayPresetLoop(HapticPreset preset) { Operations.Add("Loop"); }
 
+			public void SetContinuousIntensity(float intensity01) { }
+
 			public void PlayCustom(float intensity01, float durationMs)
 			{
 				LastIntensity = intensity01;

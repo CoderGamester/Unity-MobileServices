@@ -18,6 +18,10 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		private AndroidJavaObject _vibrator;
 		private AndroidJavaClass _vibrationEffectClass;
 		private bool _initialized;
+		private bool _hasAmplitudeControl;
+		private int _continuousAmplitude;
+		private readonly long[] _continuousTimings = { 1000L };
+		private readonly int[] _continuousAmplitudes = new int[1];
 #endif
 
 		/// <inheritdoc />
@@ -80,6 +84,36 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		}
 
 		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01)
+		{
+#if UNITY_ANDROID && !UNITY_EDITOR
+			if (!IsSupported || !EnsureInitialized() || !_hasAmplitudeControl)
+			{
+				return;
+			}
+
+			int amplitude = Mathf.Clamp(Mathf.RoundToInt(intensity01 * 255f), 1, 255);
+			if (amplitude == _continuousAmplitude)
+			{
+				return;
+			}
+
+			try
+			{
+				_continuousAmplitudes[0] = amplitude;
+				using var effect = _vibrationEffectClass.CallStatic<AndroidJavaObject>(
+					"createWaveform", _continuousTimings, _continuousAmplitudes, RepeatLoop);
+				_vibrator.Call("vibrate", effect);
+				_continuousAmplitude = amplitude;
+			}
+			catch (System.Exception exception)
+			{
+				Debug.LogError($"[GameLovers.MobileServices] Continuous haptics failed: {exception.Message}");
+			}
+#endif
+		}
+
+		/// <inheritdoc />
 		public void Stop()
 		{
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -90,6 +124,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 
 			try
 			{
+				_continuousAmplitude = 0;
 				_vibrator.Call("cancel");
 			}
 			catch (System.Exception exception)
@@ -129,6 +164,7 @@ namespace GameLovers.MobileServices.Haptics.Internal
 					_vibrator = activity.Call<AndroidJavaObject>("getSystemService", "vibrator");
 				}
 
+				_hasAmplitudeControl = _vibrator != null && _vibrator.Call<bool>("hasAmplitudeControl");
 				_vibrationEffectClass = new AndroidJavaClass("android.os.VibrationEffect");
 			}
 			catch (System.Exception exception)

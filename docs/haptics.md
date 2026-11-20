@@ -80,6 +80,10 @@ Always finite; `durationMs <= 0` is a no-op. Intensity is clamped to `[0, 1]`. O
 
 The backend is selected at construction by `CreateDefaultBackend()`. Tests construct `HapticsService` with the internal injection constructor + a `FakeHapticsBackend`.
 
+## Sustained vibration
+
+Start or update a sustained vibration with `IContinuousHapticsService.SetContinuousIntensity(amplitude)`. `HapticsService` implements this optional capability, and amplitude is normalized to [0, 1]. Pass zero to stop the sustained vibration. Preset playback replaces sustained output through the existing stop path. iOS uses a Core Haptics continuous player with live intensity parameters. Android replaces the repeating constant-amplitude effect when the requested amplitude changes. Sustained output needs Core Haptics or an Android vibrator with amplitude control.
+
 ## Editor introspection
 
 Internal accessors on `HapticsService` (visible to the Editor assembly via `InternalsVisibleTo`):

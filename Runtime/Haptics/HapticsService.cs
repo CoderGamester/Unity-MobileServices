@@ -6,7 +6,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Haptics
 {
 	/// <inheritdoc />
-	public sealed class HapticsService : IHapticsService, IDisposable
+	public sealed class HapticsService : IContinuousHapticsService, IDisposable
 	{
 		private readonly IHapticsBackend _backend;
 
@@ -16,6 +16,7 @@ namespace GameLovers.MobileServices.Haptics
 
 		private bool _enabled = true;
 		private bool _isPlaying;
+		private bool _continuous;
 		private bool _disposed;
 		private HapticPreset _currentPreset;
 		private float _currentDurationSeconds;
@@ -141,6 +142,34 @@ namespace GameLovers.MobileServices.Haptics
 			EnsureHost().ScheduleStop(durationMs / 1000f, OnAutoStop);
 		}
 
+		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01)
+		{
+			if (_disposed || !_enabled)
+			{
+				return;
+			}
+
+			if (intensity01 <= 0f)
+			{
+				if (_continuous)
+				{
+					StopCurrentHaptic();
+				}
+				return;
+			}
+
+			if (!_continuous)
+			{
+				StopCurrentHaptic();
+			}
+
+			_backend.SetContinuousIntensity(Mathf.Clamp01(intensity01));
+			_continuous = true;
+			_isPlaying = true;
+			_currentDurationSeconds = -1f;
+		}
+
 		/// <summary>
 		/// Stops active output, cancels pending auto-stop work, and destroys this service's host.
 		/// </summary>
@@ -182,6 +211,7 @@ namespace GameLovers.MobileServices.Haptics
 			}
 
 			CancelPendingAutoStop();
+			_continuous = false;
 			if (!_isPlaying)
 			{
 				return;

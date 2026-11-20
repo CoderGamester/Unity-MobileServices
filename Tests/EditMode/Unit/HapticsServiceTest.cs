@@ -232,6 +232,21 @@ namespace GameLoversEditor.MobileServices.Tests
 			Assert.IsFalse(_haptics.IsPlaying);
 		}
 
+		[Test]
+		// ADMIT: HapticsService.SetContinuousIntensity could stop the active output on every update, interrupting sustained playback.
+		// RCR: HapticsService.cs SetContinuousIntensity — call StopCurrentHaptic unconditionally → RED (unexpected Stop between amplitude updates). 2026-11-20
+		public void SetContinuousIntensity_UpdatesWithoutStopAndYieldsToOneShot()
+		{
+			_haptics.SetContinuousIntensity(0.2f);
+			_haptics.SetContinuousIntensity(0.4f);
+			Assert.AreEqual(0.4f, _backend.LastIntensity);
+			Assert.AreEqual(-1f, _haptics.CurrentDurationSeconds);
+
+			_haptics.PlayPreset(HapticPreset.ImpactRigid);
+			_haptics.SetContinuousIntensity(0f);
+			CollectionAssert.AreEqual(new[] { "Continuous", "Continuous", "Stop", "OneShot" }, _backend.Operations);
+		}
+
 		private sealed class FakeHapticsBackend : IHapticsBackend
 		{
 			public bool IsSupportedValue;
@@ -260,6 +275,12 @@ namespace GameLoversEditor.MobileServices.Tests
 				LoopCount++;
 				LastPreset = preset;
 				Operations.Add("Loop");
+			}
+
+			public void SetContinuousIntensity(float intensity01)
+			{
+				LastIntensity = intensity01;
+				Operations.Add("Continuous");
 			}
 
 			public void PlayCustom(float intensity01, float durationMs)
