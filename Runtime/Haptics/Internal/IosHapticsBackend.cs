@@ -30,6 +30,9 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsLoopStart(int presetId);
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsCustom(float intensity, float durationMs);
 		[DllImport("__Internal")] private static extern void _GameLoversHapticsStop();
+
+		[DllImport("__Internal")]
+		private static extern void _GameLoversHapticsSetContinuousIntensity(float intensity01);
 #endif
 
 		/// <inheritdoc />
@@ -66,6 +69,14 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		{
 #if UNITY_IOS && !UNITY_EDITOR
 			_GameLoversHapticsCustom(intensity01, durationMs);
+#endif
+		}
+
+		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01)
+		{
+#if UNITY_IOS && !UNITY_EDITOR
+			_GameLoversHapticsSetContinuousIntensity(intensity01);
 #endif
 		}
 

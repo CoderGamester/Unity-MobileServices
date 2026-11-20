@@ -65,4 +65,16 @@ namespace GameLovers.MobileServices.Haptics
 		/// </summary>
 		void StopCurrentHaptic();
 	}
+
+	/// <summary>
+	/// Optional haptics capability for sustained output whose amplitude can change during playback.
+	/// </summary>
+	public interface IContinuousHapticsService : IHapticsService
+	{
+		/// <summary>
+		/// Starts a sustained vibration or adjusts its amplitude in place. Intensity is normalized
+		/// to [0, 1]. Zero stops sustained output. Unsupported hardware stays silent.
+		/// </summary>
+		void SetContinuousIntensity(float intensity01);
+	}
 }

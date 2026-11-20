@@ -6,7 +6,7 @@ using UnityEngine;
 namespace GameLovers.MobileServices.Haptics
 {
 	/// <inheritdoc />
-	public sealed class HapticsService : IHapticsService, IDisposable
+	public sealed class HapticsService : IContinuousHapticsService, IDisposable
 	{
 		private readonly IHapticsBackend _backend;
 
@@ -16,6 +16,7 @@ namespace GameLovers.MobileServices.Haptics
 
 		private bool _enabled = true;
 		private bool _isPlaying;
+		private bool _continuous;
 		private bool _disposed;
 		private HapticPreset _currentPreset;
 		private float _currentDurationSeconds;
@@ -118,7 +119,7 @@ namespace GameLovers.MobileServices.Haptics
 
 			if (duration > 0f)
 			{
-				EnsureHost().ScheduleStop(duration, OnAutoStop);
+				EnsureHost().ScheduleStop(duration, StopPlayback);
 			}
 		}
 
@@ -138,7 +139,35 @@ namespace GameLovers.MobileServices.Haptics
 			_currentPreset = HapticPreset.None;
 			_currentDurationSeconds = durationMs / 1000f;
 
-			EnsureHost().ScheduleStop(durationMs / 1000f, OnAutoStop);
+			EnsureHost().ScheduleStop(durationMs / 1000f, StopPlayback);
+		}
+
+		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01)
+		{
+			if (_disposed || !_enabled)
+			{
+				return;
+			}
+
+			if (intensity01 <= 0f)
+			{
+				if (_continuous)
+				{
+					StopCurrentHaptic();
+				}
+				return;
+			}
+
+			if (!_continuous)
+			{
+				StopCurrentHaptic();
+			}
+
+			_backend.SetContinuousIntensity(Mathf.Clamp01(intensity01));
+			_continuous = true;
+			_isPlaying = true;
+			_currentDurationSeconds = -1f;
 		}
 
 		/// <summary>
@@ -182,14 +211,7 @@ namespace GameLovers.MobileServices.Haptics
 			}
 
 			CancelPendingAutoStop();
-			if (!_isPlaying)
-			{
-				return;
-			}
-			_backend.Stop();
-			_isPlaying = false;
-			_currentPreset = HapticPreset.None;
-			_currentDurationSeconds = 0f;
+			StopPlayback();
 		}
 
 		private void PlayOneShot(HapticPreset preset, float intensityScale)
@@ -200,8 +222,9 @@ namespace GameLovers.MobileServices.Haptics
 			_currentDurationSeconds = HapticEnvelopes.GetNaturalDurationSeconds(preset);
 		}
 
-		private void OnAutoStop()
+		private void StopPlayback()
 		{
+			_continuous = false;
 			if (!_isPlaying)
 			{
 				return;

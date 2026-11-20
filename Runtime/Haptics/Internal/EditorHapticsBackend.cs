@@ -38,6 +38,9 @@ namespace GameLovers.MobileServices.Haptics.Internal
 		}
 
 		/// <inheritdoc />
+		public void SetContinuousIntensity(float intensity01) { }
+
+		/// <inheritdoc />
 		public void Stop()
 		{
 			if (!DebugLoggingEnabled) return;

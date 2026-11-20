@@ -37,7 +37,7 @@ The Haptics view exposes every preset—`Selection`, `Success`, `Warning`, `Erro
 - **Finite** — loop for a real-time duration and stop automatically.
 - **Indefinite** — loop until **Stop** is pressed.
 
-Custom controls demonstrate clamped intensity and duration. Every preset action records an immutable preset and delay snapshot. **Replay** cannot overlap itself, and **Clear** does not mutate a replay already in progress. Haptics supported, enabled, playing, and last-action state appear on separate `Field: Value` lines.
+Custom controls demonstrate clamped intensity and duration. The separate sustained amplitude API is described in the [haptics guide](../../docs/haptics.md). Every preset action records an immutable preset and delay snapshot. **Replay** cannot overlap itself, and **Clear** does not mutate a replay already in progress. Haptics supported, enabled, playing, and last-action state appear on separate `Field: Value` lines.
 
 The activity area reports every action. Native haptic output requires a paired iOS or Android device.
 
