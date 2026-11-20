@@ -69,7 +69,7 @@ namespace GameLoversEditor.MobileServices.Tests
 		[UnityTest]
 		// ADMIT: An explicit StopCurrentHaptic must not be followed by a second backend Stop from the pending auto-stop coroutine.
 		// RCR: none exists — the second Stop is blocked by both HapticsService.CancelPendingAutoStop/HapticsHost.Cancel and
-		// OnAutoStop's `if (!_isPlaying) return` guard; disabling either leaves the other suppressing it (verified).
+		// StopPlayback's `if (!_isPlaying) return` guard; disabling either leaves the other suppressing it (verified).
 		// Double-covered, not single-line falsifiable.
 		public IEnumerator StopCurrentHaptic_CancelsPendingAutoStop()
 		{

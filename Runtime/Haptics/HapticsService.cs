@@ -119,7 +119,7 @@ namespace GameLovers.MobileServices.Haptics
 
 			if (duration > 0f)
 			{
-				EnsureHost().ScheduleStop(duration, OnAutoStop);
+				EnsureHost().ScheduleStop(duration, StopPlayback);
 			}
 		}
 
@@ -139,7 +139,7 @@ namespace GameLovers.MobileServices.Haptics
 			_currentPreset = HapticPreset.None;
 			_currentDurationSeconds = durationMs / 1000f;
 
-			EnsureHost().ScheduleStop(durationMs / 1000f, OnAutoStop);
+			EnsureHost().ScheduleStop(durationMs / 1000f, StopPlayback);
 		}
 
 		/// <inheritdoc />
@@ -211,15 +211,7 @@ namespace GameLovers.MobileServices.Haptics
 			}
 
 			CancelPendingAutoStop();
-			_continuous = false;
-			if (!_isPlaying)
-			{
-				return;
-			}
-			_backend.Stop();
-			_isPlaying = false;
-			_currentPreset = HapticPreset.None;
-			_currentDurationSeconds = 0f;
+			StopPlayback();
 		}
 
 		private void PlayOneShot(HapticPreset preset, float intensityScale)
@@ -230,8 +222,9 @@ namespace GameLovers.MobileServices.Haptics
 			_currentDurationSeconds = HapticEnvelopes.GetNaturalDurationSeconds(preset);
 		}
 
-		private void OnAutoStop()
+		private void StopPlayback()
 		{
+			_continuous = false;
 			if (!_isPlaying)
 			{
 				return;

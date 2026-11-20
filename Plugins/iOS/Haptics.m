@@ -319,22 +319,8 @@ void _GameLoversHapticsCustom(float intensity, float durationMs)
     });
 }
 
-static void GLHapticsSetContinuousIntensity(float intensity) API_AVAILABLE(ios(13.0))
+static void GLHapticsStartContinuousPlayer(CHHapticDynamicParameter *level) API_AVAILABLE(ios(13.0))
 {
-    CHHapticDynamicParameter *level = [[CHHapticDynamicParameter alloc]
-        initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl
-        value:intensity relativeTime:0];
-
-    if (gEnvelopePlayer != nil)
-    {
-        if ([gEnvelopePlayer sendParameters:@[level] atTime:CHHapticTimeImmediate error:nil])
-        {
-            return;
-        }
-
-        GLHapticsStopEnvelope();
-    }
-
     CHHapticEngine *engine = GLHapticsEngine();
     if (engine == nil)
     {
@@ -366,6 +352,21 @@ static void GLHapticsSetContinuousIntensity(float intensity) API_AVAILABLE(ios(1
     }
 
     player.isMuted = NO;
+}
+
+static void GLHapticsSetContinuousIntensity(float intensity) API_AVAILABLE(ios(13.0))
+{
+    CHHapticDynamicParameter *level = [[CHHapticDynamicParameter alloc]
+        initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl
+        value:intensity relativeTime:0];
+
+    if (gEnvelopePlayer != nil && [gEnvelopePlayer sendParameters:@[level] atTime:CHHapticTimeImmediate error:nil])
+    {
+        return;
+    }
+
+    GLHapticsStopEnvelope();
+    GLHapticsStartContinuousPlayer(level);
 }
 
 void _GameLoversHapticsSetContinuousIntensity(float intensity)
